@@ -3,7 +3,30 @@
 
 import React, { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react';
 import type { Campaign, Hex, HexCoordinate } from '../types';
-import { createCampaign, createHex, coordinateKey } from '../types';
+import { createCampaign, createHex, coordinateKey, createDefaultTimeWeather } from '../types';
+import {
+  TimeWeatherState,
+  Weather,
+  CalendarSystem,
+  CurrentTime,
+  Season,
+  TimeOfDay,
+  WeatherEffects,
+  WeatherHistoryEntry
+} from '../types/Weather';
+import {
+  advanceTime,
+  getCurrentSeason,
+  getTimeOfDay,
+  formatTime12,
+  formatDate
+} from '../services/time';
+import {
+  generateWeather,
+  getHexWeather,
+  getHexWeatherEffects,
+  getWeatherSummary
+} from '../services/weather';
 
 // Save status enum
 export type SaveStatus = 'saved' | 'saving' | 'unsaved';
@@ -31,7 +54,19 @@ type CampaignAction =
   | { type: 'MARK_CHANGED' }
   | { type: 'CLOSE_CAMPAIGN' }
   | { type: 'UNDO' }
-  | { type: 'REDO' };
+  | { type: 'REDO' }
+  // Time/Weather actions
+  | { type: 'INIT_TIME_WEATHER' }
+  | { type: 'SET_CALENDAR'; calendar: CalendarSystem }
+  | { type: 'SET_TIME'; time: CurrentTime }
+  | { type: 'ADVANCE_TIME'; hours: number; minutes?: number }
+  | { type: 'SET_GLOBAL_WEATHER'; weather: Weather }
+  | { type: 'SET_ZONE_WEATHER'; zoneId: string; weather: Weather }
+  | { type: 'SET_HEX_WEATHER'; hexKey: string; weather: Weather }
+  | { type: 'CLEAR_HEX_WEATHER'; hexKey: string }
+  | { type: 'GENERATE_WEATHER'; terrain?: string }
+  | { type: 'LOG_WEATHER'; entry: WeatherHistoryEntry }
+  | { type: 'UPDATE_WEATHER_SETTINGS'; settings: Partial<TimeWeatherState> };
 
 // Initial state
 const initialState: CampaignState = {
@@ -149,6 +184,237 @@ function campaignReducer(state: CampaignState, action: CampaignAction): Campaign
       };
     }
 
+    // ============ TIME/WEATHER ACTIONS ============
+
+    case 'INIT_TIME_WEATHER': {
+      if (!state.campaign) return state;
+      if (state.campaign.timeWeather) return state; // Already initialized
+      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
+      return {
+        ...state,
+        campaign: {
+          ...state.campaign,
+          timeWeather: createDefaultTimeWeather(),
+          modifiedAt: new Date().toISOString()
+        },
+        saveStatus: 'unsaved',
+        hasUnsavedChanges: true,
+        past: newPast,
+        future: []
+      };
+    }
+
+    case 'SET_CALENDAR': {
+      if (!state.campaign?.timeWeather) return state;
+      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
+      return {
+        ...state,
+        campaign: {
+          ...state.campaign,
+          timeWeather: {
+            ...state.campaign.timeWeather,
+            calendar: action.calendar
+          },
+          modifiedAt: new Date().toISOString()
+        },
+        saveStatus: 'unsaved',
+        hasUnsavedChanges: true,
+        past: newPast,
+        future: []
+      };
+    }
+
+    case 'SET_TIME': {
+      if (!state.campaign?.timeWeather) return state;
+      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
+      return {
+        ...state,
+        campaign: {
+          ...state.campaign,
+          timeWeather: {
+            ...state.campaign.timeWeather,
+            currentTime: action.time
+          },
+          modifiedAt: new Date().toISOString()
+        },
+        saveStatus: 'unsaved',
+        hasUnsavedChanges: true,
+        past: newPast,
+        future: []
+      };
+    }
+
+    case 'ADVANCE_TIME': {
+      if (!state.campaign?.timeWeather) return state;
+      const tw = state.campaign.timeWeather;
+      const newTime = advanceTime(tw.calendar, tw.currentTime, action.hours, action.minutes || 0);
+      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
+      return {
+        ...state,
+        campaign: {
+          ...state.campaign,
+          timeWeather: {
+            ...tw,
+            currentTime: newTime
+          },
+          modifiedAt: new Date().toISOString()
+        },
+        saveStatus: 'unsaved',
+        hasUnsavedChanges: true,
+        past: newPast,
+        future: []
+      };
+    }
+
+    case 'SET_GLOBAL_WEATHER': {
+      if (!state.campaign?.timeWeather) return state;
+      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
+      return {
+        ...state,
+        campaign: {
+          ...state.campaign,
+          timeWeather: {
+            ...state.campaign.timeWeather,
+            globalWeather: action.weather
+          },
+          modifiedAt: new Date().toISOString()
+        },
+        saveStatus: 'unsaved',
+        hasUnsavedChanges: true,
+        past: newPast,
+        future: []
+      };
+    }
+
+    case 'SET_ZONE_WEATHER': {
+      if (!state.campaign?.timeWeather) return state;
+      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
+      return {
+        ...state,
+        campaign: {
+          ...state.campaign,
+          timeWeather: {
+            ...state.campaign.timeWeather,
+            zoneWeathers: {
+              ...state.campaign.timeWeather.zoneWeathers,
+              [action.zoneId]: action.weather
+            }
+          },
+          modifiedAt: new Date().toISOString()
+        },
+        saveStatus: 'unsaved',
+        hasUnsavedChanges: true,
+        past: newPast,
+        future: []
+      };
+    }
+
+    case 'SET_HEX_WEATHER': {
+      if (!state.campaign?.timeWeather) return state;
+      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
+      return {
+        ...state,
+        campaign: {
+          ...state.campaign,
+          timeWeather: {
+            ...state.campaign.timeWeather,
+            hexWeatherOverrides: {
+              ...state.campaign.timeWeather.hexWeatherOverrides,
+              [action.hexKey]: action.weather
+            }
+          },
+          modifiedAt: new Date().toISOString()
+        },
+        saveStatus: 'unsaved',
+        hasUnsavedChanges: true,
+        past: newPast,
+        future: []
+      };
+    }
+
+    case 'CLEAR_HEX_WEATHER': {
+      if (!state.campaign?.timeWeather) return state;
+      const { [action.hexKey]: _, ...remainingOverrides } = state.campaign.timeWeather.hexWeatherOverrides;
+      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
+      return {
+        ...state,
+        campaign: {
+          ...state.campaign,
+          timeWeather: {
+            ...state.campaign.timeWeather,
+            hexWeatherOverrides: remainingOverrides
+          },
+          modifiedAt: new Date().toISOString()
+        },
+        saveStatus: 'unsaved',
+        hasUnsavedChanges: true,
+        past: newPast,
+        future: []
+      };
+    }
+
+    case 'GENERATE_WEATHER': {
+      if (!state.campaign?.timeWeather) return state;
+      const tw = state.campaign.timeWeather;
+      const season = getCurrentSeason(tw.calendar, tw.currentTime.month);
+      const terrain = action.terrain || 'Plains';
+      const newWeather = generateWeather(terrain, season);
+      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
+      return {
+        ...state,
+        campaign: {
+          ...state.campaign,
+          timeWeather: {
+            ...tw,
+            globalWeather: newWeather
+          },
+          modifiedAt: new Date().toISOString()
+        },
+        saveStatus: 'unsaved',
+        hasUnsavedChanges: true,
+        past: newPast,
+        future: []
+      };
+    }
+
+    case 'LOG_WEATHER': {
+      if (!state.campaign?.timeWeather) return state;
+      const newHistory = [...state.campaign.timeWeather.weatherHistory, action.entry].slice(-100); // Keep last 100
+      return {
+        ...state,
+        campaign: {
+          ...state.campaign,
+          timeWeather: {
+            ...state.campaign.timeWeather,
+            weatherHistory: newHistory
+          },
+          modifiedAt: new Date().toISOString()
+        },
+        saveStatus: 'unsaved',
+        hasUnsavedChanges: true
+      };
+    }
+
+    case 'UPDATE_WEATHER_SETTINGS': {
+      if (!state.campaign?.timeWeather) return state;
+      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
+      return {
+        ...state,
+        campaign: {
+          ...state.campaign,
+          timeWeather: {
+            ...state.campaign.timeWeather,
+            ...action.settings
+          },
+          modifiedAt: new Date().toISOString()
+        },
+        saveStatus: 'unsaved',
+        hasUnsavedChanges: true,
+        past: newPast,
+        future: []
+      };
+    }
+
     default:
       return state;
   }
@@ -177,6 +443,27 @@ interface CampaignContextValue {
   saveStatus: SaveStatus;
   hasUnsavedChanges: boolean;
   currentFilePath: string | null;
+
+  // Time/Weather operations
+  initTimeWeather: () => void;
+  setCalendar: (calendar: CalendarSystem) => void;
+  setTime: (time: CurrentTime) => void;
+  advanceTimeBy: (hours: number, minutes?: number) => void;
+  setGlobalWeather: (weather: Weather) => void;
+  setHexWeather: (coord: HexCoordinate, weather: Weather) => void;
+  clearHexWeather: (coord: HexCoordinate) => void;
+  generateNewWeather: (terrain?: string) => void;
+  updateWeatherSettings: (settings: Partial<TimeWeatherState>) => void;
+
+  // Time/Weather helpers
+  timeWeather: TimeWeatherState | undefined;
+  currentSeason: Season | undefined;
+  currentTimeOfDay: TimeOfDay | undefined;
+  formattedTime: string;
+  formattedDate: string;
+  weatherSummary: string;
+  getWeatherForHex: (coord: HexCoordinate, terrain: string) => Weather | undefined;
+  getWeatherEffectsForHex: (coord: HexCoordinate, terrain: string) => WeatherEffects | undefined;
 }
 
 const CampaignContext = createContext<CampaignContextValue | null>(null);
@@ -329,9 +616,88 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'REDO' });
   }, []);
 
+  // ============ TIME/WEATHER METHODS ============
+
+  // Initialize time/weather if not present
+  const initTimeWeather = useCallback(() => {
+    dispatch({ type: 'INIT_TIME_WEATHER' });
+  }, []);
+
+  // Set calendar preset
+  const setCalendar = useCallback((calendar: CalendarSystem) => {
+    dispatch({ type: 'SET_CALENDAR', calendar });
+  }, []);
+
+  // Set specific time
+  const setTime = useCallback((time: CurrentTime) => {
+    dispatch({ type: 'SET_TIME', time });
+  }, []);
+
+  // Advance time by hours/minutes
+  const advanceTimeBy = useCallback((hours: number, minutes: number = 0) => {
+    dispatch({ type: 'ADVANCE_TIME', hours, minutes });
+  }, []);
+
+  // Set global weather
+  const setGlobalWeather = useCallback((weather: Weather) => {
+    dispatch({ type: 'SET_GLOBAL_WEATHER', weather });
+  }, []);
+
+  // Set weather for specific hex
+  const setHexWeather = useCallback((coord: HexCoordinate, weather: Weather) => {
+    dispatch({ type: 'SET_HEX_WEATHER', hexKey: coordinateKey(coord), weather });
+  }, []);
+
+  // Clear hex-specific weather override
+  const clearHexWeather = useCallback((coord: HexCoordinate) => {
+    dispatch({ type: 'CLEAR_HEX_WEATHER', hexKey: coordinateKey(coord) });
+  }, []);
+
+  // Generate new random weather
+  const generateNewWeather = useCallback((terrain?: string) => {
+    dispatch({ type: 'GENERATE_WEATHER', terrain });
+  }, []);
+
+  // Update weather settings
+  const updateWeatherSettings = useCallback((settings: Partial<TimeWeatherState>) => {
+    dispatch({ type: 'UPDATE_WEATHER_SETTINGS', settings });
+  }, []);
+
+  // Get weather for a specific hex
+  const getWeatherForHex = useCallback((coord: HexCoordinate, terrain: string): Weather | undefined => {
+    if (!state.campaign?.timeWeather) return undefined;
+    return getHexWeather(state.campaign.timeWeather, coordinateKey(coord), terrain);
+  }, [state.campaign?.timeWeather]);
+
+  // Get weather effects for a specific hex
+  const getWeatherEffectsForHex = useCallback((coord: HexCoordinate, terrain: string): WeatherEffects | undefined => {
+    if (!state.campaign?.timeWeather) return undefined;
+    return getHexWeatherEffects(state.campaign.timeWeather, coordinateKey(coord), terrain);
+  }, [state.campaign?.timeWeather]);
+
+  // ============ COMPUTED VALUES ============
+
   // Computed values for undo/redo availability
   const canUndo = state.past.length > 0;
   const canRedo = state.future.length > 0;
+
+  // Time/Weather computed values
+  const timeWeather = state.campaign?.timeWeather;
+  const currentSeason = timeWeather
+    ? getCurrentSeason(timeWeather.calendar, timeWeather.currentTime.month)
+    : undefined;
+  const currentTimeOfDay = timeWeather
+    ? getTimeOfDay(timeWeather.currentTime.hour)
+    : undefined;
+  const formattedTime = timeWeather
+    ? formatTime12(timeWeather.currentTime)
+    : '';
+  const formattedDate = timeWeather
+    ? formatDate(timeWeather.calendar, timeWeather.currentTime)
+    : '';
+  const weatherSummary = timeWeather
+    ? getWeatherSummary(timeWeather.globalWeather)
+    : '';
 
   const value: CampaignContextValue = {
     state,
@@ -350,7 +716,28 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
     campaign: state.campaign,
     saveStatus: state.saveStatus,
     hasUnsavedChanges: state.hasUnsavedChanges,
-    currentFilePath: state.currentFilePath
+    currentFilePath: state.currentFilePath,
+
+    // Time/Weather operations
+    initTimeWeather,
+    setCalendar,
+    setTime,
+    advanceTimeBy,
+    setGlobalWeather,
+    setHexWeather,
+    clearHexWeather,
+    generateNewWeather,
+    updateWeatherSettings,
+
+    // Time/Weather helpers
+    timeWeather,
+    currentSeason,
+    currentTimeOfDay,
+    formattedTime,
+    formattedDate,
+    weatherSummary,
+    getWeatherForHex,
+    getWeatherEffectsForHex
   };
 
   return (

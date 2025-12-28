@@ -5,6 +5,18 @@ import { useSelection } from '../stores/SelectionContext';
 import type { Hex, ContentItem, DiscoveryStatus } from '../types';
 import { createContentItem, createHex } from '../types';
 import ContentItemRow from './ui/ContentItemRow';
+import {
+  WEATHER_ICONS,
+  WEATHER_CONDITION_LABELS,
+  Weather,
+  WeatherEffects,
+  WeatherCondition,
+  Temperature,
+  WindStrength,
+  PrecipitationLevel
+} from '../types/Weather';
+import { getWeatherSummary } from '../services/weather';
+import { formatTravelModifier, formatVisibilityModifier, formatEncounterModifier } from '../data/weatherEffects';
 
 type ContentCategory = 'locations' | 'encounters' | 'npcs' | 'treasures' | 'clues';
 
@@ -17,7 +29,17 @@ const categoryConfig: Record<ContentCategory, { title: string; icon: string }> =
 };
 
 function HexDetail() {
-  const { campaign, getHex, getOrCreateHex, updateHex } = useCampaign();
+  const {
+    campaign,
+    getHex,
+    getOrCreateHex,
+    updateHex,
+    timeWeather,
+    getWeatherForHex,
+    getWeatherEffectsForHex,
+    setHexWeather,
+    clearHexWeather
+  } = useCampaign();
   const { selectedCoordinate } = useSelection();
 
   const [hex, setHex] = useState<Hex | null>(null);
@@ -167,6 +189,17 @@ function HexDetail() {
           />
         </div>
 
+        {/* Weather Section */}
+        {timeWeather && selectedCoordinate && (
+          <HexWeatherSection
+            weather={getWeatherForHex(selectedCoordinate, hex.terrain)}
+            effects={getWeatherEffectsForHex(selectedCoordinate, hex.terrain)}
+            onSetWeather={(weather) => setHexWeather(selectedCoordinate, weather)}
+            onClearOverride={() => clearHexWeather(selectedCoordinate)}
+            hasOverride={!!timeWeather.hexWeatherOverrides[`${selectedCoordinate.q},${selectedCoordinate.r}`]}
+          />
+        )}
+
         {/* Notes */}
         <div className="field-group">
           <label>Notes</label>
@@ -312,6 +345,195 @@ function ContentItemEditor({ item, category, onSave, onClose }: ContentItemEdito
           <button className="btn btn-primary" onClick={handleSave}>Save</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Weather condition options for the editor
+const CONDITION_OPTIONS: WeatherCondition[] = [
+  'clear', 'partly-cloudy', 'cloudy', 'overcast',
+  'light-rain', 'rain', 'heavy-rain', 'thunderstorm',
+  'drizzle', 'fog', 'mist',
+  'light-snow', 'snow', 'heavy-snow', 'blizzard',
+  'hail', 'sleet', 'windy', 'hot', 'cold', 'freezing'
+];
+
+const TEMPERATURE_OPTIONS: Temperature[] = [
+  'freezing', 'cold', 'cool', 'mild', 'warm', 'hot', 'scorching'
+];
+
+const WIND_OPTIONS: WindStrength[] = ['calm', 'light', 'moderate', 'strong', 'gale'];
+
+const PRECIPITATION_OPTIONS: PrecipitationLevel[] = ['none', 'light', 'moderate', 'heavy'];
+
+// Hex weather section component
+interface HexWeatherSectionProps {
+  weather: Weather | undefined;
+  effects: WeatherEffects | undefined;
+  onSetWeather: (weather: Weather) => void;
+  onClearOverride: () => void;
+  hasOverride: boolean;
+}
+
+function HexWeatherSection({
+  weather,
+  effects,
+  onSetWeather,
+  onClearOverride,
+  hasOverride
+}: HexWeatherSectionProps) {
+  const [isExpanded, setIsExpanded] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editWeather, setEditWeather] = useState<Weather | null>(null);
+
+  // If no weather available, don't render
+  if (!weather || !effects) return null;
+
+  const weatherIcon = WEATHER_ICONS[weather.condition] || '🌤️';
+  const summary = getWeatherSummary(weather);
+
+  const handleStartEdit = () => {
+    setEditWeather({ ...weather });
+    setIsEditing(true);
+  };
+
+  const handleApplyEdit = () => {
+    if (editWeather) {
+      onSetWeather(editWeather);
+      setIsEditing(false);
+      setEditWeather(null);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditWeather(null);
+  };
+
+  return (
+    <div className="hex-weather-section">
+      <div className="section-header" onClick={() => setIsExpanded(!isExpanded)}>
+        <span className="section-icon">🌦️</span>
+        <span className="section-title">Weather</span>
+        {hasOverride && <span className="override-badge">Override</span>}
+        <span className="section-toggle">{isExpanded ? '▼' : '▶'}</span>
+      </div>
+      {isExpanded && (
+        <div className="section-content">
+          {!isEditing ? (
+            <>
+              <div className="weather-current">
+                <span className="weather-icon-large">{weatherIcon}</span>
+                <div className="weather-info">
+                  <span className="weather-summary">{summary}</span>
+                  <span className="weather-label">{WEATHER_CONDITION_LABELS[weather.condition]}</span>
+                </div>
+              </div>
+
+              <div className="weather-effects">
+                <h5>Effects</h5>
+                <ul>
+                  <li>
+                    <span className="effect-icon">🚶</span>
+                    <span className="effect-label">Travel:</span>
+                    <span className="effect-value">{formatTravelModifier(effects.travelModifier)}</span>
+                  </li>
+                  <li>
+                    <span className="effect-icon">👁️</span>
+                    <span className="effect-label">Visibility:</span>
+                    <span className="effect-value">{formatVisibilityModifier(effects.visibilityModifier)}</span>
+                  </li>
+                  <li>
+                    <span className="effect-icon">⚔️</span>
+                    <span className="effect-label">Encounters:</span>
+                    <span className="effect-value">{formatEncounterModifier(effects.encounterModifier)}</span>
+                  </li>
+                </ul>
+                <p className="effect-description">{effects.description}</p>
+              </div>
+
+              <div className="weather-actions">
+                <button
+                  className="btn btn-small"
+                  onClick={handleStartEdit}
+                  title="Set custom weather for this hex"
+                >
+                  Set Custom
+                </button>
+                {hasOverride && (
+                  <button
+                    className="btn btn-small"
+                    onClick={onClearOverride}
+                    title="Use regional weather"
+                  >
+                    Clear Override
+                  </button>
+                )}
+                {!hasOverride && (
+                  <span className="weather-source">Using regional weather</span>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="weather-editor">
+              <div className="form-group">
+                <label>Condition</label>
+                <select
+                  value={editWeather?.condition || 'clear'}
+                  onChange={(e) => setEditWeather(w => w ? { ...w, condition: e.target.value as WeatherCondition } : null)}
+                >
+                  {CONDITION_OPTIONS.map((c) => (
+                    <option key={c} value={c}>
+                      {WEATHER_ICONS[c]} {WEATHER_CONDITION_LABELS[c]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Temperature</label>
+                <select
+                  value={editWeather?.temperature || 'mild'}
+                  onChange={(e) => setEditWeather(w => w ? { ...w, temperature: e.target.value as Temperature } : null)}
+                >
+                  {TEMPERATURE_OPTIONS.map((t) => (
+                    <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Wind</label>
+                <select
+                  value={editWeather?.wind || 'calm'}
+                  onChange={(e) => setEditWeather(w => w ? { ...w, wind: e.target.value as WindStrength } : null)}
+                >
+                  {WIND_OPTIONS.map((w) => (
+                    <option key={w} value={w}>{w.charAt(0).toUpperCase() + w.slice(1)}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Precipitation</label>
+                <select
+                  value={editWeather?.precipitation || 'none'}
+                  onChange={(e) => setEditWeather(w => w ? { ...w, precipitation: e.target.value as PrecipitationLevel } : null)}
+                >
+                  {PRECIPITATION_OPTIONS.map((p) => (
+                    <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="weather-editor-actions">
+                <button className="btn btn-small btn-primary" onClick={handleApplyEdit}>
+                  Apply
+                </button>
+                <button className="btn btn-small" onClick={handleCancelEdit}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

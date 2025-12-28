@@ -1,5 +1,8 @@
 // Direct port from Swift data models
 
+import { TimeWeatherState, DEFAULT_WEATHER, DEFAULT_TIME, CalendarSystem } from './Weather';
+import { CALENDAR_PRESETS } from '../data/calendars';
+
 export interface Campaign {
   id: string;
   name: string;
@@ -10,6 +13,9 @@ export interface Campaign {
   encounterTables: EncounterTable[];
   createdAt: string; // ISO date string
   modifiedAt: string;
+
+  // Weather & Time System (optional for backward compatibility)
+  timeWeather?: TimeWeatherState;
 }
 
 export interface Hex {
@@ -98,6 +104,22 @@ export function hasUnresolvedContent(hex: Hex): boolean {
 export const hexHasUnresolvedContent = hasUnresolvedContent;
 
 // Default factory functions
+
+export function createDefaultTimeWeather(calendar: CalendarSystem = CALENDAR_PRESETS['simple']): TimeWeatherState {
+  return {
+    calendar,
+    currentTime: { ...DEFAULT_TIME },
+    timeSpeed: 'normal',
+    globalWeather: { ...DEFAULT_WEATHER },
+    zoneWeathers: {},
+    hexWeatherOverrides: {},
+    weatherHistory: [],
+    dynamicWeather: true,
+    seasonalEffects: true,
+    weatherChangeInterval: 6
+  };
+}
+
 export function createCampaign(name: string, gridWidth: number, gridHeight: number): Campaign {
   return {
     id: crypto.randomUUID(),
@@ -108,7 +130,8 @@ export function createCampaign(name: string, gridWidth: number, gridHeight: numb
     terrainTypes: DEFAULT_TERRAIN_TYPES,
     encounterTables: DEFAULT_ENCOUNTER_TABLES,
     createdAt: new Date().toISOString(),
-    modifiedAt: new Date().toISOString()
+    modifiedAt: new Date().toISOString(),
+    timeWeather: createDefaultTimeWeather()
   };
 }
 

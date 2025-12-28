@@ -5,8 +5,11 @@ import { useSelection } from '../stores/SelectionContext';
 import Sidebar from './Sidebar';
 import HexGrid from './HexGrid';
 import HexDetail from './HexDetail';
+import TimeWeatherBar from './TimeWeatherBar';
 import GeneratorModal from './modals/GeneratorModal';
 import ExportModal from './modals/ExportModal';
+import TimeControlsModal from './modals/TimeControlsModal';
+import WeatherSettingsModal from './modals/WeatherSettingsModal';
 
 interface MainEditorProps {
   onRegisterExport?: (handler: () => void) => void;
@@ -18,6 +21,8 @@ function MainEditor({ onRegisterExport }: MainEditorProps) {
   const [showGenerator, setShowGenerator] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [showTimeControls, setShowTimeControls] = useState(false);
+  const [showWeatherSettings, setShowWeatherSettings] = useState(false);
 
   // Register export handler for menu command
   useEffect(() => {
@@ -49,6 +54,16 @@ function MainEditor({ onRegisterExport }: MainEditorProps) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'z' && e.shiftKey) {
         e.preventDefault();
         redo();
+      }
+      // Cmd+T to open time controls
+      if ((e.metaKey || e.ctrlKey) && e.key === 't') {
+        e.preventDefault();
+        setShowTimeControls(true);
+      }
+      // Cmd+W to open weather settings (only if not in input field)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'w' && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
+        e.preventDefault();
+        setShowWeatherSettings(true);
       }
     };
 
@@ -187,6 +202,12 @@ function MainEditor({ onRegisterExport }: MainEditorProps) {
         </div>
       </div>
 
+      {/* Time & Weather Bar */}
+      <TimeWeatherBar
+        onOpenTimeControls={() => setShowTimeControls(true)}
+        onOpenWeatherSettings={() => setShowWeatherSettings(true)}
+      />
+
       {/* Three-column layout */}
       <div className="editor-content">
         <div className="sidebar-panel">
@@ -206,6 +227,12 @@ function MainEditor({ onRegisterExport }: MainEditorProps) {
       )}
       {showExport && (
         <ExportModal onClose={() => setShowExport(false)} />
+      )}
+      {showTimeControls && (
+        <TimeControlsModal onClose={() => setShowTimeControls(false)} />
+      )}
+      {showWeatherSettings && (
+        <WeatherSettingsModal onClose={() => setShowWeatherSettings(false)} />
       )}
     </div>
   );
