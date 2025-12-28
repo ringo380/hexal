@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2025-12-28
+
+### Security
+- Updated Electron from 28.3.3 to 35.7.5 (fixes CVE-2025-55305 ASAR integrity bypass)
+- Updated esbuild from 0.21.5 to 0.25.12 (fixes GHSA-67mh-4wv8-2f99 dev server CORS vulnerability)
+
 ## [1.1.0] - 2025-12-28
 
 ### Added
