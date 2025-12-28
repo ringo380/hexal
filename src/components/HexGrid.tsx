@@ -377,11 +377,9 @@ function HexGrid() {
         // Shows items from the first category that has content (e.g., locations)
         if (lod.showContentTitles && hex && lod.contentTitleFont > 0) {
           // Find the first category with items
-          let primaryCategory: ContentCategory | null = null;
           let items: { title: string }[] = [];
           for (const cat of CONTENT_CATEGORIES) {
             if (hex[cat].length > 0) {
-              primaryCategory = cat;
               items = hex[cat];
               break;
             }
