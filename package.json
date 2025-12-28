@@ -2,10 +2,12 @@
   "name": "hexal",
   "version": "1.0.0",
   "description": "D&D Hex Crawl Campaign Manager",
+  "author": "Hexal",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
+    "build:mac": "tsc && vite build && electron-builder --mac",
     "preview": "vite preview",
     "electron": "electron ."
   },
@@ -26,16 +28,5 @@
     "vite": "^5.0.0",
     "vite-plugin-electron": "^0.28.0",
     "vite-plugin-electron-renderer": "^0.14.0"
-  },
-  "build": {
-    "appId": "com.hexal.app",
-    "productName": "Hexal",
-    "mac": {
-      "category": "public.app-category.games"
-    },
-    "files": [
-      "dist/**/*",
-      "dist-electron/**/*"
-    ]
   }
 }

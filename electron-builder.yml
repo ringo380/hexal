@@ -1,0 +1,47 @@
+appId: com.hexal.app
+productName: Hexal
+copyright: Copyright © 2025 Hexal
+
+# Build for both architectures
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+    - target: zip
+      arch:
+        - x64
+        - arm64
+  category: public.app-category.games
+  icon: build/icon.png
+  minimumSystemVersion: "10.15"
+  hardenedRuntime: false
+  gatekeeperAssess: false
+
+# DMG customization
+dmg:
+  title: "${productName} ${version}"
+  icon: build/icon.png
+  iconSize: 100
+  contents:
+    - x: 130
+      y: 220
+      type: file
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+  window:
+    width: 540
+    height: 380
+
+# Files to include
+files:
+  - dist/**/*
+  - dist-electron/**/*
+
+# Directories
+directories:
+  output: release
+  buildResources: build
