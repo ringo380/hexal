@@ -2,8 +2,9 @@
 // Direct port from Swift CampaignStore using React Context + useReducer
 
 import React, { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react';
-import type { Campaign, Hex, HexCoordinate } from '../types';
+import type { Campaign, Hex, HexCoordinate, HexMarker, MarkerType } from '../types';
 import { createCampaign, createHex, coordinateKey, createDefaultTimeWeather } from '../types';
+import { createMarker, createCustomMarkerType, DEFAULT_MARKER_TYPES } from '../types/Markers';
 import {
   TimeWeatherState,
   Weather,
@@ -66,7 +67,15 @@ type CampaignAction =
   | { type: 'CLEAR_HEX_WEATHER'; hexKey: string }
   | { type: 'GENERATE_WEATHER'; terrain?: string }
   | { type: 'LOG_WEATHER'; entry: WeatherHistoryEntry }
-  | { type: 'UPDATE_WEATHER_SETTINGS'; settings: Partial<TimeWeatherState> };
+  | { type: 'UPDATE_WEATHER_SETTINGS'; settings: Partial<TimeWeatherState> }
+  // Marker actions
+  | { type: 'ADD_MARKER'; coord: HexCoordinate; marker: HexMarker }
+  | { type: 'REMOVE_MARKER'; coord: HexCoordinate; markerId: string }
+  | { type: 'MOVE_MARKER'; fromCoord: HexCoordinate; toCoord: HexCoordinate; markerId: string }
+  | { type: 'MOVE_MARKER_TO_POSITION'; coord: HexCoordinate; markerId: string; worldX: number; worldY: number }
+  | { type: 'UPDATE_MARKER'; coord: HexCoordinate; marker: HexMarker }
+  | { type: 'ADD_CUSTOM_MARKER_TYPE'; markerType: MarkerType }
+  | { type: 'REMOVE_MARKER_TYPE'; markerTypeId: string };
 
 // Initial state
 const initialState: CampaignState = {
@@ -415,6 +424,185 @@ function campaignReducer(state: CampaignState, action: CampaignAction): Campaign
       };
     }
 
+    // ============ MARKER ACTIONS ============
+
+    case 'ADD_MARKER': {
+      if (!state.campaign) return state;
+      const key = coordinateKey(action.coord);
+      const hex = state.campaign.hexes[key] || createHex(action.coord);
+      const markers = [...(hex.markers || []), action.marker];
+      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
+      return {
+        ...state,
+        campaign: {
+          ...state.campaign,
+          hexes: {
+            ...state.campaign.hexes,
+            [key]: { ...hex, markers }
+          },
+          modifiedAt: new Date().toISOString()
+        },
+        saveStatus: 'unsaved',
+        hasUnsavedChanges: true,
+        past: newPast,
+        future: []
+      };
+    }
+
+    case 'REMOVE_MARKER': {
+      if (!state.campaign) return state;
+      const key = coordinateKey(action.coord);
+      const hex = state.campaign.hexes[key];
+      if (!hex || !hex.markers) return state;
+      const markers = hex.markers.filter(m => m.id !== action.markerId);
+      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
+      return {
+        ...state,
+        campaign: {
+          ...state.campaign,
+          hexes: {
+            ...state.campaign.hexes,
+            [key]: { ...hex, markers }
+          },
+          modifiedAt: new Date().toISOString()
+        },
+        saveStatus: 'unsaved',
+        hasUnsavedChanges: true,
+        past: newPast,
+        future: []
+      };
+    }
+
+    case 'MOVE_MARKER': {
+      if (!state.campaign) return state;
+      const fromKey = coordinateKey(action.fromCoord);
+      const toKey = coordinateKey(action.toCoord);
+      const fromHex = state.campaign.hexes[fromKey];
+      if (!fromHex || !fromHex.markers) return state;
+
+      // Find and remove marker from source hex
+      const marker = fromHex.markers.find(m => m.id === action.markerId);
+      if (!marker) return state;
+      const fromMarkers = fromHex.markers.filter(m => m.id !== action.markerId);
+
+      // Add marker to destination hex (clear world position so it centers)
+      const movedMarker = { ...marker, worldX: undefined, worldY: undefined };
+      const toHex = state.campaign.hexes[toKey] || createHex(action.toCoord);
+      const toMarkers = [...(toHex.markers || []), movedMarker];
+
+      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
+      return {
+        ...state,
+        campaign: {
+          ...state.campaign,
+          hexes: {
+            ...state.campaign.hexes,
+            [fromKey]: { ...fromHex, markers: fromMarkers },
+            [toKey]: { ...toHex, markers: toMarkers }
+          },
+          modifiedAt: new Date().toISOString()
+        },
+        saveStatus: 'unsaved',
+        hasUnsavedChanges: true,
+        past: newPast,
+        future: []
+      };
+    }
+
+    case 'MOVE_MARKER_TO_POSITION': {
+      if (!state.campaign) return state;
+      const key = coordinateKey(action.coord);
+      const hex = state.campaign.hexes[key];
+      if (!hex || !hex.markers) return state;
+
+      // Update the marker's world position
+      const markers = hex.markers.map(m =>
+        m.id === action.markerId
+          ? { ...m, worldX: action.worldX, worldY: action.worldY }
+          : m
+      );
+
+      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
+      return {
+        ...state,
+        campaign: {
+          ...state.campaign,
+          hexes: {
+            ...state.campaign.hexes,
+            [key]: { ...hex, markers }
+          },
+          modifiedAt: new Date().toISOString()
+        },
+        saveStatus: 'unsaved',
+        hasUnsavedChanges: true,
+        past: newPast,
+        future: []
+      };
+    }
+
+    case 'UPDATE_MARKER': {
+      if (!state.campaign) return state;
+      const key = coordinateKey(action.coord);
+      const hex = state.campaign.hexes[key];
+      if (!hex || !hex.markers) return state;
+      const markers = hex.markers.map(m =>
+        m.id === action.marker.id ? action.marker : m
+      );
+      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
+      return {
+        ...state,
+        campaign: {
+          ...state.campaign,
+          hexes: {
+            ...state.campaign.hexes,
+            [key]: { ...hex, markers }
+          },
+          modifiedAt: new Date().toISOString()
+        },
+        saveStatus: 'unsaved',
+        hasUnsavedChanges: true,
+        past: newPast,
+        future: []
+      };
+    }
+
+    case 'ADD_CUSTOM_MARKER_TYPE': {
+      if (!state.campaign) return state;
+      const markerTypes = [...(state.campaign.markerTypes || DEFAULT_MARKER_TYPES), action.markerType];
+      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
+      return {
+        ...state,
+        campaign: {
+          ...state.campaign,
+          markerTypes,
+          modifiedAt: new Date().toISOString()
+        },
+        saveStatus: 'unsaved',
+        hasUnsavedChanges: true,
+        past: newPast,
+        future: []
+      };
+    }
+
+    case 'REMOVE_MARKER_TYPE': {
+      if (!state.campaign) return state;
+      const markerTypes = (state.campaign.markerTypes || DEFAULT_MARKER_TYPES)
+        .filter(t => t.id !== action.markerTypeId);
+      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
+      return {
+        ...state,
+        campaign: {
+          ...state.campaign,
+          markerTypes,
+          modifiedAt: new Date().toISOString()
+        },
+        saveStatus: 'unsaved',
+        hasUnsavedChanges: true,
+        past: newPast,
+        future: []
+      };
+    }
+
     default:
       return state;
   }
@@ -464,6 +652,19 @@ interface CampaignContextValue {
   weatherSummary: string;
   getWeatherForHex: (coord: HexCoordinate, terrain: string) => Weather | undefined;
   getWeatherEffectsForHex: (coord: HexCoordinate, terrain: string) => WeatherEffects | undefined;
+
+  // Marker operations
+  addMarker: (coord: HexCoordinate, typeId: string, label?: string) => void;
+  addMarkerAtPosition: (coord: HexCoordinate, typeId: string, worldX: number, worldY: number, label?: string) => void;
+  removeMarker: (coord: HexCoordinate, markerId: string) => void;
+  moveMarker: (fromCoord: HexCoordinate, toCoord: HexCoordinate, markerId: string) => void;
+  moveMarkerToPosition: (coord: HexCoordinate, markerId: string, worldX: number, worldY: number) => void;
+  updateMarker: (coord: HexCoordinate, marker: HexMarker) => void;
+  addCustomMarkerType: (name: string, icon: string, color: string, category?: 'settlement' | 'military' | 'landmark' | 'player' | 'custom') => void;
+  removeMarkerType: (markerTypeId: string) => void;
+
+  // Marker helpers
+  markerTypes: MarkerType[];
 }
 
 const CampaignContext = createContext<CampaignContextValue | null>(null);
@@ -663,6 +864,67 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'UPDATE_WEATHER_SETTINGS', settings });
   }, []);
 
+  // ============ MARKER METHODS ============
+
+  // Add marker to hex (at hex center)
+  const addMarker = useCallback((coord: HexCoordinate, typeId: string, label?: string) => {
+    const marker = createMarker(typeId, label);
+    dispatch({ type: 'ADD_MARKER', coord, marker });
+  }, []);
+
+  // Add marker at specific world position
+  const addMarkerAtPosition = useCallback((
+    coord: HexCoordinate,
+    typeId: string,
+    worldX: number,
+    worldY: number,
+    label?: string
+  ) => {
+    const marker = createMarker(typeId, label, { x: worldX, y: worldY });
+    dispatch({ type: 'ADD_MARKER', coord, marker });
+  }, []);
+
+  // Remove marker from hex
+  const removeMarker = useCallback((coord: HexCoordinate, markerId: string) => {
+    dispatch({ type: 'REMOVE_MARKER', coord, markerId });
+  }, []);
+
+  // Move marker between hexes (clears world position, centers in new hex)
+  const moveMarker = useCallback((fromCoord: HexCoordinate, toCoord: HexCoordinate, markerId: string) => {
+    dispatch({ type: 'MOVE_MARKER', fromCoord, toCoord, markerId });
+  }, []);
+
+  // Move marker to a specific world position within its hex
+  const moveMarkerToPosition = useCallback((
+    coord: HexCoordinate,
+    markerId: string,
+    worldX: number,
+    worldY: number
+  ) => {
+    dispatch({ type: 'MOVE_MARKER_TO_POSITION', coord, markerId, worldX, worldY });
+  }, []);
+
+  // Update marker properties
+  const updateMarker = useCallback((coord: HexCoordinate, marker: HexMarker) => {
+    dispatch({ type: 'UPDATE_MARKER', coord, marker });
+  }, []);
+
+  // Add custom marker type
+  const addCustomMarkerType = useCallback((
+    name: string,
+    icon: string,
+    color: string,
+    category: 'settlement' | 'military' | 'landmark' | 'player' | 'custom' = 'custom'
+  ) => {
+    const markerType = createCustomMarkerType(name, icon, color, category);
+    dispatch({ type: 'ADD_CUSTOM_MARKER_TYPE', markerType });
+  }, []);
+
+  // Remove custom marker type
+  const removeMarkerType = useCallback((markerTypeId: string) => {
+    dispatch({ type: 'REMOVE_MARKER_TYPE', markerTypeId });
+  }, []);
+
   // Get weather for a specific hex
   const getWeatherForHex = useCallback((coord: HexCoordinate, terrain: string): Weather | undefined => {
     if (!state.campaign?.timeWeather) return undefined;
@@ -698,6 +960,9 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
   const weatherSummary = timeWeather
     ? getWeatherSummary(timeWeather.globalWeather)
     : '';
+
+  // Marker types (with fallback to defaults)
+  const markerTypes = state.campaign?.markerTypes || DEFAULT_MARKER_TYPES;
 
   const value: CampaignContextValue = {
     state,
@@ -737,7 +1002,20 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
     formattedDate,
     weatherSummary,
     getWeatherForHex,
-    getWeatherEffectsForHex
+    getWeatherEffectsForHex,
+
+    // Marker operations
+    addMarker,
+    addMarkerAtPosition,
+    removeMarker,
+    moveMarker,
+    moveMarkerToPosition,
+    updateMarker,
+    addCustomMarkerType,
+    removeMarkerType,
+
+    // Marker helpers
+    markerTypes
   };
 
   return (

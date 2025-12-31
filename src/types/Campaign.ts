@@ -2,6 +2,7 @@
 
 import { TimeWeatherState, DEFAULT_WEATHER, DEFAULT_TIME, CalendarSystem } from './Weather';
 import { CALENDAR_PRESETS } from '../data/calendars';
+import { HexMarker, MarkerType, DEFAULT_MARKER_TYPES } from './Markers';
 
 export interface Campaign {
   id: string;
@@ -16,6 +17,9 @@ export interface Campaign {
 
   // Weather & Time System (optional for backward compatibility)
   timeWeather?: TimeWeatherState;
+
+  // Marker system (optional for backward compatibility)
+  markerTypes?: MarkerType[];
 }
 
 export interface Hex {
@@ -30,6 +34,7 @@ export interface Hex {
   npcs: ContentItem[];
   treasures: ContentItem[];
   clues: ContentItem[];
+  markers?: HexMarker[];  // Visual markers/figurines on this hex
 }
 
 export interface HexCoordinate {
@@ -131,7 +136,8 @@ export function createCampaign(name: string, gridWidth: number, gridHeight: numb
     encounterTables: DEFAULT_ENCOUNTER_TABLES,
     createdAt: new Date().toISOString(),
     modifiedAt: new Date().toISOString(),
-    timeWeather: createDefaultTimeWeather()
+    timeWeather: createDefaultTimeWeather(),
+    markerTypes: DEFAULT_MARKER_TYPES
   };
 }
 
@@ -147,7 +153,8 @@ export function createHex(coordinate: HexCoordinate, terrain: string = ''): Hex 
     encounters: [],
     npcs: [],
     treasures: [],
-    clues: []
+    clues: [],
+    markers: []
   };
 }
 

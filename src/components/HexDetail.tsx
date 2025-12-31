@@ -2,8 +2,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useCampaign } from '../stores/CampaignContext';
 import { useSelection } from '../stores/SelectionContext';
-import type { Hex, ContentItem, DiscoveryStatus } from '../types';
+import type { Hex, ContentItem, DiscoveryStatus, HexMarker, MarkerType } from '../types';
 import { createContentItem, createHex } from '../types';
+import { getMarkerType, getMarkerColor, getMarkerIcon } from '../types/Markers';
 import ContentItemRow from './ui/ContentItemRow';
 import {
   WEATHER_ICONS,
@@ -38,9 +39,12 @@ function HexDetail() {
     getWeatherForHex,
     getWeatherEffectsForHex,
     setHexWeather,
-    clearHexWeather
+    clearHexWeather,
+    markerTypes,
+    removeMarker,
+    updateMarker
   } = useCampaign();
-  const { selectedCoordinate } = useSelection();
+  const { selectedCoordinate, selectedMarker, selectMarker } = useSelection();
 
   const [hex, setHex] = useState<Hex | null>(null);
   const [editingItem, setEditingItem] = useState<{ item: ContentItem; category: ContentCategory } | null>(null);
@@ -188,6 +192,23 @@ function HexDetail() {
             onChange={(e) => handleTagsChange(e.target.value)}
           />
         </div>
+
+        {/* Markers Section */}
+        {hex.markers && hex.markers.length > 0 && (
+          <MarkerSection
+            markers={hex.markers}
+            markerTypes={markerTypes}
+            selectedMarkerId={selectedMarker?.markerId}
+            onSelectMarker={(markerId) => selectMarker(markerId, selectedCoordinate)}
+            onRemoveMarker={(markerId) => {
+              removeMarker(selectedCoordinate, markerId);
+              if (selectedMarker?.markerId === markerId) {
+                selectMarker(null);
+              }
+            }}
+            onUpdateMarker={(marker) => updateMarker(selectedCoordinate, marker)}
+          />
+        )}
 
         {/* Weather Section */}
         {timeWeather && selectedCoordinate && (
@@ -532,6 +553,132 @@ function HexWeatherSection({
               </div>
             </div>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Marker section component
+interface MarkerSectionProps {
+  markers: HexMarker[];
+  markerTypes: MarkerType[];
+  selectedMarkerId?: string;
+  onSelectMarker: (markerId: string | null) => void;
+  onRemoveMarker: (markerId: string) => void;
+  onUpdateMarker: (marker: HexMarker) => void;
+}
+
+function MarkerSection({
+  markers,
+  markerTypes,
+  selectedMarkerId,
+  onSelectMarker,
+  onRemoveMarker,
+  onUpdateMarker
+}: MarkerSectionProps) {
+  const [isExpanded, setIsExpanded] = useState(true);
+  const [editingMarkerId, setEditingMarkerId] = useState<string | null>(null);
+
+  const handleToggleVisibility = (marker: HexMarker) => {
+    onUpdateMarker({ ...marker, isVisible: !marker.isVisible });
+  };
+
+  const handleLabelChange = (marker: HexMarker, label: string) => {
+    onUpdateMarker({ ...marker, label: label || undefined });
+  };
+
+  return (
+    <div className="marker-section">
+      <div className="section-header" onClick={() => setIsExpanded(!isExpanded)}>
+        <span className="section-icon">📍</span>
+        <span className="section-title">Markers</span>
+        <span className="section-count">{markers.length}</span>
+        <span className="section-toggle">{isExpanded ? '▼' : '▶'}</span>
+      </div>
+      {isExpanded && (
+        <div className="section-content">
+          {markers.map((marker) => {
+            const markerType = getMarkerType(marker.typeId, markerTypes);
+            const icon = getMarkerIcon(marker, markerTypes);
+            const color = getMarkerColor(marker, markerTypes);
+            const isSelected = marker.id === selectedMarkerId;
+            const isEditing = marker.id === editingMarkerId;
+
+            return (
+              <div
+                key={marker.id}
+                className={`marker-item ${isSelected ? 'selected' : ''} ${!marker.isVisible ? 'hidden-marker' : ''}`}
+                onClick={() => onSelectMarker(isSelected ? null : marker.id)}
+              >
+                <span className="marker-item-icon" style={{ color }}>
+                  {icon}
+                </span>
+                <div className="marker-item-info">
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      className="marker-label-input"
+                      value={marker.label || ''}
+                      placeholder={markerType?.name || 'Marker'}
+                      onChange={(e) => handleLabelChange(marker, e.target.value)}
+                      onBlur={() => setEditingMarkerId(null)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') setEditingMarkerId(null);
+                        e.stopPropagation();
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      autoFocus
+                    />
+                  ) : (
+                    <span
+                      className="marker-item-name"
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        setEditingMarkerId(marker.id);
+                      }}
+                    >
+                      {marker.label || markerType?.name || 'Marker'}
+                    </span>
+                  )}
+                  <span className="marker-item-type">{markerType?.name}</span>
+                </div>
+                <div className="marker-item-actions">
+                  <button
+                    className="btn-icon-small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleVisibility(marker);
+                    }}
+                    title={marker.isVisible ? 'Hide marker' : 'Show marker'}
+                  >
+                    {marker.isVisible ? '👁️' : '👁️‍🗨️'}
+                  </button>
+                  <button
+                    className="btn-icon-small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingMarkerId(marker.id);
+                    }}
+                    title="Edit label"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    className="btn-icon-small danger"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemoveMarker(marker.id);
+                    }}
+                    title="Remove marker"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+          <p className="marker-hint">Click to select • Double-click name to edit • Delete key to remove</p>
         </div>
       )}
     </div>

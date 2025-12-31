@@ -15,10 +15,16 @@ function App() {
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const exportRef = useRef<(() => void) | null>(null);
+  const mapExportRef = useRef<(() => void) | null>(null);
 
   // Register export handler from MainEditor
   const registerExportHandler = useCallback((handler: () => void) => {
     exportRef.current = handler;
+  }, []);
+
+  // Register map export handler from MainEditor
+  const registerMapExportHandler = useCallback((handler: () => void) => {
+    mapExportRef.current = handler;
   }, []);
 
   // Handle menu commands
@@ -58,6 +64,12 @@ function App() {
         case 'export':
           if (campaign && exportRef.current) {
             exportRef.current();
+          }
+          break;
+
+        case 'export-map':
+          if (campaign && mapExportRef.current) {
+            mapExportRef.current();
           }
           break;
 
@@ -165,7 +177,10 @@ function App() {
   return (
     <div className="app">
       {campaign ? (
-        <MainEditor onRegisterExport={registerExportHandler} />
+        <MainEditor
+          onRegisterExport={registerExportHandler}
+          onRegisterMapExport={registerMapExportHandler}
+        />
       ) : (
         <CampaignBrowser />
       )}

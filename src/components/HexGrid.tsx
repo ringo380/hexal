@@ -9,7 +9,19 @@ import {
   drawHexPath,
   coordinateAt
 } from '../services/hexGeometry';
-import type { HexCoordinate, Hex, ContentCategory } from '../types';
+import {
+  hexToRgba,
+  getContentSummary,
+  truncateForHex,
+  CONTENT_INDICATORS,
+  renderMarkers,
+  renderDraggingMarker
+} from '../services/hexRenderer';
+import { figurineCache } from '../services/markerFigurines';
+import { markerAudio } from '../services/audioService';
+import { useMarkerDrag } from '../hooks/useMarkerDrag';
+import type { HexCoordinate, ContentCategory, MarkerPosition } from '../types';
+import { DEFAULT_MARKER_TYPES } from '../types/Markers';
 
 // Zoom configuration
 const MIN_ZOOM = 0.15;            // Allow more zoom out
@@ -35,6 +47,7 @@ interface LODConfig {
   showCoordLabels: boolean;
   showTerrainLabels: boolean;
   showContentTitles: boolean;
+  showMarkers: boolean;
   // Sizes (proportional to HEX_SIZE to fit within hex bounds)
   borderWidth: number;
   statusDotRadius: number;
@@ -58,74 +71,74 @@ interface LODConfig {
 // Vertical space budget: ~26 units from center to edge (HEX_SIZE * sqrt(3)/2)
 // INVERSE FONT SCALING: smaller fonts at higher zoom = more text fits without truncation
 const LOD_LEVELS: LODConfig[] = [
-  // Level 0: Minimal (0.15 - 0.25) - hex colors only
+  // Level 0: Minimal (0.15 - 0.25) - hex colors only, but player markers visible
   { minZoom: 0.15, maxZoom: 0.25,
     showBorders: false, showStatusDot: false, showIndicators: false,
     showIndicatorLetters: false, showCountBadges: false, showCoordLabels: false,
-    showTerrainLabels: false, showContentTitles: false,
+    showTerrainLabels: false, showContentTitles: false, showMarkers: true,  // Enable for player markers
     borderWidth: 0, statusDotRadius: 0, indicatorRadius: 0, indicatorFont: 0,
     indicatorSpacing: 0, badgeRadius: 0, badgeFont: 0, coordFont: 0, coordOpacity: 0,
     terrainFont: 0, contentTitleFont: 0, indicatorY: 0, terrainY: 0, contentTitleY: 0, coordY: 0 },
 
-  // Level 1: Overview (0.25 - 0.40) - add hex borders
+  // Level 1: Overview (0.25 - 0.40) - add hex borders, player markers visible
   { minZoom: 0.25, maxZoom: 0.40,
     showBorders: true, showStatusDot: false, showIndicators: false,
     showIndicatorLetters: false, showCountBadges: false, showCoordLabels: false,
-    showTerrainLabels: false, showContentTitles: false,
+    showTerrainLabels: false, showContentTitles: false, showMarkers: true,  // Enable for player markers
     borderWidth: 0.5, statusDotRadius: 0, indicatorRadius: 0, indicatorFont: 0,
     indicatorSpacing: 0, badgeRadius: 0, badgeFont: 0, coordFont: 0, coordOpacity: 0,
     terrainFont: 0, contentTitleFont: 0, indicatorY: 0, terrainY: 0, contentTitleY: 0, coordY: 0 },
 
-  // Level 2: Region (0.40 - 0.60) - add status dots
+  // Level 2: Region (0.40 - 0.60) - add status dots + markers
   { minZoom: 0.40, maxZoom: 0.60,
     showBorders: true, showStatusDot: true, showIndicators: false,
     showIndicatorLetters: false, showCountBadges: false, showCoordLabels: false,
-    showTerrainLabels: false, showContentTitles: false,
+    showTerrainLabels: false, showContentTitles: false, showMarkers: true,
     borderWidth: 0.75, statusDotRadius: 3, indicatorRadius: 0, indicatorFont: 0,
     indicatorSpacing: 0, badgeRadius: 0, badgeFont: 0, coordFont: 0, coordOpacity: 0,
     terrainFont: 0, contentTitleFont: 0, indicatorY: 0, terrainY: 0, contentTitleY: 0, coordY: 0 },
 
-  // Level 3: Area (0.60 - 0.80) - tiny indicator dots in row (no letters)
+  // Level 3: Area (0.60 - 0.80) - tiny indicator dots in row (no letters) + markers
   { minZoom: 0.60, maxZoom: 0.80,
     showBorders: true, showStatusDot: true, showIndicators: true,
     showIndicatorLetters: false, showCountBadges: false, showCoordLabels: false,
-    showTerrainLabels: false, showContentTitles: false,
+    showTerrainLabels: false, showContentTitles: false, showMarkers: true,
     borderWidth: 1, statusDotRadius: 3, indicatorRadius: 2, indicatorFont: 0,
     indicatorSpacing: 6, badgeRadius: 0, badgeFont: 0, coordFont: 0, coordOpacity: 0,
     terrainFont: 0, contentTitleFont: 0, indicatorY: -16, terrainY: 0, contentTitleY: 0, coordY: 0 },
 
-  // Level 4: Standard (0.80 - 1.00) - dots + coords (larger font at lower zoom)
+  // Level 4: Standard (0.80 - 1.00) - dots + coords + markers
   { minZoom: 0.80, maxZoom: 1.00,
     showBorders: true, showStatusDot: true, showIndicators: true,
     showIndicatorLetters: false, showCountBadges: false, showCoordLabels: true,
-    showTerrainLabels: false, showContentTitles: false,
+    showTerrainLabels: false, showContentTitles: false, showMarkers: true,
     borderWidth: 1, statusDotRadius: 3, indicatorRadius: 2, indicatorFont: 0,
     indicatorSpacing: 6, badgeRadius: 0, badgeFont: 0, coordFont: 6, coordOpacity: 0.5,
     terrainFont: 0, contentTitleFont: 0, indicatorY: -16, terrainY: 0, contentTitleY: 0, coordY: 18 },
 
-  // Level 5: Detailed (1.00 - 1.50) - dots + badges
+  // Level 5: Detailed (1.00 - 1.50) - dots + badges + markers
   { minZoom: 1.00, maxZoom: 1.50,
     showBorders: true, showStatusDot: true, showIndicators: true,
     showIndicatorLetters: false, showCountBadges: true, showCoordLabels: true,
-    showTerrainLabels: false, showContentTitles: false,
+    showTerrainLabels: false, showContentTitles: false, showMarkers: true,
     borderWidth: 1, statusDotRadius: 4, indicatorRadius: 3, indicatorFont: 0,
     indicatorSpacing: 8, badgeRadius: 3, badgeFont: 4, coordFont: 5, coordOpacity: 0.7,
     terrainFont: 0, contentTitleFont: 0, indicatorY: -15, terrainY: 0, contentTitleY: 0, coordY: 18 },
 
-  // Level 6: Close (1.50 - 2.50) - add terrain labels (smaller font)
+  // Level 6: Close (1.50 - 2.50) - add terrain labels + markers
   { minZoom: 1.50, maxZoom: 2.50,
     showBorders: true, showStatusDot: true, showIndicators: true,
     showIndicatorLetters: false, showCountBadges: true, showCoordLabels: true,
-    showTerrainLabels: true, showContentTitles: false,
+    showTerrainLabels: true, showContentTitles: false, showMarkers: true,
     borderWidth: 1, statusDotRadius: 4, indicatorRadius: 3, indicatorFont: 0,
     indicatorSpacing: 8, badgeRadius: 3, badgeFont: 4, coordFont: 4, coordOpacity: 0.8,
     terrainFont: 6, contentTitleFont: 0, indicatorY: -15, terrainY: 6, contentTitleY: 0, coordY: 20 },
 
-  // Level 7: Immersive (2.50 - 5.00) - smallest fonts, maximum info displayed
+  // Level 7: Immersive (2.50 - 5.00) - smallest fonts, maximum info displayed + markers
   { minZoom: 2.50, maxZoom: 5.01,
     showBorders: true, showStatusDot: true, showIndicators: true,
     showIndicatorLetters: false, showCountBadges: false, showCoordLabels: false,
-    showTerrainLabels: true, showContentTitles: true,
+    showTerrainLabels: true, showContentTitles: true, showMarkers: true,
     borderWidth: 1.5, statusDotRadius: 3, indicatorRadius: 2, indicatorFont: 0,
     indicatorSpacing: 6, badgeRadius: 0, badgeFont: 0, coordFont: 0, coordOpacity: 0,
     terrainFont: 4, contentTitleFont: 3, indicatorY: -18, terrainY: 4, contentTitleY: 14, coordY: 0 },
@@ -141,45 +154,8 @@ function getLOD(zoomLevel: number): LODConfig {
   return LOD_LEVELS[LOD_LEVELS.length - 1];
 }
 
-// Truncate text to fit within hex width
-// At higher zoom, hex is larger on screen so more characters fit
-function truncateForHex(text: string, fontSize: number, zoomLevel: number = 1): string {
-  // Approximate: each character is ~0.6 * fontSize wide
-  // Available width scales with zoom (hex is bigger on screen at higher zoom)
-  const effectiveWidth = 50 * Math.max(1, zoomLevel);
-  const maxChars = Math.floor(effectiveWidth / (fontSize * 0.6));
-  if (text.length <= maxChars) return text;
-  return text.slice(0, maxChars - 1) + '…';
-}
-
-// Content indicator configuration
-const CONTENT_INDICATORS: Record<ContentCategory, {
-  color: string;
-  letter: string;
-  label: string;
-}> = {
-  locations:  { color: '#e91e63', letter: 'L', label: 'Locations' },
-  encounters: { color: '#ff5722', letter: 'E', label: 'Encounters' },
-  npcs:       { color: '#2196f3', letter: 'N', label: 'NPCs' },
-  treasures:  { color: '#ffc107', letter: 'T', label: 'Treasures' },
-  clues:      { color: '#9c27b0', letter: 'C', label: 'Clues' }
-};
-
+// Content categories for iteration (matches hexRenderer)
 const CONTENT_CATEGORIES: ContentCategory[] = ['locations', 'encounters', 'npcs', 'treasures', 'clues'];
-
-// Get content counts and resolved status for a hex
-function getContentSummary(hex: Hex): { category: ContentCategory; total: number; unresolved: number }[] {
-  return CONTENT_CATEGORIES
-    .map(category => {
-      const items = hex[category];
-      return {
-        category,
-        total: items.length,
-        unresolved: items.filter(item => !item.isResolved).length
-      };
-    })
-    .filter(summary => summary.total > 0);
-}
 
 // Tooltip state type
 interface TooltipState {
@@ -202,8 +178,8 @@ interface IndicatorPosition {
 function HexGrid() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { campaign, getHex } = useCampaign();
-  const { selectedCoordinate, selectHex, clearSelection } = useSelection();
+  const { campaign, getHex, removeMarker, moveMarker, moveMarkerToPosition, addMarkerAtPosition } = useCampaign();
+  const { selectedCoordinate, selectedMarker, selectHex, selectMarker, clearSelection } = useSelection();
 
   // Tooltip state
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
@@ -219,6 +195,9 @@ function HexGrid() {
   // Store indicator positions for mouse hover detection
   const indicatorPositionsRef = useRef<IndicatorPosition[]>([]);
 
+  // Store marker positions for hit testing
+  const markerPositionsRef = useRef<MarkerPosition[]>([]);
+
   // Drag-to-pan state
   const [isDraggingMap, setIsDraggingMap] = useState(false);
   const [isPotentialDrag, setIsPotentialDrag] = useState(false);
@@ -228,6 +207,36 @@ function HexGrid() {
     panX: 0,
     panY: 0,
     onActiveHex: false
+  });
+
+  // Marker drag state machine with free-form positioning
+  const markerDrag = useMarkerDrag({
+    onPickup: () => markerAudio.playPickup(),
+    onDrop: () => markerAudio.playDrop(),
+    onDragEnd: (marker, sourceHex, targetHex, wasMoved, dropPosition) => {
+      if (!targetHex || !dropPosition) return;
+
+      // Calculate world coordinates from drop position
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const canvasX = dropPosition.x * scaleX;
+      const canvasY = dropPosition.y * scaleY;
+      const worldX = (canvasX - panOffset.x) / zoomLevel;
+      const worldY = (canvasY - panOffset.y) / zoomLevel;
+
+      if (wasMoved) {
+        // Different hex - transfer marker then set position
+        moveMarker(sourceHex, targetHex, marker.id);
+        moveMarkerToPosition(targetHex, marker.id, worldX, worldY);
+      } else {
+        // Same hex - just reposition within the hex
+        moveMarkerToPosition(sourceHex, marker.id, worldX, worldY);
+      }
+    },
   });
 
   // Get terrain color
@@ -250,6 +259,12 @@ function HexGrid() {
     // Clear indicator positions for this draw cycle
     const indicatorPositions: IndicatorPosition[] = [];
 
+    // Clear marker positions for this draw cycle
+    const markerPositions: MarkerPosition[] = [];
+
+    // Get marker types from campaign (fall back to defaults for backward compatibility)
+    const markerTypes = campaign.markerTypes || DEFAULT_MARKER_TYPES;
+
     // Clear canvas (before transforms)
     ctx.fillStyle = '#1e1e1e';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -259,7 +274,9 @@ function HexGrid() {
     ctx.translate(panOffset.x, panOffset.y);
     ctx.scale(zoomLevel, zoomLevel);
 
-    // Draw all hexes
+    // ========================================================================
+    // PASS 1: Draw all hex backgrounds and content (terrain, indicators, labels)
+    // ========================================================================
     for (let q = 0; q < campaign.gridWidth; q++) {
       for (let r = 0; r < campaign.gridHeight; r++) {
         const coord: HexCoordinate = { q, r };
@@ -432,12 +449,65 @@ function HexGrid() {
       }
     }
 
+    // ========================================================================
+    // PASS 2: Draw all markers (figurines) on top of hex content
+    // This ensures markers with free-form positions can overlap adjacent hexes
+    // ========================================================================
+    if (lod.showMarkers) {
+      for (let q = 0; q < campaign.gridWidth; q++) {
+        for (let r = 0; r < campaign.gridHeight; r++) {
+          const coord: HexCoordinate = { q, r };
+          const center = hexCenter(coord);
+          const hex = getHex(coord);
+
+          if (hex && hex.markers && hex.markers.length > 0) {
+            const hexMarkerPositions = renderMarkers(
+              ctx,
+              hex,
+              center,
+              markerTypes,
+              zoomLevel,
+              selectedMarker?.markerId
+            );
+            markerPositions.push(...hexMarkerPositions);
+          }
+        }
+      }
+    }
+
     // Restore canvas transform state
     ctx.restore();
 
     // Store indicator positions for hit testing
     indicatorPositionsRef.current = indicatorPositions;
-  }, [campaign, getHex, selectedCoordinate, getTerrainColor, zoomLevel, panOffset]);
+
+    // Store marker positions for hit testing
+    markerPositionsRef.current = markerPositions;
+
+    // Render dragging marker overlay (in screen coordinates)
+    if (markerDrag.isDragging && markerDrag.state.marker && markerDrag.state.currentPosition) {
+      const marker = markerDrag.state.marker;
+      const pos = markerDrag.state.currentPosition;
+      const tilt = markerDrag.state.tiltAngle;
+
+      // Convert screen position to canvas coordinates
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const canvasX = pos.x * scaleX;
+      const canvasY = pos.y * scaleY;
+
+      // Render the dragging marker
+      renderDraggingMarker(
+        ctx,
+        marker,
+        { x: canvasX, y: canvasY },
+        markerTypes,
+        zoomLevel,
+        tilt
+      );
+    }
+  }, [campaign, getHex, selectedCoordinate, getTerrainColor, zoomLevel, panOffset, markerDrag.isDragging, markerDrag.state]);
 
   // Update canvas size and redraw on campaign change
   useEffect(() => {
@@ -451,10 +521,25 @@ function HexGrid() {
     draw();
   }, [campaign, draw]);
 
-  // Redraw on selection change
+  // Redraw on selection change (hex or marker)
   useEffect(() => {
     draw();
-  }, [selectedCoordinate, draw]);
+  }, [selectedCoordinate, selectedMarker, draw]);
+
+  // Preload figurine cache when campaign loads
+  useEffect(() => {
+    if (!campaign) return;
+
+    const markerTypes = campaign.markerTypes || DEFAULT_MARKER_TYPES;
+
+    // Preload all marker type figurines in all sizes
+    figurineCache.preload(markerTypes).then(() => {
+      // Trigger redraw after preload completes to show figurines
+      draw();
+    }).catch(err => {
+      console.warn('Failed to preload figurine cache:', err);
+    });
+  }, [campaign?.markerTypes, draw]);
 
   // Helper to select hex at position (used by mouseUp when not dragging)
   const selectHexAtPosition = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -474,13 +559,30 @@ function HexGrid() {
     const worldX = (canvasX - panOffset.x) / zoomLevel;
     const worldY = (canvasY - panOffset.y) / zoomLevel;
 
+    // Check for marker hit first (priority over hex selection)
+    // Use the marker's adaptive radius for hit testing (or fallback to 8px screen space)
+    const hitMarker = markerPositionsRef.current.find(m => {
+      const dx = worldX - m.x;
+      const dy = worldY - m.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const hitRadius = m.radius || (8 / zoomLevel);
+      return distance < hitRadius;
+    });
+
+    if (hitMarker) {
+      // Select the marker and its containing hex
+      selectMarker(hitMarker.markerId, hitMarker.hexCoord);
+      return;
+    }
+
+    // No marker hit, check for hex selection
     const coord = coordinateAt({ x: worldX, y: worldY }, campaign.gridWidth, campaign.gridHeight);
     if (coord) {
       selectHex(coord);
     }
-  }, [campaign, selectHex, zoomLevel, panOffset]);
+  }, [campaign, selectHex, selectMarker, zoomLevel, panOffset]);
 
-  // Handle mouse down - start potential drag
+  // Handle mouse down - start potential drag (map or marker)
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (e.button !== 0 || !campaign) return; // Left click only
 
@@ -496,6 +598,33 @@ function HexGrid() {
     // Convert to world coordinates
     const worldX = (canvasX - panOffset.x) / zoomLevel;
     const worldY = (canvasY - panOffset.y) / zoomLevel;
+
+    // Check for marker hit first (for marker dragging)
+    // Use the marker's adaptive radius for hit testing (or fallback to 12px screen space)
+    const hitMarkerPos = markerPositionsRef.current.find(m => {
+      const dx = worldX - m.x;
+      const dy = worldY - m.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const hitRadius = m.radius || (12 / zoomLevel);
+      return distance < hitRadius;
+    });
+
+    if (hitMarkerPos) {
+      // Get the actual marker object
+      const hex = getHex(hitMarkerPos.hexCoord);
+      const marker = hex?.markers?.find(m => m.id === hitMarkerPos.markerId);
+
+      if (marker) {
+        // Start marker drag (pending state)
+        markerDrag.startDrag(
+          marker,
+          hitMarkerPos.hexCoord,
+          e.clientX - rect.left,
+          e.clientY - rect.top
+        );
+        return; // Don't start map pan
+      }
+    }
 
     // Check if clicking on an active hex
     const coord = coordinateAt({ x: worldX, y: worldY }, campaign.gridWidth, campaign.gridHeight);
@@ -517,10 +646,38 @@ function HexGrid() {
       panY: panOffset.y,
       onActiveHex: !!hasContent
     };
-  }, [campaign, getHex, panOffset, zoomLevel]);
+  }, [campaign, getHex, panOffset, zoomLevel, markerDrag]);
 
   // Handle mouse up - either complete drag or select hex
   const handleMouseUp = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    // Handle marker drag end
+    if (markerDrag.isDragging || markerDrag.isPending) {
+      const canvas = canvasRef.current;
+      if (canvas && campaign) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const canvasX = (e.clientX - rect.left) * scaleX;
+        const canvasY = (e.clientY - rect.top) * scaleY;
+
+        // Convert to world coordinates
+        const worldX = (canvasX - panOffset.x) / zoomLevel;
+        const worldY = (canvasY - panOffset.y) / zoomLevel;
+
+        // Get target hex
+        const targetHex = coordinateAt({ x: worldX, y: worldY }, campaign.gridWidth, campaign.gridHeight);
+        markerDrag.endDrag(targetHex);
+
+        // If it was just a click (not a drag), select the marker
+        if (markerDrag.isPending && markerDrag.state.marker && markerDrag.state.sourceHex) {
+          selectMarker(markerDrag.state.marker.id, markerDrag.state.sourceHex);
+        }
+      } else {
+        markerDrag.cancelDrag();
+      }
+      return;
+    }
+
     if (isPotentialDrag && !isDraggingMap) {
       // Was a click, not a drag - select hex
       selectHexAtPosition(e);
@@ -531,13 +688,23 @@ function HexGrid() {
     }
     setIsPotentialDrag(false);
     setIsDraggingMap(false);
-  }, [isPotentialDrag, isDraggingMap, selectHexAtPosition, panOffset]);
+  }, [isPotentialDrag, isDraggingMap, selectHexAtPosition, panOffset, campaign, zoomLevel, markerDrag, selectMarker]);
 
   // Handle mouse move for drag panning and tooltips
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
     if (!canvas || !container || !campaign) return;
+
+    const rect = canvas.getBoundingClientRect();
+
+    // Handle marker dragging
+    if (markerDrag.isPending || markerDrag.isDragging) {
+      markerDrag.updateDrag(e.clientX - rect.left, e.clientY - rect.top);
+      // Trigger redraw to show dragging marker
+      draw();
+      return;
+    }
 
     // Check if we should start dragging
     if (isPotentialDrag && !isDraggingMap) {
@@ -568,7 +735,6 @@ function HexGrid() {
     // Skip tooltip logic while potential drag is happening
     if (isPotentialDrag) return;
 
-    const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
 
@@ -613,17 +779,58 @@ function HexGrid() {
     } else {
       setTooltip(null);
     }
-  }, [campaign, getHex, zoomLevel, panOffset, isPotentialDrag, isDraggingMap]);
+  }, [campaign, getHex, zoomLevel, panOffset, isPotentialDrag, isDraggingMap, markerDrag, draw]);
 
   // Handle mouse leave
   const handleMouseLeave = useCallback(() => {
     setTooltip(null);
-    // Reset drag state if mouse leaves canvas
+    // Reset marker drag state if mouse leaves canvas
+    if (markerDrag.isPending || markerDrag.isDragging) {
+      markerDrag.cancelDrag();
+    }
+    // Reset map drag state if mouse leaves canvas
     if (isPotentialDrag || isDraggingMap) {
       setIsPotentialDrag(false);
       setIsDraggingMap(false);
     }
-  }, [isPotentialDrag, isDraggingMap]);
+  }, [isPotentialDrag, isDraggingMap, markerDrag]);
+
+  // Handle drag over for palette-to-canvas drop
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLCanvasElement>) => {
+    if (e.dataTransfer.types.includes('application/hexal-marker')) {
+      e.preventDefault(); // Allow drop
+      e.dataTransfer.dropEffect = 'copy';
+    }
+  }, []);
+
+  // Handle drop for palette-to-canvas marker placement
+  const handleDrop = useCallback((e: React.DragEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const data = e.dataTransfer.getData('application/hexal-marker');
+    if (!data || !campaign) return;
+
+    const { typeId } = JSON.parse(data);
+
+    // Convert drop position to world coordinates
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const canvasX = (e.clientX - rect.left) * scaleX;
+    const canvasY = (e.clientY - rect.top) * scaleY;
+
+    const worldX = (canvasX - panOffset.x) / zoomLevel;
+    const worldY = (canvasY - panOffset.y) / zoomLevel;
+
+    // Find target hex
+    const targetHex = coordinateAt({ x: worldX, y: worldY }, campaign.gridWidth, campaign.gridHeight);
+    if (targetHex) {
+      addMarkerAtPosition(targetHex, typeId, worldX, worldY);
+      markerAudio.playDrop();
+    }
+  }, [campaign, panOffset, zoomLevel, addMarkerAtPosition]);
 
   // Handle keyboard navigation and panning
   useEffect(() => {
@@ -664,6 +871,15 @@ function HexGrid() {
             e.preventDefault();
             clearSelection();
             return;
+          case 'delete':
+          case 'backspace':
+            // Delete selected marker
+            if (selectedMarker) {
+              e.preventDefault();
+              removeMarker(selectedMarker.hexCoord, selectedMarker.markerId);
+              selectMarker(null);
+            }
+            return;
         }
 
         if (panDelta.x !== 0 || panDelta.y !== 0) {
@@ -680,7 +896,7 @@ function HexGrid() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [campaign, clearSelection]);
+  }, [campaign, clearSelection, selectedMarker, removeMarker, selectMarker]);
 
   // Smooth zoom and pan animation loop - animates both in sync
   useEffect(() => {
@@ -864,12 +1080,14 @@ function HexGrid() {
     <div className="hex-grid-container" ref={containerRef}>
       <canvas
         ref={canvasRef}
-        className={`hex-grid-canvas ${isDraggingMap ? 'dragging' : ''}`}
+        className={`hex-grid-canvas ${isDraggingMap ? 'dragging' : ''} ${markerDrag.isDragging ? 'marker-dragging' : ''}`}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         onWheel={handleWheel}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
         tabIndex={0}
       />
       {/* Zoom controls - fixed position */}
@@ -921,18 +1139,6 @@ function HexGrid() {
       )}
     </div>
   );
-}
-
-// Helper to convert hex color to rgba
-function hexToRgba(hex: string, alpha: number): string {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!result) return `rgba(100, 100, 100, ${alpha})`;
-
-  const r = parseInt(result[1], 16);
-  const g = parseInt(result[2], 16);
-  const b = parseInt(result[3], 16);
-
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 export default HexGrid;

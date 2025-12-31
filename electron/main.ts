@@ -74,7 +74,12 @@ function createApplicationMenu() {
         },
         { type: 'separator' },
         {
-          label: 'Export...',
+          label: 'Export Map...',
+          accelerator: 'CmdOrCtrl+Shift+E',
+          click: () => activeWindow?.webContents.send('menu-command', 'export-map')
+        },
+        {
+          label: 'Export Data...',
           accelerator: 'CmdOrCtrl+E',
           click: () => activeWindow?.webContents.send('menu-command', 'export')
         },
@@ -356,4 +361,38 @@ ipcMain.handle('save-file', async (_event, { filePath, content }) => {
 ipcMain.handle('open-in-new-window', async (_event, filePath?: string) => {
   createWindow(filePath);
   return { success: true };
+});
+
+// Save binary file (for images/PDFs)
+ipcMain.handle('save-binary-file', async (_event, { filePath, data }: { filePath: string; data: string }) => {
+  try {
+    // data is a base64 string from Blob
+    const buffer = Buffer.from(data, 'base64');
+    fs.writeFileSync(filePath, buffer);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
+});
+
+// Export file dialog with format-specific filters
+ipcMain.handle('export-file-dialog', async (_event, { defaultName, format }: { defaultName: string; format: 'png' | 'jpeg' | 'pdf' }) => {
+  const win = activeWindow ?? BrowserWindow.getFocusedWindow();
+  if (!win) return null;
+
+  const filters: Record<string, Electron.FileFilter[]> = {
+    png: [{ name: 'PNG Image', extensions: ['png'] }],
+    jpeg: [{ name: 'JPEG Image', extensions: ['jpg', 'jpeg'] }],
+    pdf: [{ name: 'PDF Document', extensions: ['pdf'] }]
+  };
+
+  const result = await dialog.showSaveDialog(win, {
+    defaultPath: defaultName,
+    filters: filters[format] || [{ name: 'All Files', extensions: ['*'] }]
+  });
+
+  if (result.canceled || !result.filePath) {
+    return null;
+  }
+  return result.filePath;
 });

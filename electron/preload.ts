@@ -38,8 +38,11 @@ export type MenuCommand =
   | 'save'
   | 'save-as'
   | 'export'
+  | 'export-map'
   | 'undo'
   | 'redo';
+
+export type ExportFormat = 'png' | 'jpeg' | 'pdf';
 
 // Expose protected methods to renderer via contextBridge
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -74,6 +77,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openInNewWindow: (filePath?: string): Promise<{ success: boolean }> =>
     ipcRenderer.invoke('open-in-new-window', filePath),
 
+  // Binary file operations for image/PDF export
+  saveBinaryFile: (filePath: string, data: string): Promise<SaveFileResult> =>
+    ipcRenderer.invoke('save-binary-file', { filePath, data }),
+
+  exportFileDialog: (defaultName: string, format: ExportFormat): Promise<string | null> =>
+    ipcRenderer.invoke('export-file-dialog', { defaultName, format }),
+
   // Menu command listener
   onMenuCommand: (callback: (command: MenuCommand) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, command: MenuCommand) => callback(command);
@@ -104,6 +114,8 @@ declare global {
       saveAsDialog: (defaultName: string) => Promise<string | null>;
       saveFile: (filePath: string, content: string) => Promise<SaveFileResult>;
       openInNewWindow: (filePath?: string) => Promise<{ success: boolean }>;
+      saveBinaryFile: (filePath: string, data: string) => Promise<SaveFileResult>;
+      exportFileDialog: (defaultName: string, format: ExportFormat) => Promise<string | null>;
       onMenuCommand: (callback: (command: MenuCommand) => void) => () => void;
       onLoadCampaignFile: (callback: (filePath: string) => void) => () => void;
     };

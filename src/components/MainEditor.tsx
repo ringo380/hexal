@@ -5,21 +5,25 @@ import { useSelection } from '../stores/SelectionContext';
 import Sidebar from './Sidebar';
 import HexGrid from './HexGrid';
 import HexDetail from './HexDetail';
+import MarkerPalette from './MarkerPalette';
 import TimeWeatherBar from './TimeWeatherBar';
 import GeneratorModal from './modals/GeneratorModal';
 import ExportModal from './modals/ExportModal';
+import MapExportModal from './modals/MapExportModal';
 import TimeControlsModal from './modals/TimeControlsModal';
 import WeatherSettingsModal from './modals/WeatherSettingsModal';
 
 interface MainEditorProps {
   onRegisterExport?: (handler: () => void) => void;
+  onRegisterMapExport?: (handler: () => void) => void;
 }
 
-function MainEditor({ onRegisterExport }: MainEditorProps) {
+function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) {
   const { campaign, saveStatus, saveCampaign, closeCampaign, hasUnsavedChanges, undo, redo, canUndo, canRedo } = useCampaign();
   const { searchQuery, setSearchQuery, clearFilters, filterTerrain, setFilterTerrain, filterStatus, setFilterStatus, filterHasUnresolvedHooks, setFilterHasUnresolvedHooks } = useSelection();
   const [showGenerator, setShowGenerator] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [showMapExport, setShowMapExport] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [showTimeControls, setShowTimeControls] = useState(false);
   const [showWeatherSettings, setShowWeatherSettings] = useState(false);
@@ -30,6 +34,13 @@ function MainEditor({ onRegisterExport }: MainEditorProps) {
       onRegisterExport(() => setShowExport(true));
     }
   }, [onRegisterExport]);
+
+  // Register map export handler for menu command
+  useEffect(() => {
+    if (onRegisterMapExport) {
+      onRegisterMapExport(() => setShowMapExport(true));
+    }
+  }, [onRegisterMapExport]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -196,8 +207,11 @@ function MainEditor({ onRegisterExport }: MainEditorProps) {
           <button className="btn btn-secondary" onClick={() => setShowGenerator(true)}>
             🎲 Generate
           </button>
+          <button className="btn btn-secondary" onClick={() => setShowMapExport(true)}>
+            🗺 Export Map
+          </button>
           <button className="btn btn-secondary" onClick={() => setShowExport(true)}>
-            ↗ Export
+            ↗ Export Data
           </button>
         </div>
       </div>
@@ -211,6 +225,7 @@ function MainEditor({ onRegisterExport }: MainEditorProps) {
       {/* Three-column layout */}
       <div className="editor-content">
         <div className="sidebar-panel">
+          <MarkerPalette />
           <Sidebar />
         </div>
         <div className="grid-panel">
@@ -227,6 +242,9 @@ function MainEditor({ onRegisterExport }: MainEditorProps) {
       )}
       {showExport && (
         <ExportModal onClose={() => setShowExport(false)} />
+      )}
+      {showMapExport && (
+        <MapExportModal onClose={() => setShowMapExport(false)} />
       )}
       {showTimeControls && (
         <TimeControlsModal onClose={() => setShowTimeControls(false)} />

@@ -4,8 +4,14 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import type { HexCoordinate, DiscoveryStatus } from '../types';
 
+interface SelectedMarker {
+  markerId: string;
+  hexCoord: HexCoordinate;
+}
+
 interface SelectionState {
   selectedCoordinate: HexCoordinate | null;
+  selectedMarker: SelectedMarker | null;
   searchQuery: string;
   filterTerrain: string | null;
   filterStatus: DiscoveryStatus | null;
@@ -15,6 +21,7 @@ interface SelectionState {
 interface SelectionContextValue extends SelectionState {
   // Selection operations
   selectHex: (coord: HexCoordinate | null) => void;
+  selectMarker: (markerId: string | null, hexCoord?: HexCoordinate) => void;
   clearSelection: () => void;
   // Filter operations
   setSearchQuery: (query: string) => void;
@@ -30,6 +37,7 @@ const SelectionContext = createContext<SelectionContextValue | null>(null);
 
 export function SelectionProvider({ children }: { children: React.ReactNode }) {
   const [selectedCoordinate, setSelectedCoordinate] = useState<HexCoordinate | null>(null);
+  const [selectedMarker, setSelectedMarker] = useState<SelectedMarker | null>(null);
   const [searchQuery, setSearchQueryState] = useState('');
   const [filterTerrain, setFilterTerrainState] = useState<string | null>(null);
   const [filterStatus, setFilterStatusState] = useState<DiscoveryStatus | null>(null);
@@ -37,10 +45,23 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
 
   const selectHex = useCallback((coord: HexCoordinate | null) => {
     setSelectedCoordinate(coord);
+    // Clear marker selection when selecting a different hex
+    setSelectedMarker(null);
+  }, []);
+
+  const selectMarker = useCallback((markerId: string | null, hexCoord?: HexCoordinate) => {
+    if (markerId && hexCoord) {
+      setSelectedMarker({ markerId, hexCoord });
+      // Also select the hex containing the marker
+      setSelectedCoordinate(hexCoord);
+    } else {
+      setSelectedMarker(null);
+    }
   }, []);
 
   const clearSelection = useCallback(() => {
     setSelectedCoordinate(null);
+    setSelectedMarker(null);
   }, []);
 
   const setSearchQuery = useCallback((query: string) => {
@@ -93,11 +114,13 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
 
   const value: SelectionContextValue = {
     selectedCoordinate,
+    selectedMarker,
     searchQuery,
     filterTerrain,
     filterStatus,
     filterHasUnresolvedHooks,
     selectHex,
+    selectMarker,
     clearSelection,
     setSearchQuery,
     setFilterTerrain,

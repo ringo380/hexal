@@ -36,8 +36,11 @@ type MenuCommand =
   | 'save'
   | 'save-as'
   | 'export'
+  | 'export-map'
   | 'undo'
   | 'redo';
+
+type ExportFormat = 'png' | 'jpeg' | 'pdf';
 
 interface ElectronAPI {
   listCampaigns: () => Promise<CampaignInfo[]>;
@@ -49,6 +52,8 @@ interface ElectronAPI {
   saveAsDialog: (defaultName: string) => Promise<string | null>;
   saveFile: (filePath: string, content: string) => Promise<SaveFileResult>;
   openInNewWindow: (filePath?: string) => Promise<{ success: boolean }>;
+  saveBinaryFile: (filePath: string, data: string) => Promise<SaveFileResult>;
+  exportFileDialog: (defaultName: string, format: ExportFormat) => Promise<string | null>;
   onMenuCommand: (callback: (command: MenuCommand) => void) => () => void;
   onLoadCampaignFile: (callback: (filePath: string) => void) => () => void;
 }
