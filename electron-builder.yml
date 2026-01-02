@@ -19,6 +19,25 @@ mac:
   hardenedRuntime: false
   gatekeeperAssess: false
 
+# Windows build
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+  icon: build/icon.png
+
+# NSIS installer customization
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: build/icon.png
+  uninstallerIcon: build/icon.png
+
 # DMG customization
 dmg:
   title: "${productName} ${version}"
