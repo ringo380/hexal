@@ -28,15 +28,12 @@ win:
     - target: portable
       arch:
         - x64
-  icon: build/icon.png
 
 # NSIS installer customization
 nsis:
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
-  installerIcon: build/icon.png
-  uninstallerIcon: build/icon.png
 
 # DMG customization
 dmg:
