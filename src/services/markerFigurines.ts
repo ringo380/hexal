@@ -2,6 +2,7 @@
 // Creates circular base figurines with symbolic glyphs
 
 import type { HexMarker, MarkerType } from '../types';
+import { lightenColor, darkenColor, getContrastingColor } from './colorUtils';
 
 // ============================================================================
 // Types
@@ -111,75 +112,6 @@ export function getMarkerRenderScale(zoomLevel: number): number {
   const desiredWorldSize = targetScreenSize / zoomLevel;
 
   return desiredWorldSize / baseWorldSize;
-}
-
-// ============================================================================
-// Color Helpers
-// ============================================================================
-
-/**
- * Parse hex color to RGB components
- */
-function hexToRgb(hex: string): { r: number; g: number; b: number } {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!result) {
-    return { r: 128, g: 128, b: 128 };
-  }
-  return {
-    r: parseInt(result[1], 16),
-    g: parseInt(result[2], 16),
-    b: parseInt(result[3], 16)
-  };
-}
-
-/**
- * Convert RGB to hex color
- */
-function rgbToHex(r: number, g: number, b: number): string {
-  const clamp = (v: number) => Math.max(0, Math.min(255, Math.round(v)));
-  return `#${[r, g, b].map(v => clamp(v).toString(16).padStart(2, '0')).join('')}`;
-}
-
-/**
- * Lighten a color by a percentage
- */
-export function lightenColor(hex: string, amount: number): string {
-  const { r, g, b } = hexToRgb(hex);
-  return rgbToHex(
-    r + (255 - r) * amount,
-    g + (255 - g) * amount,
-    b + (255 - b) * amount
-  );
-}
-
-/**
- * Darken a color by a percentage
- */
-export function darkenColor(hex: string, amount: number): string {
-  const { r, g, b } = hexToRgb(hex);
-  return rgbToHex(
-    r * (1 - amount),
-    g * (1 - amount),
-    b * (1 - amount)
-  );
-}
-
-/**
- * Get contrasting color (white or dark) for text on background
- */
-export function getContrastingColor(hex: string): string {
-  const { r, g, b } = hexToRgb(hex);
-  // Calculate relative luminance
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.5 ? '#2D2D2D' : '#FFFFFF';
-}
-
-/**
- * Calculate relative luminance of a color
- */
-export function getLuminance(hex: string): number {
-  const { r, g, b } = hexToRgb(hex);
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 }
 
 // ============================================================================
@@ -518,23 +450,6 @@ export function getFigurineSizeForMarker(typeId: string): FigurineSize {
   }
   // Default: medium
   return 'medium';
-}
-
-/**
- * Get figurine for a marker instance
- */
-export async function getFigurineForMarker(
-  marker: HexMarker,
-  markerTypes: MarkerType[]
-): Promise<HTMLImageElement | undefined> {
-  const markerType = markerTypes.find(t => t.id === marker.typeId);
-  if (!markerType) return undefined;
-
-  const glyphId = getGlyphIdForMarker(marker.typeId);
-  const color = marker.color || markerType.defaultColor;
-  const size = getFigurineSizeForMarker(marker.typeId);
-
-  return figurineCache.getImage(glyphId, color, size);
 }
 
 /**

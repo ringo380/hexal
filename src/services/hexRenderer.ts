@@ -4,6 +4,10 @@
 import type { Campaign, Hex, HexCoordinate, ContentCategory, HexMarker, MarkerType, MarkerPosition } from '../types';
 import type { RenderConfig, ColorMode, MapExportOptions } from '../types/MapExport';
 import { getMarkerColor, getMarkerIcon } from '../types/Markers';
+import { hexToRgba, lightenColor, colorToGrayscale } from './colorUtils';
+
+// Re-export for consumers that import color utilities from hexRenderer
+export { hexToRgba } from './colorUtils';
 import {
   figurineCache,
   getFigurineSync,
@@ -42,47 +46,6 @@ export const CONTENT_INDICATORS: Record<ContentCategory, {
   treasures:  { color: '#ffc107', letter: 'T', label: 'Treasures' },
   clues:      { color: '#9c27b0', letter: 'C', label: 'Clues' }
 };
-
-// ============================================================================
-// Color Utilities
-// ============================================================================
-
-/**
- * Convert hex color to rgba string
- */
-export function hexToRgba(hex: string, alpha: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-/**
- * Convert color to grayscale
- */
-export function colorToGrayscale(hex: string): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  // Luminance formula
-  const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
-  return `rgb(${gray}, ${gray}, ${gray})`;
-}
-
-/**
- * Lighten a hex color for print mode
- */
-export function lightenColor(hex: string, amount: number = 0.3): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-
-  const newR = Math.min(255, Math.round(r + (255 - r) * amount));
-  const newG = Math.min(255, Math.round(g + (255 - g) * amount));
-  const newB = Math.min(255, Math.round(b + (255 - b) * amount));
-
-  return `rgb(${newR}, ${newG}, ${newB})`;
-}
 
 /**
  * Adjust terrain color based on color mode

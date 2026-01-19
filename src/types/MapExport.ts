@@ -23,10 +23,14 @@ export type PageMode = 'fit-to-page' | 'multi-page';
 // PDF orientation
 export type PageOrientation = 'portrait' | 'landscape';
 
-// Export region selection
+/**
+ * Export region selection.
+ * NOTE: Custom region filtering is not yet implemented - exports always use 'full'.
+ * This interface is reserved for future region-based export functionality.
+ */
 export interface ExportRegion {
   type: 'full' | 'custom';
-  // For custom region (inclusive bounds)
+  // For custom region (inclusive bounds) - reserved for future implementation
   minQ?: number;
   maxQ?: number;
   minR?: number;
@@ -63,7 +67,7 @@ export interface MapExportOptions {
   customTitle?: string;         // Override campaign name
   scaleText?: string;           // e.g., "1 hex = 6 miles"
 
-  // Region to export
+  /** Region to export. NOTE: Custom regions not yet implemented - always exports full grid. */
   region: ExportRegion;
 
   // PDF-specific settings

@@ -15,10 +15,18 @@ export interface Campaign {
   createdAt: string; // ISO date string
   modifiedAt: string;
 
-  // Weather & Time System (optional for backward compatibility)
+  /**
+   * Weather & Time System state.
+   * Optional for backward compatibility with legacy campaign files.
+   * New campaigns are always initialized with this field via createCampaign().
+   */
   timeWeather?: TimeWeatherState;
 
-  // Marker system (optional for backward compatibility)
+  /**
+   * Custom marker type definitions for this campaign.
+   * Optional for backward compatibility with legacy campaign files.
+   * New campaigns are always initialized with DEFAULT_MARKER_TYPES via createCampaign().
+   */
   markerTypes?: MarkerType[];
 }
 
@@ -34,7 +42,8 @@ export interface Hex {
   npcs: ContentItem[];
   treasures: ContentItem[];
   clues: ContentItem[];
-  markers?: HexMarker[];  // Visual markers/figurines on this hex
+  /** Visual markers/figurines on this hex. Optional for backward compatibility with legacy files. */
+  markers?: HexMarker[];
 }
 
 export interface HexCoordinate {

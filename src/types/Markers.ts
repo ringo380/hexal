@@ -28,13 +28,13 @@ export interface MarkerType {
 
 // Marker position for hit testing during canvas interactions
 export interface MarkerPosition {
-  x: number;               // Screen-space X after transform
-  y: number;               // Screen-space Y after transform
-  worldX: number;          // World-space X
-  worldY: number;          // World-space Y
+  x: number;               // World-space X (same as worldX - kept for API consistency)
+  y: number;               // World-space Y (same as worldY - kept for API consistency)
+  worldX: number;          // World-space X coordinate
+  worldY: number;          // World-space Y coordinate
   markerId: string;
   hexCoord: HexCoordinate;
-  radius: number;          // Hit-test radius (adapts to zoom)
+  radius: number;          // Hit-test radius in world-space (adapts to zoom)
 }
 
 // State for marker drag operations
