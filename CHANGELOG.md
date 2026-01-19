@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-01-19
+
+### Security
+- Updated jspdf from 3.0.4 to 4.0.0 (fixes GHSA-f8cm-6447-x5h2 path traversal vulnerability)
+- Added npm override for tar@7.5.3 (fixes arbitrary file overwrite vulnerability)
+
+### Changed
+- Extracted color utilities into dedicated `colorUtils.ts` module
+- Improved code organization in hex renderer and marker figurine services
+
+## [1.2.1] - 2026-01-15
+
+### Fixed
+- Removed explicit Windows icon configuration (let electron-builder auto-convert)
+
+## [1.2.0] - 2026-01-10
+
+### Added
+- **Windows Build Support**: Added Windows target to electron-builder configuration
+- **GitHub Actions Release Workflow**: Automated builds and releases via CI/CD
+- **Tabletop Figurine Markers**: Place 26+ marker types on hexes (settlements, landmarks, players, hazards)
+- **Map Export**: Export maps to PNG, JPEG, or PDF with customizable presets
+
+### Changed
+- Updated build configuration for cross-platform support
+
 ## [1.1.1] - 2025-12-28
 
 ### Security

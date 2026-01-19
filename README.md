@@ -1,7 +1,7 @@
 # Hexal
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-1.2.1-blue.svg)](https://github.com/ringo380/hexal/releases)
+[![Version](https://img.shields.io/badge/version-1.2.2-blue.svg)](https://github.com/ringo380/hexal/releases)
 
 A desktop application for managing D&D hex crawl campaigns, built with Electron, React, and TypeScript.
 
