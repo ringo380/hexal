@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "electron-store": "^8.1.0",
-    "jspdf": "^3.0.4",
+    "jspdf": "^4.0.0",
     "uuid": "^9.0.0"
   },
   "overrides": {
