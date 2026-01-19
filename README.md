@@ -1,7 +1,7 @@
 # Hexal
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/ringo380/hexal/releases)
+[![Version](https://img.shields.io/badge/version-1.2.1-blue.svg)](https://github.com/ringo380/hexal/releases)
 
 A desktop application for managing D&D hex crawl campaigns, built with Electron, React, and TypeScript.
 
@@ -16,7 +16,9 @@ A desktop application for managing D&D hex crawl campaigns, built with Electron,
 - **Multi-Window Support**: Open multiple campaigns simultaneously
 - **Autosave**: Automatic saving with 2-second debounce
 - **Undo/Redo**: Full history support for all edits
-- **Export Options**: Export to JSON or Markdown formats
+- **Tabletop Markers**: Place figurine-style markers for settlements, landmarks, players, and more
+- **Map Export**: Export maps to PNG, JPEG, or PDF with print-ready and player handout presets
+- **Export Options**: Export campaign data to JSON or Markdown formats
 
 ## Installation
 
@@ -46,7 +48,7 @@ npm run build:mac
 ## Tech Stack
 
 - **Frontend**: React 18, TypeScript
-- **Desktop**: Electron 28
+- **Desktop**: Electron 35
 - **Build**: Vite, electron-builder
 - **State Management**: React Context + useReducer
 - **Rendering**: HTML5 Canvas
