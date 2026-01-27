@@ -133,7 +133,7 @@ function TimeWeatherBar({ onOpenTimeControls, onOpenWeatherSettings }: TimeWeath
           title="Time controls"
           aria-label="Time controls"
         >
-          <Icon name="filter" size={14} />
+          <Icon name="settings" size={14} />
         </button>
       </div>
     </div>
