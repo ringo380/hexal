@@ -18,6 +18,7 @@ import {
 } from '../types/Weather';
 import { getWeatherSummary } from '../services/weather';
 import { formatTravelModifier, formatVisibilityModifier, formatEncounterModifier } from '../data/weatherEffects';
+import Icon from './icons/Icon';
 
 type ContentCategory = 'locations' | 'encounters' | 'npcs' | 'treasures' | 'clues';
 
@@ -140,7 +141,7 @@ function HexDetail() {
     return (
       <div className="hex-detail empty">
         <div className="empty-state">
-          <span className="empty-icon">⬡</span>
+          <span className="empty-icon"><Icon name="hexagon" size={48} /></span>
           <p>Select a hex to view details</p>
         </div>
       </div>

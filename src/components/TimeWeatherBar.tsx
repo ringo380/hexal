@@ -5,6 +5,7 @@ import {
   SEASON_ICONS
 } from '../types/Weather';
 import { getTimeOfDayIcon } from '../services/time';
+import Icon from './icons/Icon';
 
 interface TimeWeatherBarProps {
   onOpenTimeControls: () => void;
@@ -122,15 +123,17 @@ function TimeWeatherBar({ onOpenTimeControls, onOpenWeatherSettings }: TimeWeath
           className="btn btn-icon btn-small"
           onClick={() => generateNewWeather()}
           title="Generate new weather"
+          aria-label="Generate new weather"
         >
-          🎲
+          <Icon name="dice" size={14} />
         </button>
         <button
           className="btn btn-icon btn-small"
           onClick={onOpenTimeControls}
           title="Time controls"
+          aria-label="Time controls"
         >
-          ⚙️
+          <Icon name="filter" size={14} />
         </button>
       </div>
     </div>

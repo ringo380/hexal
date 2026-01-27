@@ -4,6 +4,7 @@ import { useCampaign } from './stores/CampaignContext';
 import CampaignBrowser from './components/CampaignBrowser';
 import MainEditor from './components/MainEditor';
 import UnsavedChangesDialog from './components/modals/UnsavedChangesDialog';
+import AlertDialog from './components/modals/AlertDialog';
 
 type PendingAction = {
   type: 'open' | 'open-new-window' | 'new-campaign';
@@ -14,6 +15,7 @@ function App() {
   const { campaign, loadCampaign, saveCampaign, saveAs, closeCampaign, hasUnsavedChanges, undo, redo } = useCampaign();
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const exportRef = useRef<(() => void) | null>(null);
   const mapExportRef = useRef<(() => void) | null>(null);
 
@@ -91,7 +93,7 @@ function App() {
     const cleanup = window.electronAPI.onLoadCampaignFile((filePath) => {
       loadCampaign(filePath).catch((error) => {
         console.error('Failed to load campaign:', error);
-        alert(`Failed to load campaign: ${error.message}`);
+        setErrorMessage(`Failed to load campaign: ${error.message}`);
       });
     });
 
@@ -112,7 +114,7 @@ function App() {
       try {
         await loadCampaign(filePath);
       } catch (error: any) {
-        alert(`Failed to load campaign: ${error.message}`);
+        setErrorMessage(`Failed to load campaign: ${error.message}`);
       }
     }
   }, [hasUnsavedChanges, campaign, loadCampaign]);
@@ -161,7 +163,7 @@ function App() {
           try {
             await loadCampaign(filePath);
           } catch (error: any) {
-            alert(`Failed to load campaign: ${error.message}`);
+            setErrorMessage(`Failed to load campaign: ${error.message}`);
           }
         }
         break;
@@ -191,6 +193,15 @@ function App() {
           onDontSave={handleDialogDontSave}
           onOpenNewWindow={pendingAction?.type === 'open' ? handleDialogOpenNewWindow : undefined}
           onCancel={handleDialogCancel}
+        />
+      )}
+
+      {errorMessage && (
+        <AlertDialog
+          title="Error"
+          message={errorMessage}
+          variant="error"
+          onClose={() => setErrorMessage(null)}
         />
       )}
     </div>

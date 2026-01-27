@@ -14,13 +14,20 @@ function UnsavedChangesDialog({
   onCancel
 }: UnsavedChangesDialogProps) {
   return (
-    <div className="modal-overlay" onClick={onCancel}>
+    <div
+      className="modal-overlay"
+      onClick={onCancel}
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="unsaved-changes-title"
+      aria-describedby="unsaved-changes-description"
+    >
       <div className="modal unsaved-dialog" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Unsaved Changes</h3>
+          <h3 id="unsaved-changes-title">Unsaved Changes</h3>
         </div>
         <div className="modal-body">
-          <p>You have unsaved changes. What would you like to do?</p>
+          <p id="unsaved-changes-description">You have unsaved changes. What would you like to do?</p>
         </div>
         <div className="modal-footer unsaved-dialog-buttons">
           <button className="btn btn-secondary" onClick={onCancel}>

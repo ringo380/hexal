@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useCampaign } from '../stores/CampaignContext';
 import NewCampaignModal from './modals/NewCampaignModal';
+import ConfirmDialog from './modals/ConfirmDialog';
 
 interface CampaignInfo {
   name: string;
@@ -15,6 +16,7 @@ function CampaignBrowser() {
   const [showNewModal, setShowNewModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ path: string; name: string } | null>(null);
 
   useEffect(() => {
     loadCampaigns();
@@ -54,16 +56,20 @@ function CampaignBrowser() {
     }
   };
 
-  const handleDeleteCampaign = async (path: string, name: string) => {
-    if (!confirm(`Delete campaign "${name}"? This cannot be undone.`)) {
-      return;
-    }
+  const handleDeleteCampaign = (path: string, name: string) => {
+    setDeleteConfirm({ path, name });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
     try {
-      await window.electronAPI.deleteCampaign(path);
+      await window.electronAPI.deleteCampaign(deleteConfirm.path);
       await loadCampaigns();
     } catch (err) {
       setError('Failed to delete campaign');
       console.error(err);
+    } finally {
+      setDeleteConfirm(null);
     }
   };
 
@@ -135,6 +141,18 @@ function CampaignBrowser() {
 
       {showNewModal && (
         <NewCampaignModal onClose={() => setShowNewModal(false)} />
+      )}
+
+      {deleteConfirm && (
+        <ConfirmDialog
+          title="Delete Campaign"
+          message={`Delete campaign "${deleteConfirm.name}"? This cannot be undone.`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          variant="danger"
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteConfirm(null)}
+        />
       )}
     </div>
   );

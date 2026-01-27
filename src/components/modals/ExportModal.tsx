@@ -15,12 +15,14 @@ function ExportModal({ onClose }: ExportModalProps) {
   const [includeUndiscovered, setIncludeUndiscovered] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const handleExport = async () => {
     if (!campaign) return;
 
     try {
       setError(null);
+      setIsExporting(true);
 
       // Get save path
       const defaultName = format === 'json'
@@ -28,7 +30,10 @@ function ExportModal({ onClose }: ExportModalProps) {
         : `${campaign.name}.md`;
 
       const filePath = await window.electronAPI.saveFileDialog(defaultName);
-      if (!filePath) return; // User cancelled
+      if (!filePath) {
+        setIsExporting(false);
+        return; // User cancelled
+      }
 
       // Generate content
       let content: string;
@@ -42,21 +47,29 @@ function ExportModal({ onClose }: ExportModalProps) {
       const result = await window.electronAPI.saveFile(filePath, content);
       if (result.success) {
         setSuccess(true);
+        setIsExporting(false);
         setTimeout(() => onClose(), 1000);
       } else {
         throw new Error(result.error || 'Failed to save file');
       }
     } catch (err) {
       setError(`Export failed: ${err}`);
+      setIsExporting(false);
     }
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div
+      className="modal-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="export-modal-title"
+    >
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Export Campaign</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <h3 id="export-modal-title">Export Campaign</h3>
+          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="modal-body">
           <div className="field-group">
@@ -101,9 +114,9 @@ function ExportModal({ onClose }: ExportModalProps) {
           )}
         </div>
         <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleExport} disabled={success}>
-            Export...
+          <button className="btn btn-secondary" onClick={onClose} disabled={isExporting}>Cancel</button>
+          <button className="btn btn-primary" onClick={handleExport} disabled={success || isExporting}>
+            {isExporting ? 'Exporting...' : 'Export...'}
           </button>
         </div>
       </div>

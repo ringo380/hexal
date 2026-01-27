@@ -105,11 +105,17 @@ function GeneratorModal({ onClose }: GeneratorModalProps) {
   const canApply = target === 'allEmpty' || (target === 'selected' && selectedCoordinate);
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div
+      className="modal-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="generator-modal-title"
+    >
       <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Generate Content</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <h3 id="generator-modal-title">Generate Content</h3>
+          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="modal-body">
           <div className="field-group">
