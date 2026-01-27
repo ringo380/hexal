@@ -2159,6 +2159,17 @@ label {
   display: inline-block;
   vertical-align: middle;
   flex-shrink: 0;
+  --icon-primary: currentColor;
+  --icon-secondary: rgba(74, 158, 255, 0.35);
+  transition: --icon-secondary 0.15s ease;
+}
+
+.btn:hover:not(:disabled) .icon {
+  --icon-secondary: rgba(74, 158, 255, 0.55);
+}
+
+.btn:active:not(:disabled) .icon {
+  --icon-secondary: rgba(74, 158, 255, 0.7);
 }
 
 .btn .icon {
@@ -2170,5 +2181,5 @@ label {
 }
 
 .empty-icon .icon {
-  opacity: 0.3;
+  --icon-secondary: rgba(74, 158, 255, 0.15);
 }
