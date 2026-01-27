@@ -140,11 +140,17 @@ function MapExportModal({ onClose }: MapExportModalProps) {
   if (!campaign) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div
+      className="modal-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="map-export-modal-title"
+    >
       <div className="modal modal-lg map-export-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Export Map</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <h3 id="map-export-modal-title">Export Map</h3>
+          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
         </div>
 
         <div className="modal-body">

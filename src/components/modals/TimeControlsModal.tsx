@@ -29,11 +29,17 @@ function TimeControlsModal({ onClose }: TimeControlsModalProps) {
   // If no timeWeather, show setup
   if (!timeWeather) {
     return (
-      <div className="modal-overlay" onClick={onClose}>
+      <div
+        className="modal-overlay"
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="time-setup-modal-title"
+      >
         <div className="modal time-controls-modal" onClick={(e) => e.stopPropagation()}>
           <div className="modal-header">
-            <h2>Time & Weather Setup</h2>
-            <button className="btn btn-icon" onClick={onClose}>×</button>
+            <h2 id="time-setup-modal-title">Time & Weather Setup</h2>
+            <button className="btn btn-icon" onClick={onClose} aria-label="Close">×</button>
           </div>
           <div className="modal-body">
             <p>Time and weather tracking is not enabled for this campaign.</p>
@@ -105,11 +111,17 @@ function TimeControlsModal({ onClose }: TimeControlsModalProps) {
   const seasonIcon = currentSeason ? SEASON_ICONS[currentSeason] : '🌸';
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div
+      className="modal-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="time-controls-modal-title"
+    >
       <div className="modal time-controls-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>⏰ Time Controls</h2>
-          <button className="btn btn-icon" onClick={onClose}>×</button>
+          <h2 id="time-controls-modal-title">Time Controls</h2>
+          <button className="btn btn-icon" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="modal-body">
           {/* Calendar Selection */}

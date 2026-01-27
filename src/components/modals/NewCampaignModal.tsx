@@ -27,11 +27,17 @@ function NewCampaignModal({ onClose }: NewCampaignModalProps) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div
+      className="modal-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="new-campaign-modal-title"
+    >
       <div className="modal" onClick={(e) => e.stopPropagation()} onKeyDown={handleKeyDown}>
         <div className="modal-header">
-          <h3>New Campaign</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <h3 id="new-campaign-modal-title">New Campaign</h3>
+          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="modal-body">
           <div className="field-group">

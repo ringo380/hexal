@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
 import { getWeatherSummary, describeWeather } from '../../services/weather';
+import Icon from '../icons/Icon';
 import { getWeatherEffects } from '../../data/weatherEffects';
 import {
   Weather,
@@ -55,11 +56,17 @@ function WeatherSettingsModal({ onClose }: WeatherSettingsModalProps) {
   // If no timeWeather, show setup
   if (!timeWeather) {
     return (
-      <div className="modal-overlay" onClick={onClose}>
+      <div
+        className="modal-overlay"
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="weather-setup-modal-title"
+      >
         <div className="modal weather-settings-modal" onClick={(e) => e.stopPropagation()}>
           <div className="modal-header">
-            <h2>Weather Settings</h2>
-            <button className="btn btn-icon" onClick={onClose}>×</button>
+            <h2 id="weather-setup-modal-title">Weather Settings</h2>
+            <button className="btn btn-icon" onClick={onClose} aria-label="Close">×</button>
           </div>
           <div className="modal-body">
             <p>Time and weather tracking is not enabled for this campaign.</p>
@@ -120,11 +127,17 @@ function WeatherSettingsModal({ onClose }: WeatherSettingsModalProps) {
   const effects = getWeatherEffects(weatherToEdit);
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div
+      className="modal-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="weather-settings-modal-title"
+    >
       <div className="modal weather-settings-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>🌦️ Weather Settings</h2>
-          <button className="btn btn-icon" onClick={onClose}>×</button>
+          <h2 id="weather-settings-modal-title">Weather Settings</h2>
+          <button className="btn btn-icon" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="modal-body">
           {/* Current Weather Display */}
@@ -138,7 +151,7 @@ function WeatherSettingsModal({ onClose }: WeatherSettingsModalProps) {
               </div>
             </div>
             <button className="btn btn-secondary" onClick={handleRandomWeather}>
-              🎲 Generate Random
+              <Icon name="dice" size={16} /> Generate Random
             </button>
           </div>
 

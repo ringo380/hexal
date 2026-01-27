@@ -12,6 +12,9 @@ import ExportModal from './modals/ExportModal';
 import MapExportModal from './modals/MapExportModal';
 import TimeControlsModal from './modals/TimeControlsModal';
 import WeatherSettingsModal from './modals/WeatherSettingsModal';
+import ConfirmDialog from './modals/ConfirmDialog';
+import KeyboardShortcutsModal from './modals/KeyboardShortcutsModal';
+import Icon from './icons/Icon';
 
 interface MainEditorProps {
   onRegisterExport?: (handler: () => void) => void;
@@ -27,6 +30,8 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [showTimeControls, setShowTimeControls] = useState(false);
   const [showWeatherSettings, setShowWeatherSettings] = useState(false);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
 
   // Register export handler for menu command
   useEffect(() => {
@@ -76,6 +81,11 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
         e.preventDefault();
         setShowWeatherSettings(true);
       }
+      // Cmd+? (Cmd+Shift+/) to show keyboard shortcuts
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '/') {
+        e.preventDefault();
+        setShowKeyboardShortcuts(true);
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -84,10 +94,14 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
 
   const handleClose = () => {
     if (hasUnsavedChanges) {
-      if (!confirm('You have unsaved changes. Close anyway?')) {
-        return;
-      }
+      setShowCloseConfirm(true);
+      return;
     }
+    closeCampaign();
+  };
+
+  const confirmClose = () => {
+    setShowCloseConfirm(false);
     closeCampaign();
   };
 
@@ -114,11 +128,11 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
       {/* Toolbar */}
       <div className="toolbar">
         <div className="toolbar-left">
-          <button className="btn btn-icon" onClick={handleClose} title="Close campaign">
-            ←
+          <button className="btn btn-icon" onClick={handleClose} title="Close campaign" aria-label="Close campaign">
+            <Icon name="arrow-left" size={18} />
           </button>
           <h1 className="campaign-title">{campaign.name}</h1>
-          <span className={`save-status ${getSaveStatusClass()}`}>
+          <span className={`save-status ${getSaveStatusClass()}`} aria-live="polite">
             {getSaveStatusText()}
           </span>
           <div className="undo-redo-buttons">
@@ -127,16 +141,18 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
               onClick={undo}
               disabled={!canUndo}
               title="Undo (⌘Z)"
+              aria-label="Undo"
             >
-              ↩
+              <Icon name="undo" size={16} />
             </button>
             <button
               className="btn btn-icon"
               onClick={redo}
               disabled={!canRedo}
               title="Redo (⌘⇧Z)"
+              aria-label="Redo"
             >
-              ↪
+              <Icon name="redo" size={16} />
             </button>
           </div>
         </div>
@@ -156,8 +172,10 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
               className="btn btn-icon"
               onClick={() => setShowFilterMenu(!showFilterMenu)}
               title="Filters"
+              aria-label="Toggle filters"
+              aria-expanded={showFilterMenu}
             >
-              ≡
+              <Icon name="filter" size={16} />
             </button>
             {showFilterMenu && (
               <div className="filter-menu">
@@ -205,13 +223,13 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
 
         <div className="toolbar-right">
           <button className="btn btn-secondary" onClick={() => setShowGenerator(true)}>
-            🎲 Generate
+            <Icon name="dice" size={16} /> Generate
           </button>
           <button className="btn btn-secondary" onClick={() => setShowMapExport(true)}>
-            🗺 Export Map
+            <Icon name="map" size={16} /> Export Map
           </button>
           <button className="btn btn-secondary" onClick={() => setShowExport(true)}>
-            ↗ Export Data
+            <Icon name="export" size={16} /> Export Data
           </button>
         </div>
       </div>
@@ -251,6 +269,20 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
       )}
       {showWeatherSettings && (
         <WeatherSettingsModal onClose={() => setShowWeatherSettings(false)} />
+      )}
+      {showCloseConfirm && (
+        <ConfirmDialog
+          title="Unsaved Changes"
+          message="You have unsaved changes. Close anyway?"
+          confirmLabel="Close"
+          cancelLabel="Cancel"
+          variant="danger"
+          onConfirm={confirmClose}
+          onCancel={() => setShowCloseConfirm(false)}
+        />
+      )}
+      {showKeyboardShortcuts && (
+        <KeyboardShortcutsModal onClose={() => setShowKeyboardShortcuts(false)} />
       )}
     </div>
   );
