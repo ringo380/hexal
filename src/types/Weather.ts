@@ -107,36 +107,39 @@ export interface WeatherHistoryEntry {
 }
 
 // ============ WEATHER ICONS ============
+// Icon names that map to the Icon component
 
-export const WEATHER_ICONS: Record<WeatherCondition, string> = {
-  'clear': '☀️',
-  'partly-cloudy': '⛅',
-  'cloudy': '☁️',
-  'overcast': '🌥️',
-  'light-rain': '🌦️',
-  'rain': '🌧️',
-  'heavy-rain': '🌧️',
-  'thunderstorm': '⛈️',
-  'drizzle': '🌦️',
-  'fog': '🌫️',
-  'mist': '🌫️',
-  'light-snow': '🌨️',
-  'snow': '❄️',
-  'heavy-snow': '❄️',
-  'blizzard': '🌨️',
-  'hail': '🌨️',
-  'sleet': '🌨️',
-  'windy': '💨',
-  'hot': '🔥',
-  'cold': '🥶',
-  'freezing': '🧊'
+import type { IconName } from '../components/icons/Icon';
+
+export const WEATHER_ICONS: Record<WeatherCondition, IconName> = {
+  'clear': 'sun',
+  'partly-cloudy': 'cloud-partial',
+  'cloudy': 'cloud',
+  'overcast': 'cloud',
+  'light-rain': 'cloud-rain',
+  'rain': 'cloud-rain',
+  'heavy-rain': 'cloud-rain',
+  'thunderstorm': 'cloud-storm',
+  'drizzle': 'cloud-rain',
+  'fog': 'fog',
+  'mist': 'fog',
+  'light-snow': 'snowflake',
+  'snow': 'snowflake',
+  'heavy-snow': 'snowflake',
+  'blizzard': 'snowflake',
+  'hail': 'snowflake',
+  'sleet': 'snowflake',
+  'windy': 'wind',
+  'hot': 'thermometer-hot',
+  'cold': 'thermometer-cold',
+  'freezing': 'thermometer-cold'
 };
 
-export const SEASON_ICONS: Record<Season, string> = {
-  'spring': '🌸',
-  'summer': '☀️',
-  'autumn': '🍂',
-  'winter': '❄️'
+export const SEASON_ICONS: Record<Season, IconName> = {
+  'spring': 'flower',
+  'summer': 'sun',
+  'autumn': 'leaf',
+  'winter': 'snowflake'
 };
 
 export const TEMPERATURE_LABELS: Record<Temperature, string> = {

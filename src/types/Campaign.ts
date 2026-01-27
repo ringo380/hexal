@@ -226,12 +226,14 @@ export const DEFAULT_ENCOUNTER_TABLES: EncounterTable[] = [
 ];
 
 // Category metadata
-export const CATEGORY_INFO: Record<ContentCategory, { label: string; icon: string }> = {
-  locations: { label: 'Locations', icon: '📍' },
-  encounters: { label: 'Encounters', icon: '⚔️' },
-  npcs: { label: 'NPCs', icon: '👤' },
-  treasures: { label: 'Treasures', icon: '✨' },
-  clues: { label: 'Clues & Hooks', icon: '💡' }
+import type { IconName } from '../components/icons/Icon';
+
+export const CATEGORY_INFO: Record<ContentCategory, { label: string; icon: IconName }> = {
+  locations: { label: 'Locations', icon: 'pin' },
+  encounters: { label: 'Encounters', icon: 'sword' },
+  npcs: { label: 'NPCs', icon: 'user' },
+  treasures: { label: 'Treasures', icon: 'sparkle' },
+  clues: { label: 'Clues & Hooks', icon: 'lightbulb' }
 };
 
 // Aliases for CampaignContext

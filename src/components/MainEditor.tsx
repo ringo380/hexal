@@ -105,11 +105,11 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
     closeCampaign();
   };
 
-  const getSaveStatusText = () => {
+  const getSaveStatusContent = () => {
     switch (saveStatus) {
-      case 'saved': return '✓ Saved';
+      case 'saved': return <><Icon name="check" size={12} /> Saved</>;
       case 'saving': return 'Saving...';
-      case 'unsaved': return '● Unsaved';
+      case 'unsaved': return <><Icon name="circle-filled" size={10} /> Unsaved</>;
     }
   };
 
@@ -133,7 +133,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
           </button>
           <h1 className="campaign-title">{campaign.name}</h1>
           <span className={`save-status ${getSaveStatusClass()}`} aria-live="polite">
-            {getSaveStatusText()}
+            {getSaveStatusContent()}
           </span>
           <div className="undo-redo-buttons">
             <button

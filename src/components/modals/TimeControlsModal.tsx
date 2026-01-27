@@ -4,6 +4,7 @@ import { useCampaign } from '../../stores/CampaignContext';
 import { CALENDAR_PRESETS, getTotalDaysInYear } from '../../data/calendars';
 import { getTimeOfDayLabel, getTimeOfDayIcon } from '../../services/time';
 import { CalendarPreset, SEASON_ICONS } from '../../types/Weather';
+import Icon from '../icons/Icon';
 
 interface TimeControlsModalProps {
   onClose: () => void;
@@ -106,9 +107,9 @@ function TimeControlsModal({ onClose }: TimeControlsModalProps) {
     }
   };
 
-  const todIcon = currentTimeOfDay ? getTimeOfDayIcon(currentTimeOfDay) : '☀️';
+  const todIconName = currentTimeOfDay ? getTimeOfDayIcon(currentTimeOfDay) : 'sun';
   const todLabel = currentTimeOfDay ? getTimeOfDayLabel(currentTimeOfDay) : 'Day';
-  const seasonIcon = currentSeason ? SEASON_ICONS[currentSeason] : '🌸';
+  const seasonIconName = currentSeason ? SEASON_ICONS[currentSeason] : 'flower';
 
   return (
     <div
@@ -142,16 +143,16 @@ function TimeControlsModal({ onClose }: TimeControlsModalProps) {
           {/* Current Time Display */}
           <div className="time-controls-current">
             <div className="time-controls-display">
-              <span className="time-controls-icon">{todIcon}</span>
+              <span className="time-controls-icon"><Icon name={todIconName} size={18} /></span>
               <span className="time-controls-time">{formattedTime}</span>
               <span className="time-controls-tod">({todLabel})</span>
             </div>
             <div className="time-controls-display">
-              <span className="time-controls-icon">📅</span>
+              <span className="time-controls-icon"><Icon name="calendar" size={18} /></span>
               <span className="time-controls-date">{formattedDate}</span>
             </div>
             <div className="time-controls-display">
-              <span className="time-controls-icon">{seasonIcon}</span>
+              <span className="time-controls-icon"><Icon name={seasonIconName} size={18} /></span>
               <span className="time-controls-season">{currentSeason}</span>
             </div>
           </div>

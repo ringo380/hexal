@@ -22,6 +22,7 @@ import { markerAudio } from '../services/audioService';
 import { useMarkerDrag } from '../hooks/useMarkerDrag';
 import type { HexCoordinate, ContentCategory, MarkerPosition } from '../types';
 import { DEFAULT_MARKER_TYPES } from '../types/Markers';
+import Icon from './icons/Icon';
 
 // Zoom configuration
 const MIN_ZOOM = 0.15;            // Allow more zoom out
@@ -1130,7 +1131,7 @@ function HexGrid() {
           <ul className="tooltip-items">
             {tooltip.items.map((item, index) => (
               <li key={index} className={item.isResolved ? 'resolved' : ''}>
-                <span className="item-status">{item.isResolved ? '✓' : '○'}</span>
+                <span className="item-status"><Icon name={item.isResolved ? 'check' : 'circle'} size={10} /></span>
                 <span className="item-title">{item.title}</span>
               </li>
             ))}

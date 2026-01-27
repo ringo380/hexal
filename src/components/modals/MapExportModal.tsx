@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
+import Icon from '../icons/Icon';
 import {
   DEFAULT_EXPORT_OPTIONS,
   EXPORT_PRESETS,
@@ -171,7 +172,7 @@ function MapExportModal({ onClose }: MapExportModalProps) {
           {/* Format & Resolution Section */}
           <div className={`export-section ${expandedSections.has('format') ? 'expanded' : ''}`}>
             <div className="section-header" onClick={() => toggleSection('format')}>
-              <span className="section-icon">{expandedSections.has('format') ? '▼' : '▶'}</span>
+              <span className="section-icon"><Icon name={expandedSections.has('format') ? 'chevron-down' : 'chevron-right'} size={12} /></span>
               <span className="section-title">Format & Resolution</span>
             </div>
             {expandedSections.has('format') && (
@@ -231,7 +232,7 @@ function MapExportModal({ onClose }: MapExportModalProps) {
           {/* View Mode Section */}
           <div className={`export-section ${expandedSections.has('view') ? 'expanded' : ''}`}>
             <div className="section-header" onClick={() => toggleSection('view')}>
-              <span className="section-icon">{expandedSections.has('view') ? '▼' : '▶'}</span>
+              <span className="section-icon"><Icon name={expandedSections.has('view') ? 'chevron-down' : 'chevron-right'} size={12} /></span>
               <span className="section-title">View Mode</span>
             </div>
             {expandedSections.has('view') && (
@@ -280,7 +281,7 @@ function MapExportModal({ onClose }: MapExportModalProps) {
           {/* Appearance Section */}
           <div className={`export-section ${expandedSections.has('appearance') ? 'expanded' : ''}`}>
             <div className="section-header" onClick={() => toggleSection('appearance')}>
-              <span className="section-icon">{expandedSections.has('appearance') ? '▼' : '▶'}</span>
+              <span className="section-icon"><Icon name={expandedSections.has('appearance') ? 'chevron-down' : 'chevron-right'} size={12} /></span>
               <span className="section-title">Appearance</span>
             </div>
             {expandedSections.has('appearance') && (
@@ -365,7 +366,7 @@ function MapExportModal({ onClose }: MapExportModalProps) {
           {/* Legend & Metadata Section */}
           <div className={`export-section ${expandedSections.has('metadata') ? 'expanded' : ''}`}>
             <div className="section-header" onClick={() => toggleSection('metadata')}>
-              <span className="section-icon">{expandedSections.has('metadata') ? '▼' : '▶'}</span>
+              <span className="section-icon"><Icon name={expandedSections.has('metadata') ? 'chevron-down' : 'chevron-right'} size={12} /></span>
               <span className="section-title">Legend & Metadata</span>
             </div>
             {expandedSections.has('metadata') && (
@@ -428,7 +429,7 @@ function MapExportModal({ onClose }: MapExportModalProps) {
           {options.format === 'pdf' && (
             <div className={`export-section ${expandedSections.has('pdf') ? 'expanded' : ''}`}>
               <div className="section-header" onClick={() => toggleSection('pdf')}>
-                <span className="section-icon">{expandedSections.has('pdf') ? '▼' : '▶'}</span>
+                <span className="section-icon"><Icon name={expandedSections.has('pdf') ? 'chevron-down' : 'chevron-right'} size={12} /></span>
                 <span className="section-title">PDF Settings</span>
               </div>
               {expandedSections.has('pdf') && (

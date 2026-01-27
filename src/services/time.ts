@@ -25,16 +25,18 @@ export function getTimeOfDay(hour: number): TimeOfDay {
 /**
  * Get icon for time of day
  */
-export function getTimeOfDayIcon(tod: TimeOfDay): string {
+import type { IconName } from '../components/icons/Icon';
+
+export function getTimeOfDayIcon(tod: TimeOfDay): IconName {
   switch (tod) {
-    case 'dawn': return '🌅';
-    case 'morning': return '☀️';
-    case 'midday': return '☀️';
-    case 'afternoon': return '🌤️';
-    case 'dusk': return '🌆';
-    case 'evening': return '🌙';
-    case 'night': return '🌙';
-    case 'midnight': return '🌑';
+    case 'dawn': return 'sunrise';
+    case 'morning': return 'sun';
+    case 'midday': return 'sun';
+    case 'afternoon': return 'cloud-partial';
+    case 'dusk': return 'sunset';
+    case 'evening': return 'moon';
+    case 'night': return 'moon';
+    case 'midnight': return 'moon-new';
   }
 }
 
