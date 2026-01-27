@@ -5,6 +5,7 @@ import { useSelection } from '../stores/SelectionContext';
 import { groupMarkersByCategory, MARKER_CATEGORY_INFO } from '../types/Markers';
 import { generateFigurineSVG, getGlyphIdForMarker, FIGURINE_SIZES } from '../services/markerFigurines';
 import type { MarkerType, MarkerCategory } from '../types';
+import Icon from './icons/Icon';
 
 interface MarkerPaletteProps {
   onMarkerSelected?: (markerType: MarkerType | null) => void;
@@ -100,9 +101,11 @@ function MarkerPalette({ onMarkerSelected, selectedMarkerType }: MarkerPalettePr
         className="marker-palette-header"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <span className="palette-icon">📍</span>
+        <span className="palette-icon"><Icon name="pin" size={14} /></span>
         <span className="palette-title">Markers</span>
-        <span className={`expand-arrow ${isExpanded ? 'expanded' : ''}`}>▶</span>
+        <span className={`expand-arrow ${isExpanded ? 'expanded' : ''}`}>
+          <Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} size={12} />
+        </span>
       </div>
 
       {isExpanded && (
@@ -132,10 +135,10 @@ function MarkerPalette({ onMarkerSelected, selectedMarkerType }: MarkerPalettePr
                   className="category-header"
                   onClick={() => toggleCategory(category)}
                 >
-                  <span className="category-icon">{categoryInfo.icon}</span>
+                  <span className="category-icon"><Icon name={categoryInfo.icon} size={14} /></span>
                   <span className="category-label">{categoryInfo.label}</span>
                   <span className={`category-arrow ${isCategoryExpanded ? 'expanded' : ''}`}>
-                    ▶
+                    <Icon name={isCategoryExpanded ? 'chevron-down' : 'chevron-right'} size={12} />
                   </span>
                 </div>
 

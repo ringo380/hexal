@@ -82,7 +82,7 @@ function WeatherSettingsModal({ onClose }: WeatherSettingsModalProps) {
 
   const currentWeather = timeWeather.globalWeather;
   const weatherToEdit = editingWeather || currentWeather;
-  const weatherIcon = WEATHER_ICONS[currentWeather.condition] || '🌤️';
+  const weatherIconName = WEATHER_ICONS[currentWeather.condition] || 'cloud-partial';
 
   const handleConditionChange = (condition: WeatherCondition) => {
     setEditingWeather({ ...weatherToEdit, condition });
@@ -143,7 +143,7 @@ function WeatherSettingsModal({ onClose }: WeatherSettingsModalProps) {
           {/* Current Weather Display */}
           <div className="weather-settings-current">
             <div className="weather-settings-display">
-              <span className="weather-icon-large">{weatherIcon}</span>
+              <span className="weather-icon-large"><Icon name={weatherIconName} size={48} /></span>
               <div className="weather-details">
                 <h3>{weatherSummary}</h3>
                 <p>{describeWeather(currentWeather)}</p>

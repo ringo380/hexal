@@ -98,12 +98,14 @@ export const DEFAULT_MARKER_TYPES: MarkerType[] = [
 ];
 
 // Category display info for palette organization
-export const MARKER_CATEGORY_INFO: Record<MarkerCategory, { label: string; icon: string }> = {
-  settlement: { label: 'Settlements', icon: '🏘' },
-  military: { label: 'Military', icon: '⚔' },
-  landmark: { label: 'Landmarks', icon: '🏛' },
-  player: { label: 'Players', icon: '👤' },
-  custom: { label: 'Custom', icon: '📍' },
+import type { IconName } from '../components/icons/Icon';
+
+export const MARKER_CATEGORY_INFO: Record<MarkerCategory, { label: string; icon: IconName }> = {
+  settlement: { label: 'Settlements', icon: 'hexagon' },
+  military: { label: 'Military', icon: 'sword' },
+  landmark: { label: 'Landmarks', icon: 'pin' },
+  player: { label: 'Players', icon: 'user' },
+  custom: { label: 'Custom', icon: 'pin' },
 };
 
 // Helper functions

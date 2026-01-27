@@ -20,14 +20,16 @@ import { getWeatherSummary } from '../services/weather';
 import { formatTravelModifier, formatVisibilityModifier, formatEncounterModifier } from '../data/weatherEffects';
 import Icon from './icons/Icon';
 
+import type { IconName } from './icons/Icon';
+
 type ContentCategory = 'locations' | 'encounters' | 'npcs' | 'treasures' | 'clues';
 
-const categoryConfig: Record<ContentCategory, { title: string; icon: string }> = {
-  locations: { title: 'Locations', icon: '📍' },
-  encounters: { title: 'Encounters', icon: '⚔️' },
-  npcs: { title: 'NPCs', icon: '👤' },
-  treasures: { title: 'Treasures', icon: '✨' },
-  clues: { title: 'Clues & Hooks', icon: '💡' }
+const categoryConfig: Record<ContentCategory, { title: string; icon: IconName }> = {
+  locations: { title: 'Locations', icon: 'pin' },
+  encounters: { title: 'Encounters', icon: 'sword' },
+  npcs: { title: 'NPCs', icon: 'user' },
+  treasures: { title: 'Treasures', icon: 'sparkle' },
+  clues: { title: 'Clues & Hooks', icon: 'lightbulb' }
 };
 
 function HexDetail() {
@@ -280,10 +282,10 @@ function ContentSection({ category, items, onAdd, onToggleResolved, onEdit, onDe
   return (
     <div className="content-section">
       <div className="section-header" onClick={() => setIsExpanded(!isExpanded)}>
-        <span className="section-icon">{config.icon}</span>
+        <span className="section-icon"><Icon name={config.icon} size={14} /></span>
         <span className="section-title">{config.title}</span>
         <span className="section-count">{items.length}</span>
-        <span className="section-toggle">{isExpanded ? '▼' : '▶'}</span>
+        <span className="section-toggle"><Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} size={12} /></span>
       </div>
       {isExpanded && (
         <div className="section-content">
@@ -411,7 +413,7 @@ function HexWeatherSection({
   // If no weather available, don't render
   if (!weather || !effects) return null;
 
-  const weatherIcon = WEATHER_ICONS[weather.condition] || '🌤️';
+  const weatherIconName = WEATHER_ICONS[weather.condition] || 'cloud-partial';
   const summary = getWeatherSummary(weather);
 
   const handleStartEdit = () => {
@@ -435,17 +437,17 @@ function HexWeatherSection({
   return (
     <div className="hex-weather-section">
       <div className="section-header" onClick={() => setIsExpanded(!isExpanded)}>
-        <span className="section-icon">🌦️</span>
+        <span className="section-icon"><Icon name="cloud-sun" size={14} /></span>
         <span className="section-title">Weather</span>
         {hasOverride && <span className="override-badge">Override</span>}
-        <span className="section-toggle">{isExpanded ? '▼' : '▶'}</span>
+        <span className="section-toggle"><Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} size={12} /></span>
       </div>
       {isExpanded && (
         <div className="section-content">
           {!isEditing ? (
             <>
               <div className="weather-current">
-                <span className="weather-icon-large">{weatherIcon}</span>
+                <span className="weather-icon-large"><Icon name={weatherIconName} size={32} /></span>
                 <div className="weather-info">
                   <span className="weather-summary">{summary}</span>
                   <span className="weather-label">{WEATHER_CONDITION_LABELS[weather.condition]}</span>
@@ -456,17 +458,17 @@ function HexWeatherSection({
                 <h5>Effects</h5>
                 <ul>
                   <li>
-                    <span className="effect-icon">🚶</span>
+                    <span className="effect-icon"><Icon name="walk" size={14} /></span>
                     <span className="effect-label">Travel:</span>
                     <span className="effect-value">{formatTravelModifier(effects.travelModifier)}</span>
                   </li>
                   <li>
-                    <span className="effect-icon">👁️</span>
+                    <span className="effect-icon"><Icon name="eye" size={14} /></span>
                     <span className="effect-label">Visibility:</span>
                     <span className="effect-value">{formatVisibilityModifier(effects.visibilityModifier)}</span>
                   </li>
                   <li>
-                    <span className="effect-icon">⚔️</span>
+                    <span className="effect-icon"><Icon name="sword" size={14} /></span>
                     <span className="effect-label">Encounters:</span>
                     <span className="effect-value">{formatEncounterModifier(effects.encounterModifier)}</span>
                   </li>
@@ -506,7 +508,7 @@ function HexWeatherSection({
                 >
                   {CONDITION_OPTIONS.map((c) => (
                     <option key={c} value={c}>
-                      {WEATHER_ICONS[c]} {WEATHER_CONDITION_LABELS[c]}
+                      {WEATHER_CONDITION_LABELS[c]}
                     </option>
                   ))}
                 </select>
@@ -592,10 +594,10 @@ function MarkerSection({
   return (
     <div className="marker-section">
       <div className="section-header" onClick={() => setIsExpanded(!isExpanded)}>
-        <span className="section-icon">📍</span>
+        <span className="section-icon"><Icon name="pin" size={14} /></span>
         <span className="section-title">Markers</span>
         <span className="section-count">{markers.length}</span>
-        <span className="section-toggle">{isExpanded ? '▼' : '▶'}</span>
+        <span className="section-toggle"><Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} size={12} /></span>
       </div>
       {isExpanded && (
         <div className="section-content">
@@ -652,8 +654,9 @@ function MarkerSection({
                       handleToggleVisibility(marker);
                     }}
                     title={marker.isVisible ? 'Hide marker' : 'Show marker'}
+                    aria-label={marker.isVisible ? 'Hide marker' : 'Show marker'}
                   >
-                    {marker.isVisible ? '👁️' : '👁️‍🗨️'}
+                    <Icon name={marker.isVisible ? 'eye' : 'eye-off'} size={14} />
                   </button>
                   <button
                     className="btn-icon-small"
@@ -662,8 +665,9 @@ function MarkerSection({
                       setEditingMarkerId(marker.id);
                     }}
                     title="Edit label"
+                    aria-label="Edit label"
                   >
-                    ✏️
+                    <Icon name="pencil" size={14} />
                   </button>
                   <button
                     className="btn-icon-small danger"
@@ -672,8 +676,9 @@ function MarkerSection({
                       onRemoveMarker(marker.id);
                     }}
                     title="Remove marker"
+                    aria-label="Remove marker"
                   >
-                    🗑️
+                    <Icon name="trash" size={14} />
                   </button>
                 </div>
               </div>

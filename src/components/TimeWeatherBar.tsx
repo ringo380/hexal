@@ -34,15 +34,15 @@ function TimeWeatherBar({ onOpenTimeControls, onOpenWeatherSettings }: TimeWeath
           onClick={initTimeWeather}
           title="Enable time & weather tracking"
         >
-          ⏰ Enable Time & Weather
+          <Icon name="clock" size={14} /> Enable Time & Weather
         </button>
       </div>
     );
   }
 
-  const weatherIcon = WEATHER_ICONS[timeWeather.globalWeather.condition] || '🌤️';
-  const seasonIcon = currentSeason ? SEASON_ICONS[currentSeason] : '🌸';
-  const todIcon = currentTimeOfDay ? getTimeOfDayIcon(currentTimeOfDay) : '☀️';
+  const weatherIconName = WEATHER_ICONS[timeWeather.globalWeather.condition] || 'cloud-partial';
+  const seasonIconName = currentSeason ? SEASON_ICONS[currentSeason] : 'flower';
+  const todIconName = currentTimeOfDay ? getTimeOfDayIcon(currentTimeOfDay) : 'sun';
 
   const handleQuickAdvance = (hours: number) => {
     advanceTimeBy(hours);
@@ -56,7 +56,7 @@ function TimeWeatherBar({ onOpenTimeControls, onOpenWeatherSettings }: TimeWeath
         onClick={onOpenWeatherSettings}
         title="Click to change weather"
       >
-        <span className="time-weather-bar__icon">{weatherIcon}</span>
+        <span className="time-weather-bar__icon"><Icon name={weatherIconName} size={16} /></span>
         <span className="time-weather-bar__text">{weatherSummary}</span>
       </div>
 
@@ -68,7 +68,7 @@ function TimeWeatherBar({ onOpenTimeControls, onOpenWeatherSettings }: TimeWeath
         onClick={onOpenTimeControls}
         title="Click to set time"
       >
-        <span className="time-weather-bar__icon">📅</span>
+        <span className="time-weather-bar__icon"><Icon name="calendar" size={16} /></span>
         <span className="time-weather-bar__text">{formattedDate}</span>
       </div>
 
@@ -80,7 +80,7 @@ function TimeWeatherBar({ onOpenTimeControls, onOpenWeatherSettings }: TimeWeath
         onClick={onOpenTimeControls}
         title="Click to set time"
       >
-        <span className="time-weather-bar__icon">{todIcon}</span>
+        <span className="time-weather-bar__icon"><Icon name={todIconName} size={16} /></span>
         <span className="time-weather-bar__text">{formattedTime}</span>
       </div>
 
@@ -88,7 +88,7 @@ function TimeWeatherBar({ onOpenTimeControls, onOpenWeatherSettings }: TimeWeath
 
       {/* Season */}
       <div className="time-weather-bar__section time-weather-bar__season">
-        <span className="time-weather-bar__icon">{seasonIcon}</span>
+        <span className="time-weather-bar__icon"><Icon name={seasonIconName} size={16} /></span>
         <span className="time-weather-bar__text time-weather-bar__text--capitalize">
           {currentSeason}
         </span>
