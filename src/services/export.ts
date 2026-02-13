@@ -1,6 +1,8 @@
 // Direct port from Swift ExportService
 
 import type { Campaign, Hex, ContentItem } from '../types';
+import type { Encounter } from '../types/Campaign';
+import { ENCOUNTER_TYPE_INFO, OUTCOME_INFO } from '../types/Campaign';
 
 /**
  * Export campaign as formatted JSON string
@@ -69,13 +71,47 @@ function renderHex(hex: Hex): string {
   }
 
   md += renderContentSection('Locations', hex.locations, '📍');
-  md += renderContentSection('Encounters', hex.encounters, '⚔️');
+  md += renderEncounterSection(hex.encounters);
   md += renderContentSection('NPCs', hex.npcs, '👤');
   md += renderContentSection('Treasures', hex.treasures, '✨');
   md += renderContentSection('Clues & Hooks', hex.clues, '💡');
 
   md += '---\n\n';
 
+  return md;
+}
+
+function renderEncounterSection(encounters: Encounter[]): string {
+  if (encounters.length === 0) return '';
+
+  let md = `#### ⚔️ Encounters\n\n`;
+
+  for (const enc of encounters) {
+    const status = enc.isResolved ? '~~' : '';
+    const typeLabel = ENCOUNTER_TYPE_INFO[enc.encounterType]?.label || enc.encounterType;
+    md += `- ${status}**${enc.title}**${status} [${typeLabel}]`;
+    if (enc.difficulty) {
+      md += ` (${enc.difficulty})`;
+    }
+    if (enc.outcome !== 'pending') {
+      md += ` — ${OUTCOME_INFO[enc.outcome]?.label || enc.outcome}`;
+    }
+    md += '\n';
+    if (enc.description) {
+      md += `  ${enc.description}\n`;
+    }
+    if (enc.creatures.length > 0) {
+      md += `  Creatures: ${enc.creatures.map(c => `${c.count}x ${c.name}${c.cr ? ` (${c.cr})` : ''}`).join(', ')}\n`;
+    }
+    if (enc.rewards.length > 0) {
+      md += `  Rewards: ${enc.rewards.map(r => `${r.description}${r.quantity ? ` x${r.quantity}` : ''}`).join(', ')}\n`;
+    }
+    if (enc.outcomeNotes) {
+      md += `  Notes: ${enc.outcomeNotes}\n`;
+    }
+  }
+
+  md += '\n';
   return md;
 }
 

@@ -4,8 +4,12 @@ import { useCampaign } from '../stores/CampaignContext';
 import { useSelection } from '../stores/SelectionContext';
 import type { Hex, ContentItem, DiscoveryStatus, HexMarker, MarkerType } from '../types';
 import { createContentItem, createHex } from '../types';
+import type { Encounter, EncounterTemplate } from '../types/Campaign';
+import { createEncounter, instantiateFromTemplate } from '../types/Campaign';
 import { getMarkerType, getMarkerColor, getMarkerIcon } from '../types/Markers';
 import ContentItemRow from './ui/ContentItemRow';
+import EncounterRow from './encounters/EncounterRow';
+import EncounterEditorModal from './encounters/EncounterEditorModal';
 import {
   WEATHER_ICONS,
   WEATHER_CONDITION_LABELS,
@@ -45,12 +49,16 @@ function HexDetail() {
     clearHexWeather,
     markerTypes,
     removeMarker,
-    updateMarker
+    updateMarker,
+    encounterTemplates,
+    getAllNpcs
   } = useCampaign();
   const { selectedCoordinate, selectedMarker, selectMarker } = useSelection();
 
   const [hex, setHex] = useState<Hex | null>(null);
   const [editingItem, setEditingItem] = useState<{ item: ContentItem; category: ContentCategory } | null>(null);
+  const [editingEncounter, setEditingEncounter] = useState<Encounter | null>(null);
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
 
   // Load hex data when selection changes
   useEffect(() => {
@@ -96,6 +104,16 @@ function HexDetail() {
   const addItem = (category: ContentCategory) => {
     if (!selectedCoordinate) return;
     const currentHex = getOrCreateHex(selectedCoordinate);
+    if (category === 'encounters') {
+      const newEncounter = createEncounter(`New encounter`);
+      const updated = {
+        ...currentHex,
+        encounters: [...currentHex.encounters, newEncounter]
+      };
+      saveHex(updated);
+      setEditingEncounter(newEncounter);
+      return;
+    }
     const newItem = createContentItem(`New ${category.slice(0, -1)}`);
     const updated = {
       ...currentHex,
@@ -104,6 +122,32 @@ function HexDetail() {
     saveHex(updated);
     setEditingItem({ item: newItem, category });
   };
+
+  const addEncounterFromTemplate = (template: EncounterTemplate) => {
+    if (!selectedCoordinate) return;
+    const currentHex = getOrCreateHex(selectedCoordinate);
+    const encounter = instantiateFromTemplate(template);
+    const updated = {
+      ...currentHex,
+      encounters: [...currentHex.encounters, encounter]
+    };
+    saveHex(updated);
+    setShowTemplatePicker(false);
+  };
+
+  const saveEncounter = (updated: Encounter) => {
+    if (!hex || !selectedCoordinate) return;
+    const currentHex = getOrCreateHex(selectedCoordinate);
+    const updatedHex = {
+      ...currentHex,
+      encounters: currentHex.encounters.map(e =>
+        e.id === updated.id ? updated : e
+      )
+    };
+    saveHex(updatedHex);
+    setEditingEncounter(null);
+  };
+
 
   const updateItem = (category: ContentCategory, updatedItem: ContentItem) => {
     if (!hex || !selectedCoordinate) return;
@@ -235,8 +279,21 @@ function HexDetail() {
           />
         </div>
 
-        {/* Content Sections */}
-        {(Object.keys(categoryConfig) as ContentCategory[]).map((category) => (
+        {/* Encounters Section (enhanced) */}
+        <EncounterSection
+          encounters={hex.encounters}
+          templates={encounterTemplates}
+          showTemplatePicker={showTemplatePicker}
+          onToggleTemplatePicker={() => setShowTemplatePicker(!showTemplatePicker)}
+          onAdd={() => addItem('encounters')}
+          onAddFromTemplate={addEncounterFromTemplate}
+          onToggleResolved={(id) => toggleResolved('encounters', id)}
+          onEdit={(encounter) => setEditingEncounter(encounter)}
+          onDelete={(id) => deleteItem('encounters', id)}
+        />
+
+        {/* Other Content Sections */}
+        {(Object.keys(categoryConfig) as ContentCategory[]).filter(c => c !== 'encounters').map((category) => (
           <ContentSection
             key={category}
             category={category}
@@ -260,6 +317,86 @@ function HexDetail() {
           }}
           onClose={() => setEditingItem(null)}
         />
+      )}
+
+      {/* Encounter Edit Modal */}
+      {editingEncounter && (
+        <EncounterEditorModal
+          encounter={editingEncounter}
+          allNpcs={getAllNpcs()}
+          onSave={saveEncounter}
+          onClose={() => setEditingEncounter(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Encounter section component (enhanced)
+interface EncounterSectionProps {
+  encounters: Encounter[];
+  templates: EncounterTemplate[];
+  showTemplatePicker: boolean;
+  onToggleTemplatePicker: () => void;
+  onAdd: () => void;
+  onAddFromTemplate: (template: EncounterTemplate) => void;
+  onToggleResolved: (id: string) => void;
+  onEdit: (encounter: Encounter) => void;
+  onDelete: (id: string) => void;
+}
+
+function EncounterSection({
+  encounters, templates, showTemplatePicker, onToggleTemplatePicker,
+  onAdd, onAddFromTemplate, onToggleResolved, onEdit, onDelete
+}: EncounterSectionProps) {
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  return (
+    <div className="content-section">
+      <div className="section-header" onClick={() => setIsExpanded(!isExpanded)}>
+        <span className="section-icon"><Icon name="sword" size={14} /></span>
+        <span className="section-title">Encounters</span>
+        <span className="section-count">{encounters.length}</span>
+        <span className="section-toggle"><Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} size={12} /></span>
+      </div>
+      {isExpanded && (
+        <div className="section-content">
+          {encounters.map((encounter) => (
+            <EncounterRow
+              key={encounter.id}
+              encounter={encounter}
+              onToggleResolved={() => onToggleResolved(encounter.id)}
+              onEdit={() => onEdit(encounter)}
+              onDelete={() => onDelete(encounter.id)}
+            />
+          ))}
+          <div className="encounter-add-buttons">
+            <button className="add-item-btn" onClick={onAdd}>
+              + Add Encounter
+            </button>
+            {templates.length > 0 && (
+              <div className="template-picker-wrapper">
+                <button className="add-item-btn" onClick={onToggleTemplatePicker}>
+                  + From Template
+                </button>
+                {showTemplatePicker && (
+                  <div className="template-picker-dropdown">
+                    {templates.map(t => (
+                      <button
+                        key={t.id}
+                        className="template-picker-item"
+                        onClick={() => onAddFromTemplate(t)}
+                      >
+                        {t.name}
+                        {t.encounterType && <span className="template-picker-type"> ({t.encounterType})</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
