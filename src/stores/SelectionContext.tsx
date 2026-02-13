@@ -2,7 +2,8 @@
 // Direct port from Swift SelectionState
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import type { HexCoordinate, DiscoveryStatus } from '../types';
+import type { HexCoordinate, DiscoveryStatus, ContentCategory } from '../types';
+import { hexKey } from '../types';
 
 interface SelectedMarker {
   markerId: string;
@@ -29,6 +30,20 @@ interface SelectionContextValue extends SelectionState {
   setFilterStatus: (status: DiscoveryStatus | null) => void;
   setFilterHasUnresolvedHooks: (value: boolean) => void;
   clearFilters: () => void;
+  // Content type filters
+  filterContentTypes: Set<ContentCategory>;
+  toggleContentTypeFilter: (category: ContentCategory) => void;
+  // Bookmark filter
+  filterBookmarked: boolean;
+  setFilterBookmarked: (value: boolean) => void;
+  // Active filter count
+  activeFilterCount: number;
+  // Recent hexes (session-only)
+  recentHexes: HexCoordinate[];
+  // Command palette
+  isCommandPaletteOpen: boolean;
+  openCommandPalette: () => void;
+  closeCommandPalette: () => void;
   // Navigation
   moveSelection: (dq: number, dr: number, gridWidth: number, gridHeight: number) => void;
 }
@@ -42,11 +57,23 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
   const [filterTerrain, setFilterTerrainState] = useState<string | null>(null);
   const [filterStatus, setFilterStatusState] = useState<DiscoveryStatus | null>(null);
   const [filterHasUnresolvedHooks, setFilterHasUnresolvedHooksState] = useState(false);
+  const [filterContentTypes, setFilterContentTypes] = useState<Set<ContentCategory>>(new Set());
+  const [filterBookmarked, setFilterBookmarkedState] = useState(false);
+  const [recentHexes, setRecentHexes] = useState<HexCoordinate[]>([]);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
   const selectHex = useCallback((coord: HexCoordinate | null) => {
     setSelectedCoordinate(coord);
     // Clear marker selection when selecting a different hex
     setSelectedMarker(null);
+    // Track recent hexes
+    if (coord) {
+      setRecentHexes(prev => {
+        const key = hexKey(coord);
+        const filtered = prev.filter(c => hexKey(c) !== key);
+        return [coord, ...filtered].slice(0, 20);
+      });
+    }
   }, []);
 
   const selectMarker = useCallback((markerId: string | null, hexCoord?: HexCoordinate) => {
@@ -85,6 +112,32 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
     setFilterTerrainState(null);
     setFilterStatusState(null);
     setFilterHasUnresolvedHooksState(false);
+    setFilterContentTypes(new Set());
+    setFilterBookmarkedState(false);
+  }, []);
+
+  const toggleContentTypeFilter = useCallback((category: ContentCategory) => {
+    setFilterContentTypes(prev => {
+      const next = new Set(prev);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
+      }
+      return next;
+    });
+  }, []);
+
+  const setFilterBookmarked = useCallback((value: boolean) => {
+    setFilterBookmarkedState(value);
+  }, []);
+
+  const openCommandPalette = useCallback(() => {
+    setIsCommandPaletteOpen(true);
+  }, []);
+
+  const closeCommandPalette = useCallback(() => {
+    setIsCommandPaletteOpen(false);
   }, []);
 
   // Move selection with arrow keys (accounting for odd-q offset)
@@ -112,6 +165,14 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
     setSelectedCoordinate({ q: newQ, r: newR });
   }, [selectedCoordinate]);
 
+  // Compute active filter count
+  const activeFilterCount =
+    (filterTerrain ? 1 : 0) +
+    (filterStatus ? 1 : 0) +
+    (filterHasUnresolvedHooks ? 1 : 0) +
+    filterContentTypes.size +
+    (filterBookmarked ? 1 : 0);
+
   const value: SelectionContextValue = {
     selectedCoordinate,
     selectedMarker,
@@ -127,6 +188,15 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
     setFilterStatus,
     setFilterHasUnresolvedHooks,
     clearFilters,
+    filterContentTypes,
+    toggleContentTypeFilter,
+    filterBookmarked,
+    setFilterBookmarked,
+    activeFilterCount,
+    recentHexes,
+    isCommandPaletteOpen,
+    openCommandPalette,
+    closeCommandPalette,
     moveSelection
   };
 
