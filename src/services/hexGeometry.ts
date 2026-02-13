@@ -56,6 +56,52 @@ export function drawHexPath(ctx: CanvasRenderingContext2D, center: { x: number; 
 }
 
 /**
+ * Get all 6 neighbors for a hex coordinate (odd-q vertical offset layout)
+ */
+export function getHexNeighbors(coord: HexCoordinate): HexCoordinate[] {
+  const isOddCol = coord.q % 2 !== 0;
+  if (isOddCol) {
+    return [
+      { q: coord.q + 1, r: coord.r },     // east-north
+      { q: coord.q + 1, r: coord.r + 1 }, // east-south
+      { q: coord.q, r: coord.r + 1 },     // south
+      { q: coord.q - 1, r: coord.r + 1 }, // west-south
+      { q: coord.q - 1, r: coord.r },     // west-north
+      { q: coord.q, r: coord.r - 1 },     // north
+    ];
+  } else {
+    return [
+      { q: coord.q + 1, r: coord.r - 1 }, // east-north
+      { q: coord.q + 1, r: coord.r },     // east-south
+      { q: coord.q, r: coord.r + 1 },     // south
+      { q: coord.q - 1, r: coord.r },     // west-south
+      { q: coord.q - 1, r: coord.r - 1 }, // west-north
+      { q: coord.q, r: coord.r - 1 },     // north
+    ];
+  }
+}
+
+/**
+ * Check if two hexes share an edge
+ */
+export function areHexesAdjacent(a: HexCoordinate, b: HexCoordinate): boolean {
+  return getHexNeighbors(a).some(n => n.q === b.q && n.r === b.r);
+}
+
+/**
+ * Get neighbors within grid bounds
+ */
+export function getValidNeighbors(
+  coord: HexCoordinate,
+  gridWidth: number,
+  gridHeight: number
+): HexCoordinate[] {
+  return getHexNeighbors(coord).filter(
+    n => n.q >= 0 && n.q < gridWidth && n.r >= 0 && n.r < gridHeight
+  );
+}
+
+/**
  * Find hex coordinate at a point
  */
 export function coordinateAt(

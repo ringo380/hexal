@@ -5,10 +5,11 @@ import { useSelection } from '../stores/SelectionContext';
 import type { Hex, ContentCategory } from '../types';
 import { hexHasUnresolvedContent, hexKey } from '../types';
 import { searchHex, getMatchHint } from '../services/search';
+import { createHexRegionMap } from '../services/regions';
 import Icon from './icons/Icon';
 
 function Sidebar() {
-  const { campaign, bookmarkedHexes } = useCampaign();
+  const { campaign, bookmarkedHexes, regions } = useCampaign();
   const {
     selectedCoordinate,
     selectHex,
@@ -17,21 +18,26 @@ function Sidebar() {
     filterStatus,
     filterHasUnresolvedHooks,
     filterContentTypes,
-    filterBookmarked
+    filterBookmarked,
+    filterRegion
   } = useSelection();
+
+  // Build hex-to-region lookup
+  const hexRegionMap = useMemo(() => createHexRegionMap(regions), [regions]);
 
   // Build search results map when search is active
   const searchMatchMap = useMemo(() => {
     if (!campaign || !searchQuery.trim()) return new Map<string, ReturnType<typeof searchHex>>();
     const map = new Map<string, ReturnType<typeof searchHex>>();
     for (const [key, hex] of Object.entries(campaign.hexes)) {
-      const matches = searchHex(hex, key, searchQuery);
+      const regionName = hexRegionMap.get(key)?.name;
+      const matches = searchHex(hex, key, searchQuery, regionName);
       if (matches.length > 0) {
         map.set(key, matches);
       }
     }
     return map;
-  }, [campaign, searchQuery]);
+  }, [campaign, searchQuery, hexRegionMap]);
 
   const filteredHexes = useMemo(() => {
     if (!campaign) return [];
@@ -73,6 +79,12 @@ function Sidebar() {
           return false;
         }
 
+        // Region filter
+        if (filterRegion) {
+          const hexRegion = hexRegionMap.get(key);
+          if (!hexRegion || hexRegion.id !== filterRegion) return false;
+        }
+
         return true;
       })
       .sort((a, b) => {
@@ -81,7 +93,7 @@ function Sidebar() {
         }
         return a.coordinate.q - b.coordinate.q;
       });
-  }, [campaign, searchQuery, searchMatchMap, filterTerrain, filterStatus, filterHasUnresolvedHooks, filterContentTypes, filterBookmarked, bookmarkedHexes]);
+  }, [campaign, searchQuery, searchMatchMap, filterTerrain, filterStatus, filterHasUnresolvedHooks, filterContentTypes, filterBookmarked, bookmarkedHexes, filterRegion, hexRegionMap]);
 
   const getTerrainColor = (terrain: string): string => {
     const terrainType = campaign?.terrainTypes.find(t => t.name === terrain);
@@ -107,6 +119,7 @@ function Sidebar() {
             const key = hexKey(hex.coordinate);
             const isBookmarked = bookmarkedHexes.includes(key);
             const matchHint = searchQuery.trim() ? getMatchHint(searchMatchMap.get(key) || []) : '';
+            const hexRegion = hexRegionMap.get(key);
 
             return (
               <li
@@ -130,6 +143,12 @@ function Sidebar() {
                       </span>
                     )}
                   </div>
+                  {hexRegion && (
+                    <span className="hex-region-label">
+                      <span className="region-swatch" style={{ backgroundColor: hexRegion.color }} />
+                      {hexRegion.name || 'Unnamed'}
+                    </span>
+                  )}
                   {matchHint && (
                     <span className="match-hint">{matchHint}</span>
                   )}
