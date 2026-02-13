@@ -2,37 +2,47 @@
 import { useMemo } from 'react';
 import { useCampaign } from '../stores/CampaignContext';
 import { useSelection } from '../stores/SelectionContext';
-import type { Hex } from '../types';
-import { hexHasUnresolvedContent } from '../types';
+import type { Hex, ContentCategory } from '../types';
+import { hexHasUnresolvedContent, hexKey } from '../types';
+import { searchHex, getMatchHint } from '../services/search';
+import Icon from './icons/Icon';
 
 function Sidebar() {
-  const { campaign } = useCampaign();
+  const { campaign, bookmarkedHexes } = useCampaign();
   const {
     selectedCoordinate,
     selectHex,
     searchQuery,
     filterTerrain,
     filterStatus,
-    filterHasUnresolvedHooks
+    filterHasUnresolvedHooks,
+    filterContentTypes,
+    filterBookmarked
   } = useSelection();
+
+  // Build search results map when search is active
+  const searchMatchMap = useMemo(() => {
+    if (!campaign || !searchQuery.trim()) return new Map<string, ReturnType<typeof searchHex>>();
+    const map = new Map<string, ReturnType<typeof searchHex>>();
+    for (const [key, hex] of Object.entries(campaign.hexes)) {
+      const matches = searchHex(hex, key, searchQuery);
+      if (matches.length > 0) {
+        map.set(key, matches);
+      }
+    }
+    return map;
+  }, [campaign, searchQuery]);
 
   const filteredHexes = useMemo(() => {
     if (!campaign) return [];
 
     return Object.values(campaign.hexes)
       .filter((hex) => {
-        // Search filter
-        if (searchQuery) {
-          const query = searchQuery.toLowerCase();
-          const matchesNotes = hex.notes.toLowerCase().includes(query);
-          const matchesTerrain = hex.terrain.toLowerCase().includes(query);
-          const matchesContent = [...hex.locations, ...hex.encounters, ...hex.npcs, ...hex.treasures, ...hex.clues]
-            .some(item =>
-              item.title.toLowerCase().includes(query) ||
-              item.description.toLowerCase().includes(query)
-            );
+        const key = hexKey(hex.coordinate);
 
-          if (!matchesNotes && !matchesTerrain && !matchesContent) {
+        // Search filter (use enhanced search)
+        if (searchQuery.trim()) {
+          if (!searchMatchMap.has(key)) {
             return false;
           }
         }
@@ -52,6 +62,17 @@ function Sidebar() {
           return false;
         }
 
+        // Content type filter (show hexes that have items in any selected category)
+        if (filterContentTypes.size > 0) {
+          const hasMatchingContent = Array.from(filterContentTypes).some((cat: ContentCategory) => hex[cat].length > 0);
+          if (!hasMatchingContent) return false;
+        }
+
+        // Bookmark filter
+        if (filterBookmarked && !bookmarkedHexes.includes(key)) {
+          return false;
+        }
+
         return true;
       })
       .sort((a, b) => {
@@ -60,7 +81,7 @@ function Sidebar() {
         }
         return a.coordinate.q - b.coordinate.q;
       });
-  }, [campaign, searchQuery, filterTerrain, filterStatus, filterHasUnresolvedHooks]);
+  }, [campaign, searchQuery, searchMatchMap, filterTerrain, filterStatus, filterHasUnresolvedHooks, filterContentTypes, filterBookmarked, bookmarkedHexes]);
 
   const getTerrainColor = (terrain: string): string => {
     const terrainType = campaign?.terrainTypes.find(t => t.name === terrain);
@@ -82,32 +103,48 @@ function Sidebar() {
         {filteredHexes.length === 0 ? (
           <li className="empty-state">No hexes match filters</li>
         ) : (
-          filteredHexes.map((hex) => (
-            <li
-              key={`${hex.coordinate.q},${hex.coordinate.r}`}
-              className={`hex-item ${isSelected(hex) ? 'selected' : ''}`}
-              onClick={() => selectHex(hex.coordinate)}
-            >
-              <span
-                className="terrain-indicator"
-                style={{ backgroundColor: getTerrainColor(hex.terrain) }}
-              />
-              <div className="hex-info">
-                <span className="hex-coord">
-                  ({hex.coordinate.q}, {hex.coordinate.r})
-                </span>
-                <span className="hex-terrain">{hex.terrain}</span>
-              </div>
-              <div className="hex-status">
-                {hexHasUnresolvedContent(hex) && (
-                  <span className="unresolved-indicator" title="Has unresolved content">!</span>
-                )}
-                <span className={`status-badge status-${hex.status}`}>
-                  {hex.status.charAt(0).toUpperCase()}
-                </span>
-              </div>
-            </li>
-          ))
+          filteredHexes.map((hex) => {
+            const key = hexKey(hex.coordinate);
+            const isBookmarked = bookmarkedHexes.includes(key);
+            const matchHint = searchQuery.trim() ? getMatchHint(searchMatchMap.get(key) || []) : '';
+
+            return (
+              <li
+                key={key}
+                className={`hex-item ${isSelected(hex) ? 'selected' : ''}`}
+                onClick={() => selectHex(hex.coordinate)}
+              >
+                <span
+                  className="terrain-indicator"
+                  style={{ backgroundColor: getTerrainColor(hex.terrain) }}
+                />
+                <div className="hex-info">
+                  <div className="hex-info-row">
+                    <span className="hex-coord">
+                      ({hex.coordinate.q}, {hex.coordinate.r})
+                    </span>
+                    <span className="hex-terrain">{hex.terrain}</span>
+                    {isBookmarked && (
+                      <span className="bookmark-indicator" title="Bookmarked">
+                        <Icon name="star" size={12} />
+                      </span>
+                    )}
+                  </div>
+                  {matchHint && (
+                    <span className="match-hint">{matchHint}</span>
+                  )}
+                </div>
+                <div className="hex-status">
+                  {hexHasUnresolvedContent(hex) && (
+                    <span className="unresolved-indicator" title="Has unresolved content">!</span>
+                  )}
+                  <span className={`status-badge status-${hex.status}`}>
+                    {hex.status.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              </li>
+            );
+          })
         )}
       </ul>
     </div>

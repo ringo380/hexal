@@ -34,6 +34,12 @@ export interface Campaign {
    * Optional for backward compatibility with legacy campaign files.
    */
   encounterTemplates?: EncounterTemplate[];
+
+  /**
+   * Bookmarked hex keys ("q,r" format) for quick access.
+   * Optional for backward compatibility with legacy campaign files.
+   */
+  bookmarkedHexes?: string[];
 }
 
 export interface Hex {
@@ -153,7 +159,8 @@ export function createCampaign(name: string, gridWidth: number, gridHeight: numb
     modifiedAt: new Date().toISOString(),
     timeWeather: createDefaultTimeWeather(),
     markerTypes: DEFAULT_MARKER_TYPES,
-    encounterTemplates: []
+    encounterTemplates: [],
+    bookmarkedHexes: []
   };
 }
 
@@ -413,11 +420,12 @@ export function migrateCampaign(campaign: Campaign): Campaign {
     });
     hexes[key] = { ...hex, encounters: migratedEncounters };
   }
-  if (!changed && campaign.encounterTemplates !== undefined) return campaign;
+  if (!changed && campaign.encounterTemplates !== undefined && campaign.bookmarkedHexes !== undefined) return campaign;
   return {
     ...campaign,
     hexes,
-    encounterTemplates: campaign.encounterTemplates ?? []
+    encounterTemplates: campaign.encounterTemplates ?? [],
+    bookmarkedHexes: campaign.bookmarkedHexes ?? []
   };
 }
 

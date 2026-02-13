@@ -16,7 +16,9 @@ import ConfirmDialog from './modals/ConfirmDialog';
 import KeyboardShortcutsModal from './modals/KeyboardShortcutsModal';
 import EncounterTableEditorModal from './modals/EncounterTableEditorModal';
 import EncounterTemplateLibrary from './modals/EncounterTemplateLibrary';
+import CommandPalette from './CommandPalette';
 import Icon from './icons/Icon';
+import { CATEGORY_INFO, type ContentCategory } from '../types/Campaign';
 
 interface MainEditorProps {
   onRegisterExport?: (handler: () => void) => void;
@@ -25,7 +27,15 @@ interface MainEditorProps {
 
 function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) {
   const { campaign, saveStatus, saveCampaign, closeCampaign, hasUnsavedChanges, undo, redo, canUndo, canRedo } = useCampaign();
-  const { searchQuery, setSearchQuery, clearFilters, filterTerrain, setFilterTerrain, filterStatus, setFilterStatus, filterHasUnresolvedHooks, setFilterHasUnresolvedHooks } = useSelection();
+  const {
+    searchQuery, setSearchQuery, clearFilters,
+    filterTerrain, setFilterTerrain, filterStatus, setFilterStatus,
+    filterHasUnresolvedHooks, setFilterHasUnresolvedHooks,
+    filterContentTypes, toggleContentTypeFilter,
+    filterBookmarked, setFilterBookmarked,
+    activeFilterCount,
+    isCommandPaletteOpen, openCommandPalette, closeCommandPalette
+  } = useSelection();
   const [showGenerator, setShowGenerator] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showMapExport, setShowMapExport] = useState(false);
@@ -85,6 +95,11 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
         e.preventDefault();
         setShowWeatherSettings(true);
       }
+      // Cmd+K to open command palette
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        openCommandPalette();
+      }
       // Cmd+? (Cmd+Shift+/) to show keyboard shortcuts
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '/') {
         e.preventDefault();
@@ -94,7 +109,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [saveCampaign, undo, redo]);
+  }, [saveCampaign, undo, redo, openCommandPalette]);
 
   const handleClose = () => {
     if (hasUnsavedChanges) {
@@ -180,6 +195,9 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
               aria-expanded={showFilterMenu}
             >
               <Icon name="filter" size={16} />
+              {activeFilterCount > 0 && (
+                <span className="filter-badge">{activeFilterCount}</span>
+              )}
             </button>
             {showFilterMenu && (
               <div className="filter-menu">
@@ -208,6 +226,22 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
                   </select>
                 </div>
                 <div className="filter-group">
+                  <label>Content</label>
+                  <div className="filter-checkboxes">
+                    {(Object.keys(CATEGORY_INFO) as ContentCategory[]).map((cat) => (
+                      <label key={cat} className="filter-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={filterContentTypes.has(cat)}
+                          onChange={() => toggleContentTypeFilter(cat)}
+                        />
+                        <Icon name={CATEGORY_INFO[cat].icon} size={14} />
+                        {CATEGORY_INFO[cat].label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="filter-group">
                   <label>
                     <input
                       type="checkbox"
@@ -215,6 +249,17 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
                       onChange={(e) => setFilterHasUnresolvedHooks(e.target.checked)}
                     />
                     Has Unresolved Content
+                  </label>
+                </div>
+                <div className="filter-group">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={filterBookmarked}
+                      onChange={(e) => setFilterBookmarked(e.target.checked)}
+                    />
+                    <Icon name="star" size={14} />
+                    Bookmarked Only
                   </label>
                 </div>
                 <button className="btn btn-small" onClick={clearFilters}>
@@ -299,6 +344,9 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
       )}
       {showTemplateLibrary && (
         <EncounterTemplateLibrary onClose={() => setShowTemplateLibrary(false)} />
+      )}
+      {isCommandPaletteOpen && (
+        <CommandPalette onClose={closeCommandPalette} />
       )}
     </div>
   );
