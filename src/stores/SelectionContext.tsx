@@ -46,6 +46,12 @@ interface SelectionContextValue extends SelectionState {
   closeCommandPalette: () => void;
   // Navigation
   moveSelection: (dq: number, dr: number, gridWidth: number, gridHeight: number) => void;
+  // Region paint mode
+  regionPaintMode: string | null;
+  setRegionPaintMode: (regionId: string | null) => void;
+  // Region filter
+  filterRegion: string | null;
+  setFilterRegion: (regionId: string | null) => void;
 }
 
 const SelectionContext = createContext<SelectionContextValue | null>(null);
@@ -61,6 +67,8 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
   const [filterBookmarked, setFilterBookmarkedState] = useState(false);
   const [recentHexes, setRecentHexes] = useState<HexCoordinate[]>([]);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [regionPaintMode, setRegionPaintModeState] = useState<string | null>(null);
+  const [filterRegion, setFilterRegionState] = useState<string | null>(null);
 
   const selectHex = useCallback((coord: HexCoordinate | null) => {
     setSelectedCoordinate(coord);
@@ -107,6 +115,14 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
     setFilterHasUnresolvedHooksState(value);
   }, []);
 
+  const setRegionPaintMode = useCallback((regionId: string | null) => {
+    setRegionPaintModeState(regionId);
+  }, []);
+
+  const setFilterRegion = useCallback((regionId: string | null) => {
+    setFilterRegionState(regionId);
+  }, []);
+
   const clearFilters = useCallback(() => {
     setSearchQueryState('');
     setFilterTerrainState(null);
@@ -114,6 +130,7 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
     setFilterHasUnresolvedHooksState(false);
     setFilterContentTypes(new Set());
     setFilterBookmarkedState(false);
+    setFilterRegionState(null);
   }, []);
 
   const toggleContentTypeFilter = useCallback((category: ContentCategory) => {
@@ -171,7 +188,8 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
     (filterStatus ? 1 : 0) +
     (filterHasUnresolvedHooks ? 1 : 0) +
     filterContentTypes.size +
-    (filterBookmarked ? 1 : 0);
+    (filterBookmarked ? 1 : 0) +
+    (filterRegion ? 1 : 0);
 
   const value: SelectionContextValue = {
     selectedCoordinate,
@@ -197,7 +215,11 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
     isCommandPaletteOpen,
     openCommandPalette,
     closeCommandPalette,
-    moveSelection
+    moveSelection,
+    regionPaintMode,
+    setRegionPaintMode,
+    filterRegion,
+    setFilterRegion
   };
 
   return (

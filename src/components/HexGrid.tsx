@@ -7,8 +7,10 @@ import {
   hexCenter,
   canvasSize,
   drawHexPath,
+  hexPoints,
   coordinateAt
 } from '../services/hexGeometry';
+import { hexKey } from '../types/Campaign';
 import {
   hexToRgba,
   getContentSummary,
@@ -17,6 +19,7 @@ import {
   renderMarkers,
   renderDraggingMarker
 } from '../services/hexRenderer';
+import { createHexRegionMap, getRegionBorderSegments } from '../services/regions';
 import { figurineCache } from '../services/markerFigurines';
 import { markerAudio } from '../services/audioService';
 import { useMarkerDrag } from '../hooks/useMarkerDrag';
@@ -179,8 +182,8 @@ interface IndicatorPosition {
 function HexGrid() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { campaign, getHex, removeMarker, moveMarker, moveMarkerToPosition, addMarkerAtPosition } = useCampaign();
-  const { selectedCoordinate, selectedMarker, selectHex, selectMarker, clearSelection } = useSelection();
+  const { campaign, getHex, removeMarker, moveMarker, moveMarkerToPosition, addMarkerAtPosition, regions, addHexToRegion, removeHexFromRegion } = useCampaign();
+  const { selectedCoordinate, selectedMarker, selectHex, selectMarker, clearSelection, regionPaintMode, setRegionPaintMode } = useSelection();
 
   // Tooltip state
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
@@ -275,6 +278,12 @@ function HexGrid() {
     ctx.translate(panOffset.x, panOffset.y);
     ctx.scale(zoomLevel, zoomLevel);
 
+    // Build hex-to-region lookup map
+    const hexRegionMap = createHexRegionMap(regions);
+
+    // Neighbor-to-edge index mapping for border rendering
+    const NEIGHBOR_TO_EDGE = [5, 0, 1, 2, 3, 4];
+
     // ========================================================================
     // PASS 1: Draw all hex backgrounds and content (terrain, indicators, labels)
     // ========================================================================
@@ -298,6 +307,14 @@ function HexGrid() {
         drawHexPath(ctx, center, HEX_SIZE);
         ctx.fillStyle = fillColor;
         ctx.fill();
+
+        // Region overlay
+        const region = hexRegionMap.get(hexKey(coord));
+        if (region) {
+          drawHexPath(ctx, center, HEX_SIZE);
+          ctx.fillStyle = hexToRgba(region.color, 0.25);
+          ctx.fill();
+        }
 
         // Draw border (LOD-controlled)
         if (lod.showBorders || isSelected) {
@@ -451,6 +468,63 @@ function HexGrid() {
     }
 
     // ========================================================================
+    // REGION BORDER PASS: Draw region boundary edges
+    // ========================================================================
+    for (const region of regions) {
+      if (region.hexKeys.length === 0) continue;
+      const borderSegments = getRegionBorderSegments(region);
+
+      ctx.strokeStyle = hexToRgba(region.color, 0.6);
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = 'round';
+
+      for (const segment of borderSegments) {
+        const center = hexCenter(segment.coord);
+        const points = hexPoints(center, HEX_SIZE);
+        const edgeIndex = NEIGHBOR_TO_EDGE[segment.edgeIndex];
+        const p1 = points[edgeIndex];
+        const p2 = points[(edgeIndex + 1) % 6];
+
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      }
+    }
+
+    // ========================================================================
+    // REGION NAME LABELS (at lower zoom levels)
+    // ========================================================================
+    if (zoomLevel >= 0.25 && zoomLevel <= 0.80) {
+      for (const region of regions) {
+        if (region.hexKeys.length === 0) continue;
+
+        // Calculate bounding box center of region hexes
+        let sumX = 0, sumY = 0;
+        for (const key of region.hexKeys) {
+          const parsed = key.split(',');
+          const rq = parseInt(parsed[0], 10);
+          const rr = parseInt(parsed[1], 10);
+          const c = hexCenter({ q: rq, r: rr });
+          sumX += c.x;
+          sumY += c.y;
+        }
+        const cx = sumX / region.hexKeys.length;
+        const cy = sumY / region.hexKeys.length;
+
+        const fontSize = Math.max(8, Math.min(14, 10 / zoomLevel));
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = hexToRgba(region.color, 0.9);
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+        ctx.shadowBlur = 4;
+        ctx.fillText(region.name, cx, cy);
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    // ========================================================================
     // PASS 2: Draw all markers (figurines) on top of hex content
     // This ensures markers with free-form positions can overlap adjacent hexes
     // ========================================================================
@@ -508,7 +582,7 @@ function HexGrid() {
         tilt
       );
     }
-  }, [campaign, getHex, selectedCoordinate, getTerrainColor, zoomLevel, panOffset, markerDrag.isDragging, markerDrag.state]);
+  }, [campaign, getHex, selectedCoordinate, getTerrainColor, zoomLevel, panOffset, markerDrag.isDragging, markerDrag.state, regions]);
 
   // Update canvas size and redraw on campaign change
   useEffect(() => {
@@ -576,12 +650,25 @@ function HexGrid() {
       return;
     }
 
-    // No marker hit, check for hex selection
+    // No marker hit, check for hex selection or paint mode
     const coord = coordinateAt({ x: worldX, y: worldY }, campaign.gridWidth, campaign.gridHeight);
     if (coord) {
-      selectHex(coord);
+      if (regionPaintMode) {
+        // In paint mode: toggle hex in/out of region
+        const key = hexKey(coord);
+        const targetRegion = regions.find(r => r.id === regionPaintMode);
+        if (targetRegion) {
+          if (targetRegion.hexKeys.includes(key)) {
+            removeHexFromRegion(regionPaintMode, coord);
+          } else {
+            addHexToRegion(regionPaintMode, coord);
+          }
+        }
+      } else {
+        selectHex(coord);
+      }
     }
-  }, [campaign, selectHex, selectMarker, zoomLevel, panOffset]);
+  }, [campaign, selectHex, selectMarker, zoomLevel, panOffset, regionPaintMode, regions, addHexToRegion, removeHexFromRegion]);
 
   // Handle mouse down - start potential drag (map or marker)
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -870,7 +957,11 @@ function HexGrid() {
             break;
           case 'escape':
             e.preventDefault();
-            clearSelection();
+            if (regionPaintMode) {
+              setRegionPaintMode(null);
+            } else {
+              clearSelection();
+            }
             return;
           case 'delete':
           case 'backspace':
@@ -897,7 +988,7 @@ function HexGrid() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [campaign, clearSelection, selectedMarker, removeMarker, selectMarker]);
+  }, [campaign, clearSelection, selectedMarker, removeMarker, selectMarker, regionPaintMode, setRegionPaintMode]);
 
   // Smooth zoom and pan animation loop - animates both in sync
   useEffect(() => {
@@ -1091,6 +1182,19 @@ function HexGrid() {
         onDrop={handleDrop}
         tabIndex={0}
       />
+      {/* Region paint mode banner */}
+      {regionPaintMode && (() => {
+        const paintRegion = regions.find(r => r.id === regionPaintMode);
+        return paintRegion ? (
+          <div className="region-paint-banner">
+            <span className="region-paint-swatch" style={{ backgroundColor: paintRegion.color }} />
+            <span>Painting: <strong>{paintRegion.name || 'Unnamed Region'}</strong> — Click hexes to add/remove</span>
+            <button className="btn btn-small" onClick={() => setRegionPaintMode?.(null)}>
+              Done (Esc)
+            </button>
+          </div>
+        ) : null;
+      })()}
       {/* Zoom controls - fixed position */}
       <div className="zoom-controls">
         <button className="zoom-btn" onClick={zoomOut} title="Zoom out (Cmd/Ctrl -)">−</button>

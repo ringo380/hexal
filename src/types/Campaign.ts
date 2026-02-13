@@ -40,6 +40,12 @@ export interface Campaign {
    * Optional for backward compatibility with legacy campaign files.
    */
   bookmarkedHexes?: string[];
+
+  /**
+   * Named geographic regions grouping adjacent hexes.
+   * Optional for backward compatibility with legacy campaign files.
+   */
+  regions?: Region[];
 }
 
 export interface Hex {
@@ -160,7 +166,8 @@ export function createCampaign(name: string, gridWidth: number, gridHeight: numb
     timeWeather: createDefaultTimeWeather(),
     markerTypes: DEFAULT_MARKER_TYPES,
     encounterTemplates: [],
-    bookmarkedHexes: []
+    bookmarkedHexes: [],
+    regions: []
   };
 }
 
@@ -321,6 +328,37 @@ export const OUTCOME_INFO: Record<EncounterOutcome, { label: string; color: stri
   bypassed: { label: 'Bypassed', color: '#9c27b0' }
 };
 
+// ============ REGION SYSTEM ============
+
+export interface Region {
+  id: string;
+  name: string;
+  color: string;          // hex color e.g. "#4a9eff"
+  description: string;
+  hexKeys: string[];       // "q,r" format coordinate keys
+  tags: string[];
+  isDiscovered: boolean;
+  notes: string;
+}
+
+export const REGION_COLORS = [
+  '#4a9eff', '#4caf50', '#f44336', '#ff9800', '#9c27b0', '#00bcd4',
+  '#e91e63', '#8bc34a', '#ff5722', '#607d8b', '#3f51b5', '#cddc39'
+];
+
+export function createRegion(name: string = '', color: string = '#4a9eff'): Region {
+  return {
+    id: crypto.randomUUID(),
+    name,
+    color,
+    description: '',
+    hexKeys: [],
+    tags: [],
+    isDiscovered: false,
+    notes: ''
+  };
+}
+
 // Encounter factory functions
 export function createEncounter(title: string = ''): Encounter {
   return {
@@ -420,12 +458,13 @@ export function migrateCampaign(campaign: Campaign): Campaign {
     });
     hexes[key] = { ...hex, encounters: migratedEncounters };
   }
-  if (!changed && campaign.encounterTemplates !== undefined && campaign.bookmarkedHexes !== undefined) return campaign;
+  if (!changed && campaign.encounterTemplates !== undefined && campaign.bookmarkedHexes !== undefined && campaign.regions !== undefined) return campaign;
   return {
     ...campaign,
     hexes,
     encounterTemplates: campaign.encounterTemplates ?? [],
-    bookmarkedHexes: campaign.bookmarkedHexes ?? []
+    bookmarkedHexes: campaign.bookmarkedHexes ?? [],
+    regions: campaign.regions ?? []
   };
 }
 
