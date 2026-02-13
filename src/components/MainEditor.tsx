@@ -16,6 +16,7 @@ import ConfirmDialog from './modals/ConfirmDialog';
 import KeyboardShortcutsModal from './modals/KeyboardShortcutsModal';
 import EncounterTableEditorModal from './modals/EncounterTableEditorModal';
 import EncounterTemplateLibrary from './modals/EncounterTemplateLibrary';
+import RegionManagerModal from './modals/RegionManagerModal';
 import CommandPalette from './CommandPalette';
 import Icon from './icons/Icon';
 import { CATEGORY_INFO, type ContentCategory } from '../types/Campaign';
@@ -26,13 +27,14 @@ interface MainEditorProps {
 }
 
 function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) {
-  const { campaign, saveStatus, saveCampaign, closeCampaign, hasUnsavedChanges, undo, redo, canUndo, canRedo } = useCampaign();
+  const { campaign, saveStatus, saveCampaign, closeCampaign, hasUnsavedChanges, undo, redo, canUndo, canRedo, regions } = useCampaign();
   const {
     searchQuery, setSearchQuery, clearFilters,
     filterTerrain, setFilterTerrain, filterStatus, setFilterStatus,
     filterHasUnresolvedHooks, setFilterHasUnresolvedHooks,
     filterContentTypes, toggleContentTypeFilter,
     filterBookmarked, setFilterBookmarked,
+    filterRegion, setFilterRegion,
     activeFilterCount,
     isCommandPaletteOpen, openCommandPalette, closeCommandPalette
   } = useSelection();
@@ -46,6 +48,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [showEncounterTableEditor, setShowEncounterTableEditor] = useState(false);
   const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
+  const [showRegionManager, setShowRegionManager] = useState(false);
 
   // Register export handler for menu command
   useEffect(() => {
@@ -99,6 +102,11 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         openCommandPalette();
+      }
+      // Cmd+R to open region manager
+      if ((e.metaKey || e.ctrlKey) && e.key === 'r' && !e.shiftKey) {
+        e.preventDefault();
+        setShowRegionManager(true);
       }
       // Cmd+? (Cmd+Shift+/) to show keyboard shortcuts
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '/') {
@@ -225,6 +233,20 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
                     <option value="cleared">Cleared</option>
                   </select>
                 </div>
+                {regions.length > 0 && (
+                  <div className="filter-group">
+                    <label>Region</label>
+                    <select
+                      value={filterRegion ?? ''}
+                      onChange={(e) => setFilterRegion(e.target.value || null)}
+                    >
+                      <option value="">All Regions</option>
+                      {regions.map((r) => (
+                        <option key={r.id} value={r.id}>{r.name || 'Unnamed'}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="filter-group">
                   <label>Content</label>
                   <div className="filter-checkboxes">
@@ -276,6 +298,9 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
           </button>
           <button className="btn btn-secondary" onClick={() => setShowTemplateLibrary(true)}>
             <Icon name="sparkle" size={16} /> Templates
+          </button>
+          <button className="btn btn-secondary" onClick={() => setShowRegionManager(true)}>
+            <Icon name="map" size={16} /> Regions
           </button>
           <button className="btn btn-secondary" onClick={() => setShowGenerator(true)}>
             <Icon name="dice" size={16} /> Generate
@@ -344,6 +369,9 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
       )}
       {showTemplateLibrary && (
         <EncounterTemplateLibrary onClose={() => setShowTemplateLibrary(false)} />
+      )}
+      {showRegionManager && (
+        <RegionManagerModal onClose={() => setShowRegionManager(false)} />
       )}
       {isCommandPaletteOpen && (
         <CommandPalette onClose={closeCommandPalette} />

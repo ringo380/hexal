@@ -2,8 +2,8 @@
 // Direct port from Swift CampaignStore using React Context + useReducer
 
 import React, { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react';
-import type { Campaign, Hex, HexCoordinate, HexMarker, MarkerType, ContentItem, EncounterTemplate } from '../types';
-import { createCampaign, createHex, coordinateKey, createDefaultTimeWeather } from '../types';
+import type { Campaign, Hex, HexCoordinate, HexMarker, MarkerType, ContentItem, EncounterTemplate, Region } from '../types';
+import { createCampaign, createHex, coordinateKey, createDefaultTimeWeather, createRegion, hexKey } from '../types';
 import { migrateCampaign } from '../types/Campaign';
 import { createMarker, createCustomMarkerType, DEFAULT_MARKER_TYPES } from '../types/Markers';
 import {
@@ -678,6 +678,15 @@ interface CampaignContextValue {
   // Encounter helpers
   encounterTemplates: EncounterTemplate[];
   getAllNpcs: () => Array<{ npc: ContentItem; hexKey: string }>;
+
+  // Region operations
+  regions: Region[];
+  addRegion: (name: string, color?: string) => Region;
+  updateRegion: (regionId: string, updates: Partial<Region>) => void;
+  deleteRegion: (regionId: string) => void;
+  addHexToRegion: (regionId: string, coord: HexCoordinate) => void;
+  removeHexFromRegion: (regionId: string, coord: HexCoordinate) => void;
+  getRegionForHex: (coord: HexCoordinate) => Region | undefined;
 }
 
 const CampaignContext = createContext<CampaignContextValue | null>(null);
@@ -989,6 +998,62 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
   // Bookmarked hexes (with fallback to empty)
   const bookmarkedHexes = state.campaign?.bookmarkedHexes ?? [];
 
+  // Regions (with fallback to empty)
+  const regions = state.campaign?.regions ?? [];
+
+  // Add a new region
+  const addRegion = useCallback((name: string, color?: string): Region => {
+    const region = createRegion(name, color);
+    const current = state.campaign?.regions ?? [];
+    dispatch({ type: 'UPDATE_CAMPAIGN', updates: { regions: [...current, region] } });
+    return region;
+  }, [state.campaign]);
+
+  // Update an existing region
+  const updateRegion = useCallback((regionId: string, updates: Partial<Region>) => {
+    const current = state.campaign?.regions ?? [];
+    const updated = current.map(r => r.id === regionId ? { ...r, ...updates } : r);
+    dispatch({ type: 'UPDATE_CAMPAIGN', updates: { regions: updated } });
+  }, [state.campaign]);
+
+  // Delete a region
+  const deleteRegion = useCallback((regionId: string) => {
+    const current = state.campaign?.regions ?? [];
+    dispatch({ type: 'UPDATE_CAMPAIGN', updates: { regions: current.filter(r => r.id !== regionId) } });
+  }, [state.campaign]);
+
+  // Add a hex to a region (removes from any existing region first)
+  const addHexToRegion = useCallback((regionId: string, coord: HexCoordinate) => {
+    const key = hexKey(coord);
+    const current = state.campaign?.regions ?? [];
+    const updated = current.map(r => {
+      // Remove hex from any other region
+      const filtered = r.hexKeys.filter(k => k !== key);
+      if (r.id === regionId) {
+        // Add to target region (if not already there)
+        return { ...r, hexKeys: r.hexKeys.includes(key) ? r.hexKeys : [...r.hexKeys, key] };
+      }
+      return filtered.length !== r.hexKeys.length ? { ...r, hexKeys: filtered } : r;
+    });
+    dispatch({ type: 'UPDATE_CAMPAIGN', updates: { regions: updated } });
+  }, [state.campaign]);
+
+  // Remove a hex from a region
+  const removeHexFromRegion = useCallback((regionId: string, coord: HexCoordinate) => {
+    const key = hexKey(coord);
+    const current = state.campaign?.regions ?? [];
+    const updated = current.map(r =>
+      r.id === regionId ? { ...r, hexKeys: r.hexKeys.filter(k => k !== key) } : r
+    );
+    dispatch({ type: 'UPDATE_CAMPAIGN', updates: { regions: updated } });
+  }, [state.campaign]);
+
+  // Get the region a hex belongs to
+  const getRegionForHexFn = useCallback((coord: HexCoordinate): Region | undefined => {
+    const key = hexKey(coord);
+    return (state.campaign?.regions ?? []).find(r => r.hexKeys.includes(key));
+  }, [state.campaign?.regions]);
+
   // Toggle bookmark for a hex
   const toggleBookmark = useCallback((coord: HexCoordinate) => {
     if (!state.campaign) return;
@@ -1081,7 +1146,16 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
 
     // Encounter helpers
     encounterTemplates,
-    getAllNpcs
+    getAllNpcs,
+
+    // Region operations
+    regions,
+    addRegion,
+    updateRegion,
+    deleteRegion,
+    addHexToRegion,
+    removeHexFromRegion,
+    getRegionForHex: getRegionForHexFn
   };
 
   return (

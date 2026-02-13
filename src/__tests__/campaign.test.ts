@@ -147,7 +147,8 @@ describe('migrateCampaign', () => {
   it('returns same reference when no migration needed', () => {
     const campaign = makeLegacyCampaign({
       bookmarkedHexes: [],
-      encounterTemplates: []
+      encounterTemplates: [],
+      regions: []
     });
     const migrated = migrateCampaign(campaign);
     // No encounter migration needed, fields exist => same reference
