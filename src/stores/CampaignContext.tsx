@@ -670,6 +670,11 @@ interface CampaignContextValue {
   // Campaign-level updates
   updateCampaignData: (updates: Partial<Campaign>) => void;
 
+  // Bookmark operations
+  toggleBookmark: (coord: HexCoordinate) => void;
+  isBookmarked: (coord: HexCoordinate) => boolean;
+  bookmarkedHexes: string[];
+
   // Encounter helpers
   encounterTemplates: EncounterTemplate[];
   getAllNpcs: () => Array<{ npc: ContentItem; hexKey: string }>;
@@ -981,6 +986,26 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
   // Encounter templates (with fallback to empty)
   const encounterTemplates = state.campaign?.encounterTemplates ?? [];
 
+  // Bookmarked hexes (with fallback to empty)
+  const bookmarkedHexes = state.campaign?.bookmarkedHexes ?? [];
+
+  // Toggle bookmark for a hex
+  const toggleBookmark = useCallback((coord: HexCoordinate) => {
+    if (!state.campaign) return;
+    const key = coordinateKey(coord);
+    const current = state.campaign.bookmarkedHexes ?? [];
+    const updated = current.includes(key)
+      ? current.filter(k => k !== key)
+      : [...current, key];
+    dispatch({ type: 'UPDATE_CAMPAIGN', updates: { bookmarkedHexes: updated } });
+  }, [state.campaign]);
+
+  // Check if a hex is bookmarked
+  const isBookmarked = useCallback((coord: HexCoordinate): boolean => {
+    const key = coordinateKey(coord);
+    return (state.campaign?.bookmarkedHexes ?? []).includes(key);
+  }, [state.campaign?.bookmarkedHexes]);
+
   // Get all NPCs across all hexes (for NPC linker)
   const getAllNpcs = useCallback((): Array<{ npc: ContentItem; hexKey: string }> => {
     if (!state.campaign) return [];
@@ -1048,6 +1073,11 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
 
     // Campaign-level updates
     updateCampaignData,
+
+    // Bookmark operations
+    toggleBookmark,
+    isBookmarked,
+    bookmarkedHexes,
 
     // Encounter helpers
     encounterTemplates,

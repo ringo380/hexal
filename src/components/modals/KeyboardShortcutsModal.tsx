@@ -39,6 +39,7 @@ const sections: ShortcutSection[] = [
   {
     title: 'View',
     shortcuts: [
+      { keys: `${cmdKey}+K`, description: 'Command Palette' },
       { keys: `${cmdKey}+F`, description: 'Focus Search' },
       { keys: `${cmdKey}++`, description: 'Zoom In' },
       { keys: `${cmdKey}+-`, description: 'Zoom Out' },
