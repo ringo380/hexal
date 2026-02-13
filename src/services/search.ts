@@ -11,7 +11,8 @@ export type SearchMatchType =
   | 'content-description'
   | 'creature'
   | 'reward'
-  | 'outcome';
+  | 'outcome'
+  | 'region';
 
 export interface SearchMatch {
   hexKey: string;
@@ -31,10 +32,20 @@ export interface SearchResult {
 export function searchCampaign(campaign: Campaign, query: string): SearchResult[] {
   if (!query.trim()) return [];
 
+  // Build hex-to-region-name map
+  const hexRegionNames = new Map<string, string>();
+  if (campaign.regions) {
+    for (const region of campaign.regions) {
+      for (const key of region.hexKeys) {
+        hexRegionNames.set(key, region.name);
+      }
+    }
+  }
+
   const results: SearchResult[] = [];
 
   for (const [key, hex] of Object.entries(campaign.hexes)) {
-    const matches = searchHex(hex, key, query);
+    const matches = searchHex(hex, key, query, hexRegionNames.get(key));
     if (matches.length > 0) {
       results.push({ hexKey: key, hex, matches });
     }
@@ -44,9 +55,14 @@ export function searchCampaign(campaign: Campaign, query: string): SearchResult[
 }
 
 /** Search a single hex for matches against the query */
-export function searchHex(hex: Hex, hexKey: string, query: string): SearchMatch[] {
+export function searchHex(hex: Hex, hexKey: string, query: string, regionName?: string): SearchMatch[] {
   const q = query.toLowerCase();
   const matches: SearchMatch[] = [];
+
+  // Region name
+  if (regionName && regionName.toLowerCase().includes(q)) {
+    matches.push({ hexKey, matchType: 'region', matchText: regionName });
+  }
 
   // Notes
   if (hex.notes.toLowerCase().includes(q)) {
@@ -138,6 +154,7 @@ export function getMatchHint(matches: SearchMatch[]): string {
     case 'outcome': return `outcome: ${m.matchText}`;
     case 'content-title': return `${m.category}: ${m.matchText}`;
     case 'content-description': return `${m.category}: ${m.itemTitle}`;
+    case 'region': return `region: ${m.matchText}`;
     default: return '';
   }
 }

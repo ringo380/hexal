@@ -53,9 +53,13 @@ function HexDetail() {
     encounterTemplates,
     getAllNpcs,
     toggleBookmark,
-    isBookmarked
+    isBookmarked,
+    regions,
+    addHexToRegion,
+    removeHexFromRegion,
+    getRegionForHex
   } = useCampaign();
-  const { selectedCoordinate, selectedMarker, selectMarker } = useSelection();
+  const { selectedCoordinate, selectedMarker, selectMarker, regionPaintMode } = useSelection();
 
   const [hex, setHex] = useState<Hex | null>(null);
   const [editingItem, setEditingItem] = useState<{ item: ContentItem; category: ContentCategory } | null>(null);
@@ -238,6 +242,56 @@ function HexDetail() {
             ))}
           </div>
         </div>
+
+        {/* Region */}
+        {selectedCoordinate && (
+          <div className="field-group region-info-section">
+            <label>Region</label>
+            {regionPaintMode ? (
+              <div className="region-info-row">
+                <span style={{ fontSize: '12px', color: 'var(--accent-color)' }}>
+                  Currently painting region...
+                </span>
+              </div>
+            ) : (() => {
+              const hexRegion = getRegionForHex(selectedCoordinate);
+              if (hexRegion) {
+                return (
+                  <div className="region-info-row">
+                    <span className="region-swatch" style={{ backgroundColor: hexRegion.color }} />
+                    <span>{hexRegion.name || 'Unnamed'}</span>
+                    <button
+                      className="btn btn-small"
+                      onClick={() => removeHexFromRegion(hexRegion.id, selectedCoordinate)}
+                      title="Remove from region"
+                      style={{ marginLeft: 'auto', fontSize: '11px' }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                );
+              }
+              return (
+                <div className="region-info-row">
+                  <select
+                    className="region-assign-select"
+                    value=""
+                    onChange={(e) => {
+                      if (e.target.value && selectedCoordinate) {
+                        addHexToRegion(e.target.value, selectedCoordinate);
+                      }
+                    }}
+                  >
+                    <option value="">No region — assign...</option>
+                    {regions.map(r => (
+                      <option key={r.id} value={r.id}>{r.name || 'Unnamed'}</option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })()}
+          </div>
+        )}
 
         {/* Tags */}
         <div className="field-group">
