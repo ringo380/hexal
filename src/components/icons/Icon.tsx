@@ -57,7 +57,10 @@ export type IconName =
   | 'sunrise'
   | 'sunset'
   | 'moon'
-  | 'moon-new';
+  | 'moon-new'
+  // Search & Navigation Icons
+  | 'search'
+  | 'star';
 
 const icons: Record<IconName, JSX.Element> = {
   'arrow-left': (
@@ -1107,6 +1110,49 @@ const icons: Record<IconName, JSX.Element> = {
       <circle cx="20" cy="6" r="0.75" fill="currentColor" />
       <circle cx="19" cy="18" r="1" fill="currentColor" />
       <circle cx="5" cy="19" r="0.5" fill="currentColor" />
+    </>
+  ),
+
+  // ============ Search & Navigation Icons ============
+
+  'search': (
+    <>
+      {/* Secondary - lens fill */}
+      <circle cx="11" cy="11" r="6" fill="var(--icon-secondary)" />
+      {/* Primary - lens outline and handle */}
+      <circle
+        cx="11"
+        cy="11"
+        r="8"
+        stroke="currentColor"
+        strokeWidth="2"
+        fill="none"
+      />
+      <path
+        d="M21 21l-4.35-4.35"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        fill="none"
+      />
+    </>
+  ),
+  'star': (
+    <>
+      {/* Secondary - star fill */}
+      <path
+        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+        fill="var(--icon-secondary)"
+      />
+      {/* Primary - star outline */}
+      <path
+        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
     </>
   ),
 };

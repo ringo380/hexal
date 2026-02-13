@@ -51,7 +51,9 @@ function HexDetail() {
     removeMarker,
     updateMarker,
     encounterTemplates,
-    getAllNpcs
+    getAllNpcs,
+    toggleBookmark,
+    isBookmarked
   } = useCampaign();
   const { selectedCoordinate, selectedMarker, selectMarker } = useSelection();
 
@@ -199,6 +201,14 @@ function HexDetail() {
       {/* Header Info */}
       <div className="detail-header">
         <h2>Hex ({selectedCoordinate.q}, {selectedCoordinate.r})</h2>
+        <button
+          className={`bookmark-btn ${isBookmarked(selectedCoordinate) ? 'bookmarked' : ''}`}
+          onClick={() => toggleBookmark(selectedCoordinate)}
+          title={isBookmarked(selectedCoordinate) ? 'Remove bookmark' : 'Bookmark this hex'}
+          aria-label={isBookmarked(selectedCoordinate) ? 'Remove bookmark' : 'Bookmark this hex'}
+        >
+          <Icon name="star" size={18} />
+        </button>
       </div>
 
       <div className="detail-content">
