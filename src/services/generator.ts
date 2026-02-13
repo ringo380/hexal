@@ -1,7 +1,8 @@
 // Direct port from Swift GeneratorService
 
-import type { TerrainType, EncounterTable, ContentItem, Hex } from '../types';
-import { createContentItem } from '../types';
+import type { TerrainType, EncounterTable, Hex } from '../types';
+import type { Encounter } from '../types/Campaign';
+import { createEncounter } from '../types/Campaign';
 
 /**
  * Generate random terrain based on weighted selection
@@ -26,7 +27,7 @@ export function randomTerrain(types: TerrainType[]): string {
 export function randomEncounter(
   terrain: string,
   tables: EncounterTable[]
-): ContentItem | null {
+): Encounter | null {
   const table = tables.find(t => t.terrain === terrain);
   if (!table || table.entries.length === 0) {
     return null;
@@ -38,15 +39,23 @@ export function randomEncounter(
   for (const entry of table.entries) {
     roll -= entry.weight;
     if (roll <= 0) {
-      return {
-        ...createContentItem(entry.title),
-        description: entry.description,
-        difficulty: entry.difficulty
-      };
+      const encounter = createEncounter(entry.title);
+      encounter.description = entry.description;
+      encounter.difficulty = entry.difficulty;
+      encounter.encounterType = inferEncounterType(entry.difficulty);
+      return encounter;
     }
   }
 
   return null;
+}
+
+function inferEncounterType(difficulty: string): Encounter['encounterType'] {
+  const lower = difficulty.toLowerCase();
+  if (lower === 'social') return 'social';
+  if (lower === 'exploration') return 'exploration';
+  if (lower === 'puzzle') return 'puzzle';
+  return 'combat';
 }
 
 /**

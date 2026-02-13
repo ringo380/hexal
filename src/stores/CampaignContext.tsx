@@ -2,8 +2,9 @@
 // Direct port from Swift CampaignStore using React Context + useReducer
 
 import React, { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react';
-import type { Campaign, Hex, HexCoordinate, HexMarker, MarkerType } from '../types';
+import type { Campaign, Hex, HexCoordinate, HexMarker, MarkerType, ContentItem, EncounterTemplate } from '../types';
 import { createCampaign, createHex, coordinateKey, createDefaultTimeWeather } from '../types';
+import { migrateCampaign } from '../types/Campaign';
 import { createMarker, createCustomMarkerType, DEFAULT_MARKER_TYPES } from '../types/Markers';
 import {
   TimeWeatherState,
@@ -665,6 +666,13 @@ interface CampaignContextValue {
 
   // Marker helpers
   markerTypes: MarkerType[];
+
+  // Campaign-level updates
+  updateCampaignData: (updates: Partial<Campaign>) => void;
+
+  // Encounter helpers
+  encounterTemplates: EncounterTemplate[];
+  getAllNpcs: () => Array<{ npc: ContentItem; hexKey: string }>;
 }
 
 const CampaignContext = createContext<CampaignContextValue | null>(null);
@@ -720,9 +728,10 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
     try {
       const result = await window.electronAPI.loadCampaign(filePath);
       if (result.success && result.campaign) {
+        const loaded = migrateCampaign(result.campaign as Campaign);
         dispatch({
           type: 'SET_CAMPAIGN',
-          campaign: result.campaign as Campaign,
+          campaign: loaded,
           filePath: result.path
         });
       } else {
@@ -964,6 +973,26 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
   // Marker types (with fallback to defaults)
   const markerTypes = state.campaign?.markerTypes || DEFAULT_MARKER_TYPES;
 
+  // Generic campaign update (for templates, tables, etc.)
+  const updateCampaignData = useCallback((updates: Partial<Campaign>) => {
+    dispatch({ type: 'UPDATE_CAMPAIGN', updates });
+  }, []);
+
+  // Encounter templates (with fallback to empty)
+  const encounterTemplates = state.campaign?.encounterTemplates ?? [];
+
+  // Get all NPCs across all hexes (for NPC linker)
+  const getAllNpcs = useCallback((): Array<{ npc: ContentItem; hexKey: string }> => {
+    if (!state.campaign) return [];
+    const result: Array<{ npc: ContentItem; hexKey: string }> = [];
+    for (const [key, hex] of Object.entries(state.campaign.hexes)) {
+      for (const npc of hex.npcs) {
+        result.push({ npc, hexKey: key });
+      }
+    }
+    return result;
+  }, [state.campaign]);
+
   const value: CampaignContextValue = {
     state,
     newCampaign,
@@ -1015,7 +1044,14 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
     removeMarkerType,
 
     // Marker helpers
-    markerTypes
+    markerTypes,
+
+    // Campaign-level updates
+    updateCampaignData,
+
+    // Encounter helpers
+    encounterTemplates,
+    getAllNpcs
   };
 
   return (

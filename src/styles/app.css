@@ -2183,3 +2183,558 @@ label {
 .empty-icon .icon {
   --icon-secondary: rgba(74, 158, 255, 0.15);
 }
+
+/* ============ ENCOUNTER SYSTEM ============ */
+
+/* Badge styles */
+.difficulty-badge,
+.encounter-type-badge,
+.outcome-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.difficulty-badge--small,
+.encounter-type-badge--small,
+.outcome-badge--small {
+  padding: 1px 6px;
+  font-size: 10px;
+}
+
+/* Encounter Row */
+.encounter-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 8px;
+  border-radius: 4px;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.encounter-row:hover {
+  background-color: var(--bg-hover);
+}
+
+.encounter-row.resolved {
+  opacity: 0.6;
+}
+
+.encounter-row.resolved .item-title {
+  text-decoration: line-through;
+}
+
+.encounter-row-content {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.encounter-row-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.encounter-row-badges {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.encounter-row-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.encounter-row-creatures {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.encounter-add-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.encounter-add-buttons .add-item-btn {
+  flex: 1;
+}
+
+/* Template Picker Dropdown */
+.template-picker-wrapper {
+  position: relative;
+  flex: 1;
+}
+
+.template-picker-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.template-picker-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  font-size: 12px;
+}
+
+.template-picker-item:hover {
+  background-color: var(--bg-hover);
+}
+
+.template-picker-type {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+/* Creature List */
+.creature-list,
+.reward-list,
+.npc-linker {
+  margin-bottom: 16px;
+}
+
+.creature-row,
+.reward-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 4px;
+  align-items: center;
+}
+
+.creature-name {
+  flex: 2;
+}
+
+.creature-count {
+  width: 50px !important;
+  flex: none !important;
+}
+
+.creature-cr {
+  width: 60px !important;
+  flex: none !important;
+}
+
+.creature-notes {
+  flex: 1;
+}
+
+.reward-type {
+  width: 80px !important;
+  flex: none !important;
+}
+
+.reward-description {
+  flex: 2;
+}
+
+.reward-quantity {
+  width: 60px !important;
+  flex: none !important;
+}
+
+/* NPC Linker */
+.npc-link-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  background-color: var(--bg-tertiary);
+}
+
+.npc-link-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.npc-link-hex {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.npc-picker {
+  margin-top: 4px;
+}
+
+.npc-picker input {
+  margin-bottom: 4px;
+}
+
+.npc-picker-results {
+  max-height: 150px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+.npc-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+  text-align: left;
+}
+
+.npc-picker-item:hover {
+  background-color: var(--bg-hover);
+}
+
+.npc-picker-hex {
+  color: var(--text-muted);
+  font-size: 11px;
+  margin-left: auto;
+}
+
+.npc-picker-empty {
+  padding: 12px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* Encounter Detail Card */
+.encounter-detail-card {
+  background-color: var(--bg-tertiary);
+  border-radius: 6px;
+  padding: 12px;
+  margin-top: 8px;
+}
+
+.encounter-detail-header {
+  margin-bottom: 8px;
+}
+
+.encounter-detail-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.encounter-detail-description {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.encounter-detail-section {
+  margin-bottom: 8px;
+}
+
+.encounter-detail-section h5 {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.encounter-detail-section p {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.encounter-detail-creatures,
+.encounter-detail-rewards {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 12px;
+}
+
+.encounter-detail-creatures li,
+.encounter-detail-rewards li {
+  padding: 2px 0;
+  color: var(--text-primary);
+}
+
+.creature-cr-tag {
+  background-color: var(--bg-primary);
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+
+.creature-notes-text {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.reward-type-label {
+  background-color: var(--bg-primary);
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-right: 4px;
+  text-transform: uppercase;
+}
+
+/* Encounter Editor Modal */
+.encounter-editor-modal {
+  min-width: 550px;
+  max-width: 650px;
+}
+
+.encounter-editor-modal .modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* Encounter Table Editor Modal */
+.encounter-table-modal {
+  min-width: 700px;
+  max-width: 850px;
+}
+
+.encounter-table-layout {
+  display: flex;
+  gap: 16px;
+  min-height: 400px;
+}
+
+.encounter-table-list {
+  width: 200px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border-color);
+  padding-right: 16px;
+  overflow-y: auto;
+}
+
+.encounter-table-item {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 4px;
+  position: relative;
+}
+
+.encounter-table-item:hover {
+  background-color: var(--bg-hover);
+}
+
+.encounter-table-item.selected {
+  background-color: rgba(74, 158, 255, 0.15);
+  border-left: 3px solid var(--accent-color);
+}
+
+.encounter-table-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.encounter-table-terrain {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.encounter-table-item .btn-icon-small {
+  position: absolute;
+  top: 6px;
+  right: 4px;
+  opacity: 0;
+}
+
+.encounter-table-item:hover .btn-icon-small {
+  opacity: 0.7;
+}
+
+.encounter-table-entries {
+  flex: 1;
+  min-width: 0;
+}
+
+.encounter-table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.encounter-table-header h4 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.encounter-table-terrain-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.encounter-table-edit-header {
+  margin-bottom: 16px;
+}
+
+.encounter-table-edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.encounter-entry-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 4px;
+  align-items: center;
+}
+
+.entry-title {
+  flex: 2;
+}
+
+.entry-difficulty {
+  width: 80px !important;
+  flex: none !important;
+}
+
+.entry-weight {
+  width: 50px !important;
+  flex: none !important;
+}
+
+/* Encounter Template Library Modal */
+.encounter-template-modal {
+  min-width: 600px;
+  max-width: 750px;
+}
+
+.encounter-template-modal .modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.template-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.template-search {
+  flex: 1;
+}
+
+.template-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.template-card {
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.template-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+
+.template-card-header h4 {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.template-card-badges {
+  display: flex;
+  gap: 4px;
+}
+
+.template-card-description {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.template-card-creatures {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.template-creature-tag {
+  background-color: var(--bg-primary);
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.template-card-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.template-tag {
+  background-color: rgba(74, 158, 255, 0.15);
+  color: var(--accent-color);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+}
+
+.template-card-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.template-editor {
+  background-color: var(--bg-tertiary);
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.template-editor-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}

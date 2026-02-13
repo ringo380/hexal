@@ -28,6 +28,12 @@ export interface Campaign {
    * New campaigns are always initialized with DEFAULT_MARKER_TYPES via createCampaign().
    */
   markerTypes?: MarkerType[];
+
+  /**
+   * Encounter templates for this campaign.
+   * Optional for backward compatibility with legacy campaign files.
+   */
+  encounterTemplates?: EncounterTemplate[];
 }
 
 export interface Hex {
@@ -38,7 +44,7 @@ export interface Hex {
   notes: string;
   tags: string[];
   locations: ContentItem[];
-  encounters: ContentItem[];
+  encounters: Encounter[];
   npcs: ContentItem[];
   treasures: ContentItem[];
   clues: ContentItem[];
@@ -146,7 +152,8 @@ export function createCampaign(name: string, gridWidth: number, gridHeight: numb
     createdAt: new Date().toISOString(),
     modifiedAt: new Date().toISOString(),
     timeWeather: createDefaultTimeWeather(),
-    markerTypes: DEFAULT_MARKER_TYPES
+    markerTypes: DEFAULT_MARKER_TYPES,
+    encounterTemplates: []
   };
 }
 
@@ -235,6 +242,184 @@ export const CATEGORY_INFO: Record<ContentCategory, { label: string; icon: IconN
   treasures: { label: 'Treasures', icon: 'sparkle' },
   clues: { label: 'Clues & Hooks', icon: 'lightbulb' }
 };
+
+// ============ ENCOUNTER SYSTEM ============
+
+export type EncounterType = 'combat' | 'social' | 'exploration' | 'puzzle';
+export type EncounterOutcome = 'pending' | 'victory' | 'defeat' | 'fled' | 'negotiated' | 'bypassed';
+
+export interface CreatureEntry {
+  id: string;
+  name: string;
+  count: number;
+  cr?: string;
+  notes?: string;
+}
+
+export interface EncounterReward {
+  id: string;
+  type: 'gold' | 'item' | 'xp' | 'other';
+  description: string;
+  quantity?: number;
+}
+
+export interface LinkedNpcRef {
+  npcId: string;
+  hexKey: string; // "q,r" format
+}
+
+export interface Encounter extends ContentItem {
+  encounterType: EncounterType;
+  creatures: CreatureEntry[];
+  linkedNpcIds: LinkedNpcRef[];
+  rewards: EncounterReward[];
+  outcome: EncounterOutcome;
+  outcomeNotes: string;
+  templateId?: string;
+}
+
+export interface EncounterTemplate {
+  id: string;
+  name: string;
+  description: string;
+  encounterType: EncounterType;
+  difficulty: string;
+  creatures: CreatureEntry[];
+  rewards: EncounterReward[];
+  tags: string[];
+  terrainAffinity?: string[];
+}
+
+// Encounter constants
+export const ENCOUNTER_TYPE_INFO: Record<EncounterType, { label: string; icon: IconName; color: string }> = {
+  combat: { label: 'Combat', icon: 'sword', color: '#f44336' },
+  social: { label: 'Social', icon: 'user', color: '#4a9eff' },
+  exploration: { label: 'Exploration', icon: 'map', color: '#4caf50' },
+  puzzle: { label: 'Puzzle', icon: 'lightbulb', color: '#ff9800' }
+};
+
+export const DIFFICULTY_COLORS: Record<string, string> = {
+  'Easy': '#4caf50',
+  'Medium': '#ff9800',
+  'Hard': '#f44336',
+  'Deadly': '#9c27b0'
+};
+
+export const OUTCOME_INFO: Record<EncounterOutcome, { label: string; color: string }> = {
+  pending: { label: 'Pending', color: '#666666' },
+  victory: { label: 'Victory', color: '#4caf50' },
+  defeat: { label: 'Defeat', color: '#f44336' },
+  fled: { label: 'Fled', color: '#ff9800' },
+  negotiated: { label: 'Negotiated', color: '#4a9eff' },
+  bypassed: { label: 'Bypassed', color: '#9c27b0' }
+};
+
+// Encounter factory functions
+export function createEncounter(title: string = ''): Encounter {
+  return {
+    id: crypto.randomUUID(),
+    title,
+    description: '',
+    difficulty: undefined,
+    isResolved: false,
+    encounterType: 'combat',
+    creatures: [],
+    linkedNpcIds: [],
+    rewards: [],
+    outcome: 'pending',
+    outcomeNotes: ''
+  };
+}
+
+export function createEncounterTemplate(name: string = ''): EncounterTemplate {
+  return {
+    id: crypto.randomUUID(),
+    name,
+    description: '',
+    encounterType: 'combat',
+    difficulty: '',
+    creatures: [],
+    rewards: [],
+    tags: []
+  };
+}
+
+export function createCreatureEntry(name: string = ''): CreatureEntry {
+  return {
+    id: crypto.randomUUID(),
+    name,
+    count: 1
+  };
+}
+
+export function createEncounterReward(description: string = ''): EncounterReward {
+  return {
+    id: crypto.randomUUID(),
+    type: 'item',
+    description
+  };
+}
+
+export function instantiateFromTemplate(template: EncounterTemplate): Encounter {
+  return {
+    id: crypto.randomUUID(),
+    title: template.name,
+    description: template.description,
+    difficulty: template.difficulty || undefined,
+    isResolved: false,
+    encounterType: template.encounterType,
+    creatures: template.creatures.map(c => ({ ...c, id: crypto.randomUUID() })),
+    linkedNpcIds: [],
+    rewards: template.rewards.map(r => ({ ...r, id: crypto.randomUUID() })),
+    outcome: 'pending',
+    outcomeNotes: '',
+    templateId: template.id
+  };
+}
+
+/** Migrate a legacy ContentItem to the full Encounter type */
+export function migrateEncounterData(item: ContentItem): Encounter {
+  // If already an Encounter, return as-is
+  if ('encounterType' in item) return item as Encounter;
+  return {
+    ...item,
+    encounterType: inferEncounterType(item.difficulty),
+    creatures: [],
+    linkedNpcIds: [],
+    rewards: [],
+    outcome: item.isResolved ? 'victory' : 'pending',
+    outcomeNotes: ''
+  };
+}
+
+function inferEncounterType(difficulty?: string): EncounterType {
+  if (!difficulty) return 'combat';
+  const lower = difficulty.toLowerCase();
+  if (lower === 'social') return 'social';
+  if (lower === 'exploration') return 'exploration';
+  if (lower === 'puzzle') return 'puzzle';
+  return 'combat';
+}
+
+/** Migrate an entire campaign's encounter data (non-destructive) */
+export function migrateCampaign(campaign: Campaign): Campaign {
+  let changed = false;
+  const hexes: Record<string, Hex> = {};
+  for (const [key, hex] of Object.entries(campaign.hexes)) {
+    const migratedEncounters = hex.encounters.map(e => {
+      const migrated = migrateEncounterData(e);
+      if (migrated !== e) changed = true;
+      return migrated;
+    });
+    hexes[key] = { ...hex, encounters: migratedEncounters };
+  }
+  if (!changed && campaign.encounterTemplates !== undefined) return campaign;
+  return {
+    ...campaign,
+    hexes,
+    encounterTemplates: campaign.encounterTemplates ?? []
+  };
+}
 
 // Aliases for CampaignContext
 export const defaultTerrainTypes = DEFAULT_TERRAIN_TYPES;

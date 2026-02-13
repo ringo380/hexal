@@ -14,6 +14,8 @@ import TimeControlsModal from './modals/TimeControlsModal';
 import WeatherSettingsModal from './modals/WeatherSettingsModal';
 import ConfirmDialog from './modals/ConfirmDialog';
 import KeyboardShortcutsModal from './modals/KeyboardShortcutsModal';
+import EncounterTableEditorModal from './modals/EncounterTableEditorModal';
+import EncounterTemplateLibrary from './modals/EncounterTemplateLibrary';
 import Icon from './icons/Icon';
 
 interface MainEditorProps {
@@ -32,6 +34,8 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
   const [showWeatherSettings, setShowWeatherSettings] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [showEncounterTableEditor, setShowEncounterTableEditor] = useState(false);
+  const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
 
   // Register export handler for menu command
   useEffect(() => {
@@ -222,6 +226,12 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
         </div>
 
         <div className="toolbar-right">
+          <button className="btn btn-secondary" onClick={() => setShowEncounterTableEditor(true)}>
+            <Icon name="sword" size={16} /> Tables
+          </button>
+          <button className="btn btn-secondary" onClick={() => setShowTemplateLibrary(true)}>
+            <Icon name="sparkle" size={16} /> Templates
+          </button>
           <button className="btn btn-secondary" onClick={() => setShowGenerator(true)}>
             <Icon name="dice" size={16} /> Generate
           </button>
@@ -283,6 +293,12 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
       )}
       {showKeyboardShortcuts && (
         <KeyboardShortcutsModal onClose={() => setShowKeyboardShortcuts(false)} />
+      )}
+      {showEncounterTableEditor && (
+        <EncounterTableEditorModal onClose={() => setShowEncounterTableEditor(false)} />
+      )}
+      {showTemplateLibrary && (
+        <EncounterTemplateLibrary onClose={() => setShowTemplateLibrary(false)} />
       )}
     </div>
   );
