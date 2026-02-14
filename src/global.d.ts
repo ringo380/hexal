@@ -38,7 +38,8 @@ type MenuCommand =
   | 'export'
   | 'export-map'
   | 'undo'
-  | 'redo';
+  | 'redo'
+  | 'open-player-view';
 
 type ExportFormat = 'png' | 'jpeg' | 'pdf';
 
@@ -56,6 +57,11 @@ interface ElectronAPI {
   exportFileDialog: (defaultName: string, format: ExportFormat) => Promise<string | null>;
   onMenuCommand: (callback: (command: MenuCommand) => void) => () => void;
   onLoadCampaignFile: (callback: (filePath: string) => void) => () => void;
+  openPlayerView: () => Promise<{ success: boolean }>;
+  syncPlayerView: (data: unknown) => void;
+  notifyPlayerViewCampaignClosed: () => void;
+  onPlayerViewUpdate: (callback: (data: unknown) => void) => () => void;
+  onPlayerViewCampaignClosed: (callback: () => void) => () => void;
 }
 
 declare global {

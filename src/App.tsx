@@ -1,10 +1,11 @@
-// App.tsx - Main application with conditional routing
+// App.tsx - Main application with conditional routing (DM view)
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useCampaign } from './stores/CampaignContext';
 import CampaignBrowser from './components/CampaignBrowser';
 import MainEditor from './components/MainEditor';
 import UnsavedChangesDialog from './components/modals/UnsavedChangesDialog';
 import AlertDialog from './components/modals/AlertDialog';
+import { filterCampaignForPlayer } from './services/playerViewFilter';
 
 type PendingAction = {
   type: 'open' | 'open-new-window' | 'new-campaign';
@@ -82,6 +83,10 @@ function App() {
         case 'redo':
           redo();
           break;
+
+        case 'open-player-view':
+          window.electronAPI.openPlayerView();
+          break;
       }
     });
 
@@ -99,6 +104,23 @@ function App() {
 
     return cleanup;
   }, [loadCampaign]);
+
+  // Sync campaign state to player view windows
+  useEffect(() => {
+    if (campaign) {
+      const playerData = filterCampaignForPlayer(campaign);
+      window.electronAPI.syncPlayerView(playerData);
+    }
+  }, [campaign]);
+
+  // Notify player windows when DM closes campaign
+  const prevCampaignRef = useRef(campaign);
+  useEffect(() => {
+    if (prevCampaignRef.current && !campaign) {
+      window.electronAPI.notifyPlayerViewCampaignClosed();
+    }
+    prevCampaignRef.current = campaign;
+  }, [campaign]);
 
   // Open file dialog and load campaign
   const handleOpen = useCallback(async () => {
