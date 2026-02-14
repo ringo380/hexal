@@ -9,6 +9,7 @@ if (process.platform === 'darwin') {
 
 // Multi-window support
 const windows: Set<BrowserWindow> = new Set();
+const playerViewWindows: Set<BrowserWindow> = new Set();
 let activeWindow: BrowserWindow | null = null;
 
 // Get the Hexal folder in user's documents
@@ -124,6 +125,12 @@ function createApplicationMenu() {
     {
       label: 'View',
       submenu: [
+        {
+          label: 'Open Player View',
+          accelerator: 'CmdOrCtrl+Shift+P',
+          click: () => activeWindow?.webContents.send('menu-command', 'open-player-view')
+        },
+        { type: 'separator' },
         { role: 'reload' },
         { role: 'forceReload' },
         { role: 'toggleDevTools' },
@@ -214,6 +221,35 @@ function createWindow(filePath?: string): BrowserWindow {
     win.webContents.once('did-finish-load', () => {
       win.webContents.send('load-campaign-file', filePath);
     });
+  }
+
+  return win;
+}
+
+function createPlayerViewWindow(): BrowserWindow {
+  const win = new BrowserWindow({
+    width: 1024,
+    height: 768,
+    title: 'Hexal — Player View',
+    backgroundColor: '#1e1e1e',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  playerViewWindows.add(win);
+
+  win.on('closed', () => {
+    playerViewWindows.delete(win);
+  });
+
+  // Load with #player-view hash
+  if (process.env.VITE_DEV_SERVER_URL) {
+    win.loadURL(`${process.env.VITE_DEV_SERVER_URL}#player-view`);
+  } else {
+    win.loadFile(path.join(__dirname, '../dist/index.html'), { hash: 'player-view' });
   }
 
   return win;
@@ -395,4 +431,30 @@ ipcMain.handle('export-file-dialog', async (_event, { defaultName, format }: { d
     return null;
   }
   return result.filePath;
+});
+
+// Player View IPC handlers
+
+// Open a new player view window
+ipcMain.handle('open-player-view', async () => {
+  createPlayerViewWindow();
+  return { success: true };
+});
+
+// Relay campaign state from DM to all player view windows
+ipcMain.on('sync-player-view', (_event, data) => {
+  Array.from(playerViewWindows).forEach(win => {
+    if (!win.isDestroyed()) {
+      win.webContents.send('player-view-update', data);
+    }
+  });
+});
+
+// Relay campaign-closed event from DM to all player view windows
+ipcMain.on('player-view-campaign-closed', () => {
+  Array.from(playerViewWindows).forEach(win => {
+    if (!win.isDestroyed()) {
+      win.webContents.send('player-view-campaign-closed');
+    }
+  });
 });

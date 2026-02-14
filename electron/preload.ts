@@ -40,7 +40,8 @@ export type MenuCommand =
   | 'export'
   | 'export-map'
   | 'undo'
-  | 'redo';
+  | 'redo'
+  | 'open-player-view';
 
 export type ExportFormat = 'png' | 'jpeg' | 'pdf';
 
@@ -98,6 +99,30 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('load-campaign-file', handler);
     // Return cleanup function
     return () => ipcRenderer.removeListener('load-campaign-file', handler);
+  },
+
+  // Player view operations
+  openPlayerView: (): Promise<{ success: boolean }> =>
+    ipcRenderer.invoke('open-player-view'),
+
+  syncPlayerView: (data: unknown): void => {
+    ipcRenderer.send('sync-player-view', data);
+  },
+
+  notifyPlayerViewCampaignClosed: (): void => {
+    ipcRenderer.send('player-view-campaign-closed');
+  },
+
+  onPlayerViewUpdate: (callback: (data: unknown) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+    ipcRenderer.on('player-view-update', handler);
+    return () => ipcRenderer.removeListener('player-view-update', handler);
+  },
+
+  onPlayerViewCampaignClosed: (callback: () => void): (() => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('player-view-campaign-closed', handler);
+    return () => ipcRenderer.removeListener('player-view-campaign-closed', handler);
   }
 });
 
@@ -118,6 +143,11 @@ declare global {
       exportFileDialog: (defaultName: string, format: ExportFormat) => Promise<string | null>;
       onMenuCommand: (callback: (command: MenuCommand) => void) => () => void;
       onLoadCampaignFile: (callback: (filePath: string) => void) => () => void;
+      openPlayerView: () => Promise<{ success: boolean }>;
+      syncPlayerView: (data: unknown) => void;
+      notifyPlayerViewCampaignClosed: () => void;
+      onPlayerViewUpdate: (callback: (data: unknown) => void) => () => void;
+      onPlayerViewCampaignClosed: (callback: () => void) => () => void;
     };
   }
 }
