@@ -135,7 +135,7 @@ describe('searchHex', () => {
   it('matches NPC titles', () => {
     const hex = makeHex({
       npcs: [
-        { id: 'npc1', title: 'Gandalf the Grey', description: 'A wise wizard', isResolved: false }
+        { id: 'npc1', title: 'Gandalf the Grey', description: 'A wise wizard', isResolved: false, relationships: [], tags: [], isAlive: true }
       ]
     });
     const matches = searchHex(hex, '0,0', 'gandalf');
@@ -211,7 +211,7 @@ describe('searchHex', () => {
       terrain: 'Forest',
       notes: 'A dense forest with wolves',
       npcs: [
-        { id: 'npc1', title: 'Forest Ranger', description: 'Patrols the forest', isResolved: false }
+        { id: 'npc1', title: 'Forest Ranger', description: 'Patrols the forest', isResolved: false, relationships: [], tags: [], isAlive: true }
       ]
     });
     const matches = searchHex(hex, '0,0', 'forest');

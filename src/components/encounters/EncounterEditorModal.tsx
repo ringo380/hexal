@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Encounter, EncounterType, EncounterOutcome, ContentItem, EncounterTemplate } from '../../types/Campaign';
+import type { Encounter, EncounterType, EncounterOutcome, Npc, EncounterTemplate } from '../../types/Campaign';
 import { ENCOUNTER_TYPE_INFO, OUTCOME_INFO, createEncounterTemplate } from '../../types/Campaign';
 import CreatureList from './CreatureList';
 import RewardList from './RewardList';
@@ -7,7 +7,7 @@ import NpcLinker from './NpcLinker';
 
 interface EncounterEditorModalProps {
   encounter: Encounter;
-  allNpcs: Array<{ npc: ContentItem; hexKey: string }>;
+  allNpcs: Array<{ npc: Npc; hexKey: string }>;
   onSave: (encounter: Encounter) => void;
   onSaveAsTemplate?: (template: EncounterTemplate) => void;
   onClose: () => void;

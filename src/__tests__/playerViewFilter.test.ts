@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { filterCampaignForPlayer } from '../services/playerViewFilter';
 // Types used implicitly via assertions on return values
-import { createCampaign, createHex, createContentItem, createEncounter } from '../types/Campaign';
+import { createCampaign, createHex, createContentItem, createNpc, createEncounter, createFaction } from '../types/Campaign';
 import type { Campaign, Hex, Region } from '../types/Campaign';
 import type { HexMarker } from '../types/Markers';
 
@@ -78,14 +78,14 @@ describe('filterCampaignForPlayer', () => {
       expect(result.hexes['0,0'].locationNames).toEqual([]);
     });
 
-    it('strips NPC names', () => {
+    it('strips NPC info', () => {
       const hex = makeHex(0, 0, {
         status: 'undiscovered',
-        npcs: [createContentItem('Hidden NPC')]
+        npcs: [createNpc('Hidden NPC')]
       });
       const result = filterCampaignForPlayer(makeCampaign({ '0,0': hex }));
 
-      expect(result.hexes['0,0'].npcNames).toEqual([]);
+      expect(result.hexes['0,0'].npcs).toEqual([]);
     });
   });
 
@@ -106,37 +106,82 @@ describe('filterCampaignForPlayer', () => {
     it('includes NPC names', () => {
       const hex = makeHex(1, 1, {
         status: 'discovered',
-        npcs: [createContentItem('Gandalf'), createContentItem('Elrond')]
+        npcs: [createNpc('Gandalf'), createNpc('Elrond')]
       });
       const result = filterCampaignForPlayer(makeCampaign({ '1,1': hex }));
 
-      expect(result.hexes['1,1'].npcNames).toEqual(['Gandalf', 'Elrond']);
+      expect(result.hexes['1,1'].npcs).toEqual([
+        { name: 'Gandalf' },
+        { name: 'Elrond' }
+      ]);
     });
 
     it('filters out items with empty titles', () => {
       const hex = makeHex(1, 1, {
         status: 'discovered',
         locations: [createContentItem(''), createContentItem('Real Place')],
-        npcs: [createContentItem(''), createContentItem('Named NPC')]
+        npcs: [createNpc(''), createNpc('Named NPC')]
       });
       const result = filterCampaignForPlayer(makeCampaign({ '1,1': hex }));
 
       expect(result.hexes['1,1'].locationNames).toEqual(['Real Place']);
-      expect(result.hexes['1,1'].npcNames).toEqual(['Named NPC']);
+      expect(result.hexes['1,1'].npcs).toEqual([{ name: 'Named NPC' }]);
     });
   });
 
   describe('cleared hexes', () => {
-    it('includes location titles and NPC names like discovered', () => {
+    it('includes location titles and NPC info like discovered', () => {
       const hex = makeHex(3, 3, {
         status: 'cleared',
         locations: [createContentItem('Dungeon')],
-        npcs: [createContentItem('Boss NPC')]
+        npcs: [createNpc('Boss NPC')]
       });
       const result = filterCampaignForPlayer(makeCampaign({ '3,3': hex }));
 
       expect(result.hexes['3,3'].locationNames).toEqual(['Dungeon']);
-      expect(result.hexes['3,3'].npcNames).toEqual(['Boss NPC']);
+      expect(result.hexes['3,3'].npcs).toEqual([{ name: 'Boss NPC' }]);
+    });
+  });
+
+  describe('NPC faction and attitude filtering', () => {
+    it('includes faction name when faction isKnownToPlayers', () => {
+      const faction = createFaction('Thieves Guild', '#ff0000');
+      faction.isKnownToPlayers = true;
+      const npc = createNpc('Rogue');
+      npc.factionId = faction.id;
+      const hex = makeHex(0, 0, { status: 'discovered', npcs: [npc] });
+      const result = filterCampaignForPlayer(makeCampaign({ '0,0': hex }, { factions: [faction] }));
+
+      expect(result.hexes['0,0'].npcs).toEqual([{ name: 'Rogue', factionName: 'Thieves Guild' }]);
+    });
+
+    it('omits faction name when faction is not known to players', () => {
+      const faction = createFaction('Secret Order', '#ff0000');
+      faction.isKnownToPlayers = false;
+      const npc = createNpc('Agent');
+      npc.factionId = faction.id;
+      const hex = makeHex(0, 0, { status: 'discovered', npcs: [npc] });
+      const result = filterCampaignForPlayer(makeCampaign({ '0,0': hex }, { factions: [faction] }));
+
+      expect(result.hexes['0,0'].npcs).toEqual([{ name: 'Agent' }]);
+    });
+
+    it('includes attitude for cleared hexes', () => {
+      const npc = createNpc('Guard');
+      npc.attitude = 'hostile';
+      const hex = makeHex(0, 0, { status: 'cleared', npcs: [npc] });
+      const result = filterCampaignForPlayer(makeCampaign({ '0,0': hex }));
+
+      expect(result.hexes['0,0'].npcs).toEqual([{ name: 'Guard', attitude: 'hostile' }]);
+    });
+
+    it('omits attitude for discovered (non-cleared) hexes', () => {
+      const npc = createNpc('Guard');
+      npc.attitude = 'hostile';
+      const hex = makeHex(0, 0, { status: 'discovered', npcs: [npc] });
+      const result = filterCampaignForPlayer(makeCampaign({ '0,0': hex }));
+
+      expect(result.hexes['0,0'].npcs).toEqual([{ name: 'Guard' }]);
     });
   });
 
@@ -303,14 +348,14 @@ describe('filterCampaignForPlayer', () => {
         }),
         '2,0': makeHex(2, 0, {
           status: 'cleared',
-          npcs: [createContentItem('Freed NPC')]
+          npcs: [createNpc('Freed NPC')]
         })
       };
       const result = filterCampaignForPlayer(makeCampaign(hexes));
 
       expect(result.hexes['0,0'].locationNames).toEqual([]);
       expect(result.hexes['1,0'].locationNames).toEqual(['Found Place']);
-      expect(result.hexes['2,0'].npcNames).toEqual(['Freed NPC']);
+      expect(result.hexes['2,0'].npcs).toEqual([{ name: 'Freed NPC' }]);
     });
   });
 });

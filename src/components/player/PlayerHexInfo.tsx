@@ -63,12 +63,16 @@ function PlayerHexInfo({ hex, regionName, regionColor, terrainName, onClose }: P
         )}
 
         {/* NPCs */}
-        {hex.npcNames.length > 0 && (
+        {hex.npcs.length > 0 && (
           <div className="player-hex-info-section">
             <h4>NPCs</h4>
             <ul>
-              {hex.npcNames.map((name, i) => (
-                <li key={i}>{name}</li>
+              {hex.npcs.map((npc, i) => (
+                <li key={i}>
+                  {npc.name}
+                  {npc.factionName && <span className="player-npc-faction"> ({npc.factionName})</span>}
+                  {npc.attitude && <span className={`player-npc-attitude player-npc-attitude--${npc.attitude}`}> - {npc.attitude}</span>}
+                </li>
               ))}
             </ul>
           </div>
