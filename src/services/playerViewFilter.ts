@@ -1,6 +1,6 @@
 // Player View Filter - Strips DM-only data from campaign for player consumption
 
-import type { Campaign, Hex, TerrainType, HexCoordinate, DiscoveryStatus } from '../types';
+import type { Campaign, Hex, TerrainType, HexCoordinate, DiscoveryStatus, HexConnections } from '../types';
 import type { TimeWeatherState } from '../types/Weather';
 import type { MarkerType, HexMarker } from '../types/Markers';
 
@@ -15,6 +15,8 @@ export interface PlayerHex {
   npcNames: string[];
   // Markers (visual only)
   markers?: HexMarker[];
+  // River and road connections (map features, not DM secrets)
+  connections?: HexConnections;
 }
 
 // Player-safe region data
@@ -82,7 +84,8 @@ function filterHexForPlayer(hex: Hex): PlayerHex {
     status: hex.status,
     locationNames: [],
     npcNames: [],
-    markers: hex.markers?.filter(m => m.isVisible)
+    markers: hex.markers?.filter(m => m.isVisible),
+    connections: hex.connections
   };
 
   // Only include content names for discovered/cleared hexes
