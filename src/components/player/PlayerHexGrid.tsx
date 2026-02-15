@@ -13,6 +13,7 @@ import {
   coordinateAt
 } from '../../services/hexGeometry';
 import { hexToRgba, renderMarkers } from '../../services/hexRenderer';
+import { figurineCache } from '../../services/markerFigurines';
 import { createHexRegionMap, getRegionBorderSegments } from '../../services/regions';
 import type { Region } from '../../types';
 
@@ -238,6 +239,16 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect }: PlayerHexGridP
 
     draw();
   }, [campaign, draw]);
+
+  // Preload figurine cache when campaign data arrives
+  useEffect(() => {
+    const markerTypes = campaign.markerTypes || DEFAULT_MARKER_TYPES;
+    figurineCache.preload(markerTypes).then(() => {
+      draw();
+    }).catch(err => {
+      console.warn('Failed to preload figurine cache:', err);
+    });
+  }, [campaign.markerTypes, draw]);
 
   // Smooth animation loop
   useEffect(() => {
