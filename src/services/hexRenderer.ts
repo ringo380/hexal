@@ -20,6 +20,7 @@ import {
 import {
   HEX_SIZE,
   hexCenter,
+  hexPoints,
   canvasSize,
   drawHexPath
 } from './hexGeometry';
@@ -239,6 +240,17 @@ export function renderHexGrid(
     }
   }
 
+  // Draw connections (rivers and roads) on top of hex backgrounds
+  for (let q = 0; q < campaign.gridWidth; q++) {
+    for (let r = 0; r < campaign.gridHeight; r++) {
+      const key = `${q},${r}`;
+      const hex = campaign.hexes[key];
+      if (hex) {
+        renderConnections(ctx, hex, hexCenter({ q, r }));
+      }
+    }
+  }
+
   ctx.restore();
 }
 
@@ -429,6 +441,66 @@ export function renderCoordinateLabel(
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
   ctx.fillText(`${coord.q},${coord.r}`, center.x, center.y + yOffset);
+}
+
+// ============================================================================
+// Connection Rendering (Rivers & Roads)
+// ============================================================================
+
+/**
+ * Render river and road connections for a hex
+ */
+export function renderConnections(
+  ctx: CanvasRenderingContext2D,
+  hex: Hex,
+  center: { x: number; y: number }
+): void {
+  if (!hex.connections) return;
+  const points = hexPoints(center, HEX_SIZE);
+
+  // Draw rivers
+  if (hex.connections.rivers.length > 0) {
+    ctx.strokeStyle = '#4a9eff';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    for (const edge of hex.connections.rivers) {
+      const p1 = points[edge];
+      const p2 = points[(edge + 1) % 6];
+      const edgeMidX = (p1.x + p2.x) / 2;
+      const edgeMidY = (p1.y + p2.y) / 2;
+
+      ctx.beginPath();
+      ctx.moveTo(edgeMidX, edgeMidY);
+      const cpX = center.x + (edgeMidX - center.x) * 0.3;
+      const cpY = center.y + (edgeMidY - center.y) * 0.3;
+      ctx.quadraticCurveTo(cpX, cpY, center.x, center.y);
+      ctx.stroke();
+    }
+  }
+
+  // Draw roads
+  if (hex.connections.roads.length > 0) {
+    ctx.strokeStyle = '#8B7355';
+    ctx.lineWidth = 1.5;
+    ctx.lineCap = 'round';
+    ctx.setLineDash([3, 3]);
+
+    for (const edge of hex.connections.roads) {
+      const p1 = points[edge];
+      const p2 = points[(edge + 1) % 6];
+      const edgeMidX = (p1.x + p2.x) / 2;
+      const edgeMidY = (p1.y + p2.y) / 2;
+
+      ctx.beginPath();
+      ctx.moveTo(edgeMidX, edgeMidY);
+      ctx.lineTo(center.x, center.y);
+      ctx.stroke();
+    }
+
+    ctx.setLineDash([]);
+  }
 }
 
 // ============================================================================

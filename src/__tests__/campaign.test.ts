@@ -148,11 +148,47 @@ describe('migrateCampaign', () => {
     const campaign = makeLegacyCampaign({
       bookmarkedHexes: [],
       encounterTemplates: [],
-      regions: []
+      regions: [],
+      generationConfig: { seed: '', biomeClusteringStrength: 0.6, encounterDensity: 0.4, landmarkDensity: 0.2, terrainVariety: 0.5 },
+      landmarkTables: [],
     });
     const migrated = migrateCampaign(campaign);
     // No encounter migration needed, fields exist => same reference
     expect(migrated).toBe(campaign);
+  });
+
+  it('adds missing generationConfig with defaults', () => {
+    const legacy = makeLegacyCampaign();
+    expect(legacy.generationConfig).toBeUndefined();
+
+    const migrated = migrateCampaign(legacy);
+    expect(migrated.generationConfig).toBeDefined();
+    expect(migrated.generationConfig!.biomeClusteringStrength).toBe(0.6);
+    expect(migrated.generationConfig!.encounterDensity).toBe(0.4);
+    expect(migrated.generationConfig!.landmarkDensity).toBe(0.2);
+    expect(migrated.generationConfig!.terrainVariety).toBe(0.5);
+  });
+
+  it('adds missing landmarkTables with defaults', () => {
+    const legacy = makeLegacyCampaign();
+    expect(legacy.landmarkTables).toBeUndefined();
+
+    const migrated = migrateCampaign(legacy);
+    expect(migrated.landmarkTables).toBeDefined();
+    expect(migrated.landmarkTables).toEqual([]);
+  });
+
+  it('preserves existing generationConfig through migration', () => {
+    const config = {
+      seed: 'my-seed',
+      biomeClusteringStrength: 0.8,
+      encounterDensity: 0.5,
+      landmarkDensity: 0.3,
+      terrainVariety: 0.7,
+    };
+    const campaign = makeLegacyCampaign({ generationConfig: config });
+    const migrated = migrateCampaign(campaign);
+    expect(migrated.generationConfig).toEqual(config);
   });
 
   it('migrates legacy encounter ContentItems to Encounter type', () => {

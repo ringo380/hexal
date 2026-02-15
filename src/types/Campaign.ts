@@ -46,6 +46,18 @@ export interface Campaign {
    * Optional for backward compatibility with legacy campaign files.
    */
   regions?: Region[];
+
+  /**
+   * Procedural generation configuration (seed, densities, clustering).
+   * Optional for backward compatibility with legacy campaign files.
+   */
+  generationConfig?: GenerationConfig;
+
+  /**
+   * Custom landmark tables for procedural generation.
+   * Optional for backward compatibility with legacy campaign files.
+   */
+  landmarkTables?: LandmarkTable[];
 }
 
 export interface Hex {
@@ -62,6 +74,8 @@ export interface Hex {
   clues: ContentItem[];
   /** Visual markers/figurines on this hex. Optional for backward compatibility with legacy files. */
   markers?: HexMarker[];
+  /** River and road edge connections. Optional for backward compatibility with legacy files. */
+  connections?: HexConnections;
 }
 
 export interface HexCoordinate {
@@ -102,6 +116,53 @@ export interface EncounterEntry {
   description: string;
   difficulty: string;
   weight: number;
+}
+
+// ============ GENERATION CONFIG ============
+
+export interface GenerationConfig {
+  seed: string;
+  biomeClusteringStrength: number; // 0-1
+  encounterDensity: number;        // 0-1
+  landmarkDensity: number;         // 0-1
+  terrainVariety: number;          // 0-1
+}
+
+export function createDefaultGenerationConfig(): GenerationConfig {
+  return {
+    seed: '',
+    biomeClusteringStrength: 0.6,
+    encounterDensity: 0.4,
+    landmarkDensity: 0.2,
+    terrainVariety: 0.5
+  };
+}
+
+// ============ LANDMARK TABLES ============
+
+export interface LandmarkEntry {
+  id: string;
+  title: string;
+  description: string;
+  rarity: string;
+  weight: number;
+}
+
+export interface LandmarkTable {
+  id: string;
+  name: string;
+  terrain: string;
+  entries: LandmarkEntry[];
+}
+
+// ============ HEX CONNECTIONS (Rivers/Roads) ============
+
+/** Edge index 0-5 representing the 6 edges of a hex */
+export type HexEdge = 0 | 1 | 2 | 3 | 4 | 5;
+
+export interface HexConnections {
+  rivers: HexEdge[];
+  roads: HexEdge[];
 }
 
 // Helper functions
@@ -167,7 +228,9 @@ export function createCampaign(name: string, gridWidth: number, gridHeight: numb
     markerTypes: DEFAULT_MARKER_TYPES,
     encounterTemplates: [],
     bookmarkedHexes: [],
-    regions: []
+    regions: [],
+    generationConfig: createDefaultGenerationConfig(),
+    landmarkTables: []
   };
 }
 
@@ -458,13 +521,21 @@ export function migrateCampaign(campaign: Campaign): Campaign {
     });
     hexes[key] = { ...hex, encounters: migratedEncounters };
   }
-  if (!changed && campaign.encounterTemplates !== undefined && campaign.bookmarkedHexes !== undefined && campaign.regions !== undefined) return campaign;
+  if (!changed
+    && campaign.encounterTemplates !== undefined
+    && campaign.bookmarkedHexes !== undefined
+    && campaign.regions !== undefined
+    && campaign.generationConfig !== undefined
+    && campaign.landmarkTables !== undefined
+  ) return campaign;
   return {
     ...campaign,
     hexes,
     encounterTemplates: campaign.encounterTemplates ?? [],
     bookmarkedHexes: campaign.bookmarkedHexes ?? [],
-    regions: campaign.regions ?? []
+    regions: campaign.regions ?? [],
+    generationConfig: campaign.generationConfig ?? createDefaultGenerationConfig(),
+    landmarkTables: campaign.landmarkTables ?? []
   };
 }
 

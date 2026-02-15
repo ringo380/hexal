@@ -468,6 +468,66 @@ function HexGrid() {
     }
 
     // ========================================================================
+    // CONNECTION PASS: Draw rivers and roads
+    // ========================================================================
+    if (zoomLevel >= 0.25) {
+      for (let q = 0; q < campaign.gridWidth; q++) {
+        for (let r = 0; r < campaign.gridHeight; r++) {
+          const coord: HexCoordinate = { q, r };
+          const hex = getHex(coord);
+          if (!hex?.connections) continue;
+          const center = hexCenter(coord);
+          const points = hexPoints(center, HEX_SIZE);
+
+          // Draw rivers (blue curved lines)
+          if (hex.connections.rivers.length > 0 && zoomLevel >= 0.25) {
+            ctx.strokeStyle = '#4a9eff';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            for (const edge of hex.connections.rivers) {
+              const p1 = points[edge];
+              const p2 = points[(edge + 1) % 6];
+              const edgeMidX = (p1.x + p2.x) / 2;
+              const edgeMidY = (p1.y + p2.y) / 2;
+
+              ctx.beginPath();
+              ctx.moveTo(edgeMidX, edgeMidY);
+              // Curve through hex center for organic look
+              const cpX = center.x + (edgeMidX - center.x) * 0.3;
+              const cpY = center.y + (edgeMidY - center.y) * 0.3;
+              ctx.quadraticCurveTo(cpX, cpY, center.x, center.y);
+              ctx.stroke();
+            }
+          }
+
+          // Draw roads (brown dashed lines)
+          if (hex.connections.roads.length > 0 && zoomLevel >= 0.40) {
+            ctx.strokeStyle = '#8B7355';
+            ctx.lineWidth = 1.5;
+            ctx.lineCap = 'round';
+            ctx.setLineDash([3, 3]);
+
+            for (const edge of hex.connections.roads) {
+              const p1 = points[edge];
+              const p2 = points[(edge + 1) % 6];
+              const edgeMidX = (p1.x + p2.x) / 2;
+              const edgeMidY = (p1.y + p2.y) / 2;
+
+              ctx.beginPath();
+              ctx.moveTo(edgeMidX, edgeMidY);
+              ctx.lineTo(center.x, center.y);
+              ctx.stroke();
+            }
+
+            ctx.setLineDash([]);
+          }
+        }
+      }
+    }
+
+    // ========================================================================
     // REGION BORDER PASS: Draw region boundary edges
     // ========================================================================
     for (const region of regions) {
