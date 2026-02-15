@@ -35,6 +35,24 @@ export interface PlayerRegion {
   isDiscovered: boolean;
 }
 
+// Player-safe session data
+export interface PlayerSession {
+  id: string;
+  number: number;
+  title: string;
+  summary: string;
+  realWorldDate: string;
+}
+
+// Player-safe session log entry
+export interface PlayerSessionLogEntry {
+  id: string;
+  sessionId: string;
+  title: string;
+  description: string;
+  hexKeys: string[];
+}
+
 // Player-safe campaign data
 export interface PlayerCampaign {
   id: string;
@@ -46,6 +64,8 @@ export interface PlayerCampaign {
   timeWeather?: TimeWeatherState;
   markerTypes?: MarkerType[];
   regions: PlayerRegion[];
+  sessions: PlayerSession[];
+  sessionLog: PlayerSessionLogEntry[];
 }
 
 /**
@@ -71,6 +91,29 @@ export function filterCampaignForPlayer(campaign: Campaign): PlayerCampaign {
     isDiscovered: r.isDiscovered
   }));
 
+  // Filter sessions to only visible ones
+  const sessions: PlayerSession[] = (campaign.sessions ?? [])
+    .filter(s => s.isVisibleToPlayers)
+    .map(s => ({
+      id: s.id,
+      number: s.number,
+      title: s.title,
+      summary: s.summary,
+      realWorldDate: s.realWorldDate
+    }));
+
+  // Filter session log to only visible entries from visible sessions
+  const visibleSessionIds = new Set(sessions.map(s => s.id));
+  const sessionLog: PlayerSessionLogEntry[] = (campaign.sessionLog ?? [])
+    .filter(e => e.isVisibleToPlayers && visibleSessionIds.has(e.sessionId))
+    .map(e => ({
+      id: e.id,
+      sessionId: e.sessionId,
+      title: e.title,
+      description: e.description,
+      hexKeys: e.hexKeys
+    }));
+
   return {
     id: campaign.id,
     name: campaign.name,
@@ -80,7 +123,9 @@ export function filterCampaignForPlayer(campaign: Campaign): PlayerCampaign {
     terrainTypes: campaign.terrainTypes,
     timeWeather: campaign.timeWeather,
     markerTypes: campaign.markerTypes,
-    regions
+    regions,
+    sessions,
+    sessionLog
   };
 }
 

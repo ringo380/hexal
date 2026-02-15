@@ -1,6 +1,6 @@
 // Direct port from Swift data models
 
-import { TimeWeatherState, DEFAULT_WEATHER, DEFAULT_TIME, CalendarSystem } from './Weather';
+import { TimeWeatherState, DEFAULT_WEATHER, DEFAULT_TIME, CalendarSystem, CurrentTime } from './Weather';
 import { CALENDAR_PRESETS } from '../data/calendars';
 import { HexMarker, MarkerType, DEFAULT_MARKER_TYPES } from './Markers';
 import { DEFAULT_EXPANDED_ENCOUNTER_TABLES, DEFAULT_LANDMARK_TABLES } from '../data/generatorTables';
@@ -65,6 +65,18 @@ export interface Campaign {
    * Optional for backward compatibility with legacy campaign files.
    */
   factions?: Faction[];
+
+  /**
+   * Game sessions for this campaign.
+   * Optional for backward compatibility with legacy campaign files.
+   */
+  sessions?: Session[];
+
+  /**
+   * Session log entries (flat array, referenced by sessionId).
+   * Optional for backward compatibility with legacy campaign files.
+   */
+  sessionLog?: SessionLogEntry[];
 }
 
 export interface Hex {
@@ -238,7 +250,9 @@ export function createCampaign(name: string, gridWidth: number, gridHeight: numb
     regions: [],
     generationConfig: createDefaultGenerationConfig(),
     landmarkTables: DEFAULT_LANDMARK_TABLES,
-    factions: []
+    factions: [],
+    sessions: [],
+    sessionLog: []
   };
 }
 
@@ -446,6 +460,45 @@ export interface Faction {
   isKnownToPlayers: boolean;
 }
 
+// ============ SESSION LOG SYSTEM ============
+
+export type SessionLogTag = 'combat' | 'discovery' | 'social' | 'quest' | 'travel' | 'rest' | 'shopping' | 'custom';
+
+export const SESSION_TAG_INFO: Record<SessionLogTag, { label: string; icon: IconName; color: string }> = {
+  combat: { label: 'Combat', icon: 'sword', color: '#f44336' },
+  discovery: { label: 'Discovery', icon: 'search', color: '#4caf50' },
+  social: { label: 'Social', icon: 'user', color: '#4a9eff' },
+  quest: { label: 'Quest', icon: 'star', color: '#ff9800' },
+  travel: { label: 'Travel', icon: 'walk', color: '#8bc34a' },
+  rest: { label: 'Rest', icon: 'moon', color: '#9c27b0' },
+  shopping: { label: 'Shopping', icon: 'sparkle', color: '#00bcd4' },
+  custom: { label: 'Custom', icon: 'lightbulb', color: '#607d8b' }
+};
+
+export interface SessionLogEntry {
+  id: string;
+  sessionId: string;
+  title: string;
+  description: string;
+  inGameTime: CurrentTime;
+  hexKeys: string[];
+  tags: SessionLogTag[];
+  isVisibleToPlayers: boolean;
+  customTag?: string;
+}
+
+export interface Session {
+  id: string;
+  number: number;
+  title: string;
+  summary: string;
+  realWorldDate: string; // ISO date string
+  inGameTimeStart?: CurrentTime;
+  inGameTimeEnd?: CurrentTime;
+  hexesVisited: string[];
+  isVisibleToPlayers: boolean;
+}
+
 // NPC alignment display info
 export const ALIGNMENT_LABELS: Record<NpcAlignment, string> = {
   'lawful-good': 'LG',
@@ -519,6 +572,31 @@ export function createFaction(name: string = '', color: string = '#4a9eff'): Fac
     color,
     tags: [],
     isKnownToPlayers: false
+  };
+}
+
+export function createSession(number: number, title?: string): Session {
+  return {
+    id: crypto.randomUUID(),
+    number,
+    title: title || `Session ${number}`,
+    summary: '',
+    realWorldDate: new Date().toISOString().split('T')[0],
+    hexesVisited: [],
+    isVisibleToPlayers: true
+  };
+}
+
+export function createSessionLogEntry(sessionId: string, inGameTime: CurrentTime): SessionLogEntry {
+  return {
+    id: crypto.randomUUID(),
+    sessionId,
+    title: '',
+    description: '',
+    inGameTime: { ...inGameTime },
+    hexKeys: [],
+    tags: [],
+    isVisibleToPlayers: true
   };
 }
 
@@ -683,6 +761,8 @@ export function migrateCampaign(campaign: Campaign): Campaign {
     && campaign.generationConfig !== undefined
     && campaign.landmarkTables !== undefined
     && campaign.factions !== undefined
+    && campaign.sessions !== undefined
+    && campaign.sessionLog !== undefined
   ) return campaign;
   return {
     ...campaign,
@@ -692,7 +772,9 @@ export function migrateCampaign(campaign: Campaign): Campaign {
     regions: campaign.regions ?? [],
     generationConfig: campaign.generationConfig ?? createDefaultGenerationConfig(),
     landmarkTables: campaign.landmarkTables ?? [],
-    factions: campaign.factions ?? []
+    factions: campaign.factions ?? [],
+    sessions: campaign.sessions ?? [],
+    sessionLog: campaign.sessionLog ?? []
   };
 }
 

@@ -335,6 +335,59 @@ describe('filterCampaignForPlayer', () => {
     });
   });
 
+  describe('sessions and session log', () => {
+    it('includes visible sessions and entries', () => {
+      const sessions = [
+        { id: 's1', number: 1, title: 'Session 1', summary: 'A fun session', realWorldDate: '2026-01-01', hexesVisited: [], isVisibleToPlayers: true },
+        { id: 's2', number: 2, title: 'Session 2', summary: 'Secret', realWorldDate: '2026-01-08', hexesVisited: [], isVisibleToPlayers: false }
+      ];
+      const sessionLog = [
+        { id: 'e1', sessionId: 's1', title: 'Battle', description: 'Fought goblins', inGameTime: { year: 1, month: 0, day: 1, hour: 8, minute: 0 }, hexKeys: ['0,0'], tags: ['combat' as const], isVisibleToPlayers: true },
+        { id: 'e2', sessionId: 's1', title: 'Secret DM note', description: '', inGameTime: { year: 1, month: 0, day: 1, hour: 10, minute: 0 }, hexKeys: [], tags: [], isVisibleToPlayers: false },
+        { id: 'e3', sessionId: 's2', title: 'Hidden session entry', description: '', inGameTime: { year: 1, month: 0, day: 2, hour: 8, minute: 0 }, hexKeys: [], tags: [], isVisibleToPlayers: true }
+      ];
+      const campaign = makeCampaign({}, { sessions, sessionLog } as any);
+      const result = filterCampaignForPlayer(campaign);
+
+      // Only visible session included
+      expect(result.sessions).toHaveLength(1);
+      expect(result.sessions[0].title).toBe('Session 1');
+
+      // Only visible entry from visible session included
+      expect(result.sessionLog).toHaveLength(1);
+      expect(result.sessionLog[0].title).toBe('Battle');
+    });
+
+    it('strips DM-only fields from sessions and entries', () => {
+      const sessions = [
+        { id: 's1', number: 1, title: 'Session 1', summary: 'Recap', realWorldDate: '2026-01-01', hexesVisited: ['0,0'], isVisibleToPlayers: true, inGameTimeStart: { year: 1, month: 0, day: 1, hour: 8, minute: 0 } }
+      ];
+      const sessionLog = [
+        { id: 'e1', sessionId: 's1', title: 'Event', description: 'Desc', inGameTime: { year: 1, month: 0, day: 1, hour: 8, minute: 0 }, hexKeys: ['0,0'], tags: ['combat' as const], isVisibleToPlayers: true, customTag: 'special' }
+      ];
+      const campaign = makeCampaign({}, { sessions, sessionLog } as any);
+      const result = filterCampaignForPlayer(campaign);
+
+      // Player session should not have hexesVisited or inGameTimeStart
+      expect(result.sessions[0]).not.toHaveProperty('hexesVisited');
+      expect(result.sessions[0]).not.toHaveProperty('inGameTimeStart');
+      expect(result.sessions[0]).not.toHaveProperty('isVisibleToPlayers');
+
+      // Player entry should not have tags, customTag, inGameTime, isVisibleToPlayers
+      expect(result.sessionLog[0]).not.toHaveProperty('tags');
+      expect(result.sessionLog[0]).not.toHaveProperty('customTag');
+      expect(result.sessionLog[0]).not.toHaveProperty('inGameTime');
+      expect(result.sessionLog[0]).not.toHaveProperty('isVisibleToPlayers');
+    });
+
+    it('handles campaigns with no sessions', () => {
+      const campaign = makeCampaign({});
+      const result = filterCampaignForPlayer(campaign);
+      expect(result.sessions).toEqual([]);
+      expect(result.sessionLog).toEqual([]);
+    });
+  });
+
   describe('multiple hexes', () => {
     it('filters all hexes independently', () => {
       const hexes: Record<string, Hex> = {
