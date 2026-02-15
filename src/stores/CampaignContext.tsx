@@ -2,7 +2,7 @@
 // Direct port from Swift CampaignStore using React Context + useReducer
 
 import React, { createContext, useContext, useReducer, useCallback, useMemo, useEffect, useRef } from 'react';
-import type { Campaign, Hex, HexCoordinate, HexMarker, MarkerType, Npc, EncounterTemplate, Region, Faction } from '../types';
+import type { Campaign, Hex, HexCoordinate, HexMarker, MarkerType, Npc, EncounterTemplate, Region, Faction, Session, SessionLogEntry } from '../types';
 import { createCampaign, createHex, coordinateKey, createDefaultTimeWeather, createRegion, hexKey } from '../types';
 import { migrateCampaign } from '../types/Campaign';
 import { createMarker, createCustomMarkerType, DEFAULT_MARKER_TYPES } from '../types/Markers';
@@ -682,6 +682,10 @@ interface CampaignContextValue {
   // NPC/Faction helpers
   factions: Faction[];
 
+  // Session log helpers
+  sessions: Session[];
+  sessionLog: SessionLogEntry[];
+
   // Region operations
   regions: Region[];
   addRegion: (name: string, color?: string) => Region;
@@ -1004,6 +1008,12 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
   // Factions (with fallback to empty)
   const factions = state.campaign?.factions ?? [];
 
+  // Sessions (with fallback to empty)
+  const sessions = state.campaign?.sessions ?? [];
+
+  // Session log (with fallback to empty)
+  const sessionLog = state.campaign?.sessionLog ?? [];
+
   // Regions (with fallback to empty)
   const regions = state.campaign?.regions ?? [];
 
@@ -1156,6 +1166,10 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
 
     // NPC/Faction helpers
     factions,
+
+    // Session log helpers
+    sessions,
+    sessionLog,
 
     // Region operations
     regions,

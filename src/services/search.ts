@@ -12,7 +12,8 @@ export type SearchMatchType =
   | 'creature'
   | 'reward'
   | 'outcome'
-  | 'region';
+  | 'region'
+  | 'session-log';
 
 export interface SearchMatch {
   hexKey: string;
@@ -43,11 +44,41 @@ export function searchCampaign(campaign: Campaign, query: string): SearchResult[
   }
 
   const results: SearchResult[] = [];
+  const resultMap = new Map<string, SearchResult>();
 
   for (const [key, hex] of Object.entries(campaign.hexes)) {
     const matches = searchHex(hex, key, query, hexRegionNames.get(key));
     if (matches.length > 0) {
-      results.push({ hexKey: key, hex, matches });
+      const result = { hexKey: key, hex, matches };
+      results.push(result);
+      resultMap.set(key, result);
+    }
+  }
+
+  // Search session log entries
+  const q = query.toLowerCase();
+  if (campaign.sessionLog) {
+    for (const entry of campaign.sessionLog) {
+      if (entry.title.toLowerCase().includes(q) || entry.description.toLowerCase().includes(q)) {
+        for (const hexKey of entry.hexKeys) {
+          const hex = campaign.hexes[hexKey];
+          if (!hex) continue;
+          const match: SearchMatch = {
+            hexKey,
+            matchType: 'session-log',
+            itemTitle: entry.title,
+            matchText: entry.title.toLowerCase().includes(q) ? entry.title : entry.description
+          };
+          const existing = resultMap.get(hexKey);
+          if (existing) {
+            existing.matches.push(match);
+          } else {
+            const result = { hexKey, hex, matches: [match] };
+            results.push(result);
+            resultMap.set(hexKey, result);
+          }
+        }
+      }
     }
   }
 
@@ -175,6 +206,7 @@ export function getMatchHint(matches: SearchMatch[]): string {
     case 'content-title': return `${m.category}: ${m.matchText}`;
     case 'content-description': return `${m.category}: ${m.itemTitle}`;
     case 'region': return `region: ${m.matchText}`;
+    case 'session-log': return `session log: ${m.itemTitle || m.matchText}`;
     default: return '';
   }
 }

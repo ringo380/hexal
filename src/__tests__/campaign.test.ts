@@ -152,6 +152,8 @@ describe('migrateCampaign', () => {
       generationConfig: { seed: '', biomeClusteringStrength: 0.6, encounterDensity: 0.4, landmarkDensity: 0.2, terrainVariety: 0.5 },
       landmarkTables: [],
       factions: [],
+      sessions: [],
+      sessionLog: [],
     });
     const migrated = migrateCampaign(campaign);
     // No encounter migration needed, fields exist => same reference
@@ -283,5 +285,24 @@ describe('migrateCampaign', () => {
     const campaign = makeLegacyCampaign({ factions });
     const migrated = migrateCampaign(campaign);
     expect(migrated.factions).toEqual(factions);
+  });
+
+  it('adds sessions: [] and sessionLog: [] when missing', () => {
+    const legacy = makeLegacyCampaign();
+    expect(legacy.sessions).toBeUndefined();
+    expect(legacy.sessionLog).toBeUndefined();
+
+    const migrated = migrateCampaign(legacy);
+    expect(migrated.sessions).toEqual([]);
+    expect(migrated.sessionLog).toEqual([]);
+  });
+
+  it('preserves existing sessions and sessionLog', () => {
+    const sessions = [{ id: 's1', number: 1, title: 'Session 1', summary: '', realWorldDate: '2026-01-01', hexesVisited: [], isVisibleToPlayers: true }];
+    const sessionLog = [{ id: 'e1', sessionId: 's1', title: 'Event', description: '', inGameTime: { year: 1, month: 0, day: 1, hour: 8, minute: 0 }, hexKeys: [], tags: [] as any[], isVisibleToPlayers: true }];
+    const campaign = makeLegacyCampaign({ sessions, sessionLog } as any);
+    const migrated = migrateCampaign(campaign);
+    expect(migrated.sessions).toEqual(sessions);
+    expect(migrated.sessionLog).toEqual(sessionLog);
   });
 });

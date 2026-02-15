@@ -7,6 +7,7 @@ import { createContentItem, createNpc, createHex } from '../types';
 import type { Encounter, EncounterTemplate } from '../types/Campaign';
 import { createEncounter, instantiateFromTemplate } from '../types/Campaign';
 import { deleteNpcCleanup } from '../services/npcService';
+import { getEntriesForHex } from '../services/sessionLog';
 import ConfirmDialog from './modals/ConfirmDialog';
 import { getMarkerType, getMarkerColor, getMarkerIcon } from '../types/Markers';
 import ContentItemRow from './ui/ContentItemRow';
@@ -26,6 +27,7 @@ import {
 } from '../types/Weather';
 import { getWeatherSummary } from '../services/weather';
 import { formatTravelModifier, formatVisibilityModifier, formatEncounterModifier } from '../data/weatherEffects';
+import SessionTagBadge from './sessions/SessionTagBadge';
 import Icon from './icons/Icon';
 
 import type { IconName } from './icons/Icon';
@@ -63,7 +65,9 @@ function HexDetail() {
     regions,
     addHexToRegion,
     removeHexFromRegion,
-    getRegionForHex
+    getRegionForHex,
+    sessions,
+    sessionLog
   } = useCampaign();
   const { selectedCoordinate, selectedMarker, selectMarker, regionPaintMode } = useSelection();
 
@@ -430,6 +434,16 @@ function HexDetail() {
             onDelete={(id) => deleteItem(category, id)}
           />
         ))}
+
+        {/* Session History */}
+        {selectedCoordinate && (() => {
+          const hexKey = `${selectedCoordinate.q},${selectedCoordinate.r}`;
+          const hexEntries = getEntriesForHex(sessionLog, hexKey);
+          if (hexEntries.length === 0) return null;
+          return (
+            <HexSessionHistory entries={hexEntries} sessions={sessions} />
+          );
+        })()}
       </div>
 
       {/* Edit Modal */}
@@ -1017,6 +1031,51 @@ function MarkerSection({
             );
           })}
           <p className="marker-hint">Click to select • Double-click name to edit • Delete key to remove</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Hex session history section
+interface HexSessionHistoryProps {
+  entries: import('../types/Campaign').SessionLogEntry[];
+  sessions: import('../types/Campaign').Session[];
+}
+
+function HexSessionHistory({ entries, sessions }: HexSessionHistoryProps) {
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  const getSession = (sessionId: string) => sessions.find(s => s.id === sessionId);
+
+  return (
+    <div className="content-section hex-session-history">
+      <div className="section-header" onClick={() => setIsExpanded(!isExpanded)}>
+        <span className="section-icon"><Icon name="calendar" size={14} /></span>
+        <span className="section-title">Session History</span>
+        <span className="section-count">{entries.length}</span>
+        <span className="section-toggle"><Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} size={12} /></span>
+      </div>
+      {isExpanded && (
+        <div className="section-content">
+          {entries.map(entry => {
+            const session = getSession(entry.sessionId);
+            return (
+              <div key={entry.id} className="hex-session-history-entry">
+                <div className="hex-session-history-header">
+                  {session && <span className="hex-session-history-session">S#{session.number}</span>}
+                  <span className="hex-session-history-title">{entry.title || 'Untitled'}</span>
+                </div>
+                {entry.tags.length > 0 && (
+                  <div className="hex-session-history-tags">
+                    {entry.tags.map(tag => (
+                      <SessionTagBadge key={tag} tag={tag} customTag={entry.customTag} size="small" />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

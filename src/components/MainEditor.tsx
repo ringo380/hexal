@@ -20,9 +20,10 @@ import EncounterTemplateLibrary from './modals/EncounterTemplateLibrary';
 import RegionManagerModal from './modals/RegionManagerModal';
 import NpcDirectoryModal from './modals/NpcDirectoryModal';
 import RelationshipWebModal from './modals/RelationshipWebModal';
+import SessionLogModal from './modals/SessionLogModal';
 import CommandPalette from './CommandPalette';
 import Icon from './icons/Icon';
-import { CATEGORY_INFO, type ContentCategory } from '../types/Campaign';
+import { CATEGORY_INFO, type ContentCategory, parseHexKey } from '../types/Campaign';
 
 interface MainEditorProps {
   onRegisterExport?: (handler: () => void) => void;
@@ -39,7 +40,8 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
     filterBookmarked, setFilterBookmarked,
     filterRegion, setFilterRegion,
     activeFilterCount,
-    isCommandPaletteOpen, openCommandPalette, closeCommandPalette
+    isCommandPaletteOpen, openCommandPalette, closeCommandPalette,
+    selectHex
   } = useSelection();
   const [showGenerator, setShowGenerator] = useState(false);
   const [showExport, setShowExport] = useState(false);
@@ -55,6 +57,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
   const [showRegionManager, setShowRegionManager] = useState(false);
   const [showNpcDirectory, setShowNpcDirectory] = useState(false);
   const [showRelationshipWeb, setShowRelationshipWeb] = useState(false);
+  const [showSessionLog, setShowSessionLog] = useState(false);
 
   // Register export handler for menu command
   useEffect(() => {
@@ -113,6 +116,11 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
       if ((e.metaKey || e.ctrlKey) && e.key === 'r' && !e.shiftKey) {
         e.preventDefault();
         setShowRegionManager(true);
+      }
+      // Cmd+L to open session log
+      if ((e.metaKey || e.ctrlKey) && e.key === 'l') {
+        e.preventDefault();
+        setShowSessionLog(true);
       }
       // Cmd+? (Cmd+Shift+/) to show keyboard shortcuts
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '/') {
@@ -314,6 +322,9 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
           <button className="btn btn-secondary" onClick={() => setShowRegionManager(true)}>
             <Icon name="map" size={16} /> Regions
           </button>
+          <button className="btn btn-secondary" onClick={() => setShowSessionLog(true)}>
+            <Icon name="calendar" size={16} /> Sessions
+          </button>
           <button className="btn btn-secondary" onClick={() => setShowGenerator(true)}>
             <Icon name="dice" size={16} /> Generate
           </button>
@@ -399,6 +410,18 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
       )}
       {showRelationshipWeb && (
         <RelationshipWebModal onClose={() => setShowRelationshipWeb(false)} />
+      )}
+      {showSessionLog && (
+        <SessionLogModal
+          onClose={() => setShowSessionLog(false)}
+          onNavigateToHex={(hexKey) => {
+            const coord = parseHexKey(hexKey);
+            if (coord) {
+              selectHex(coord);
+              setShowSessionLog(false);
+            }
+          }}
+        />
       )}
       {isCommandPaletteOpen && (
         <CommandPalette onClose={closeCommandPalette} />
