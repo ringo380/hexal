@@ -137,7 +137,7 @@ function filterHexForPlayer(hex: Hex, factions: Faction[]): PlayerHex {
     status: hex.status,
     locationNames: [],
     npcs: [],
-    markers: hex.markers?.filter(m => m.isVisible),
+    markers: hex.status !== 'undiscovered' ? hex.markers?.filter(m => m.isVisible) : undefined,
     connections: hex.connections
   };
 

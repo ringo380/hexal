@@ -129,6 +129,14 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect }:
         ctx.lineWidth = isSelected ? 3 : 0.75;
         ctx.stroke();
 
+        // Status indicator (discovered/cleared dots)
+        if (hex && hex.status !== 'undiscovered' && zoomLevel >= 0.40) {
+          ctx.beginPath();
+          ctx.arc(center.x, center.y, 4, 0, Math.PI * 2);
+          ctx.fillStyle = hex.status === 'discovered' ? 'rgba(74, 158, 255, 0.7)' : 'rgba(76, 175, 80, 0.7)';
+          ctx.fill();
+        }
+
         // Terrain label (only for discovered/cleared, at sufficient zoom)
         if (hex && hex.terrain && hex.status !== 'undiscovered' && zoomLevel >= 1.5) {
           ctx.font = 'bold 6px sans-serif';
