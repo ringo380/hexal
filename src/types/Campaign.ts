@@ -3,6 +3,7 @@
 import { TimeWeatherState, DEFAULT_WEATHER, DEFAULT_TIME, CalendarSystem } from './Weather';
 import { CALENDAR_PRESETS } from '../data/calendars';
 import { HexMarker, MarkerType, DEFAULT_MARKER_TYPES } from './Markers';
+import { DEFAULT_EXPANDED_ENCOUNTER_TABLES, DEFAULT_LANDMARK_TABLES } from '../data/generatorTables';
 
 export interface Campaign {
   id: string;
@@ -221,7 +222,7 @@ export function createCampaign(name: string, gridWidth: number, gridHeight: numb
     gridHeight: Math.min(gridHeight, 50),
     hexes: {},
     terrainTypes: DEFAULT_TERRAIN_TYPES,
-    encounterTables: DEFAULT_ENCOUNTER_TABLES,
+    encounterTables: DEFAULT_EXPANDED_ENCOUNTER_TABLES,
     createdAt: new Date().toISOString(),
     modifiedAt: new Date().toISOString(),
     timeWeather: createDefaultTimeWeather(),
@@ -230,7 +231,7 @@ export function createCampaign(name: string, gridWidth: number, gridHeight: numb
     bookmarkedHexes: [],
     regions: [],
     generationConfig: createDefaultGenerationConfig(),
-    landmarkTables: []
+    landmarkTables: DEFAULT_LANDMARK_TABLES
   };
 }
 

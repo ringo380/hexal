@@ -15,6 +15,7 @@ import WeatherSettingsModal from './modals/WeatherSettingsModal';
 import ConfirmDialog from './modals/ConfirmDialog';
 import KeyboardShortcutsModal from './modals/KeyboardShortcutsModal';
 import EncounterTableEditorModal from './modals/EncounterTableEditorModal';
+import LandmarkTableEditorModal from './modals/LandmarkTableEditorModal';
 import EncounterTemplateLibrary from './modals/EncounterTemplateLibrary';
 import RegionManagerModal from './modals/RegionManagerModal';
 import CommandPalette from './CommandPalette';
@@ -47,6 +48,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [showEncounterTableEditor, setShowEncounterTableEditor] = useState(false);
+  const [showLandmarkTableEditor, setShowLandmarkTableEditor] = useState(false);
   const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
   const [showRegionManager, setShowRegionManager] = useState(false);
 
@@ -294,7 +296,10 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
 
         <div className="toolbar-right">
           <button className="btn btn-secondary" onClick={() => setShowEncounterTableEditor(true)}>
-            <Icon name="sword" size={16} /> Tables
+            <Icon name="sword" size={16} /> Encounters
+          </button>
+          <button className="btn btn-secondary" onClick={() => setShowLandmarkTableEditor(true)}>
+            <Icon name="pin" size={16} /> Landmarks
           </button>
           <button className="btn btn-secondary" onClick={() => setShowTemplateLibrary(true)}>
             <Icon name="sparkle" size={16} /> Templates
@@ -366,6 +371,9 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
       )}
       {showEncounterTableEditor && (
         <EncounterTableEditorModal onClose={() => setShowEncounterTableEditor(false)} />
+      )}
+      {showLandmarkTableEditor && (
+        <LandmarkTableEditorModal onClose={() => setShowLandmarkTableEditor(false)} />
       )}
       {showTemplateLibrary && (
         <EncounterTemplateLibrary onClose={() => setShowTemplateLibrary(false)} />
