@@ -3702,6 +3702,12 @@ label {
   font-size: 13px;
 }
 
+.npc-move-error {
+  color: #e06c75;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
 /* Faction Manager */
 .faction-manager {
   display: flex;

@@ -7,6 +7,7 @@ import { createContentItem, createNpc, createHex } from '../types';
 import type { Encounter, EncounterTemplate } from '../types/Campaign';
 import { createEncounter, instantiateFromTemplate } from '../types/Campaign';
 import { deleteNpcCleanup } from '../services/npcService';
+import ConfirmDialog from './modals/ConfirmDialog';
 import { getMarkerType, getMarkerColor, getMarkerIcon } from '../types/Markers';
 import ContentItemRow from './ui/ContentItemRow';
 import EncounterRow from './encounters/EncounterRow';
@@ -55,7 +56,7 @@ function HexDetail() {
     removeMarker,
     updateMarker,
     encounterTemplates,
-    getAllNpcs,
+    allNpcs,
     factions,
     toggleBookmark,
     isBookmarked,
@@ -71,6 +72,7 @@ function HexDetail() {
   const [editingEncounter, setEditingEncounter] = useState<Encounter | null>(null);
   const [editingNpc, setEditingNpc] = useState<Npc | null>(null);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const [npcToDelete, setNpcToDelete] = useState<{ id: string; title: string } | null>(null);
 
   // Load hex data when selection changes
   useEffect(() => {
@@ -183,19 +185,25 @@ function HexDetail() {
     setEditingNpc(null);
   };
 
-  const deleteNpc = (npcId: string) => {
-    if (!hex || !selectedCoordinate || !campaign) return;
+  const confirmDeleteNpc = (npcId: string) => {
+    if (!hex) return;
+    const currentHex = getOrCreateHex(selectedCoordinate!);
+    const npc = currentHex.npcs.find(n => n.id === npcId);
+    if (npc) setNpcToDelete({ id: npcId, title: npc.title || 'Unnamed NPC' });
+  };
+
+  const executeDeleteNpc = () => {
+    if (!hex || !selectedCoordinate || !campaign || !npcToDelete) return;
     const currentHex = getOrCreateHex(selectedCoordinate);
-    // Remove NPC from this hex
     const updatedHex = {
       ...currentHex,
-      npcs: currentHex.npcs.filter(n => n.id !== npcId)
+      npcs: currentHex.npcs.filter(n => n.id !== npcToDelete.id)
     };
     saveHex(updatedHex);
-    // Clean up cross-campaign references
     const hexKey = `${selectedCoordinate.q},${selectedCoordinate.r}`;
-    const cleanup = deleteNpcCleanup(campaign, npcId, hexKey);
+    const cleanup = deleteNpcCleanup(campaign, npcToDelete.id, hexKey);
     updateCampaignData(cleanup);
+    setNpcToDelete(null);
   };
 
 
@@ -407,7 +415,7 @@ function HexDetail() {
           onAdd={() => addItem('npcs')}
           onToggleResolved={(id) => toggleResolved('npcs', id)}
           onEdit={(npc) => setEditingNpc(npc)}
-          onDelete={(id) => deleteNpc(id)}
+          onDelete={(id) => confirmDeleteNpc(id)}
         />
 
         {/* Other Content Sections (excluding encounters and npcs) */}
@@ -441,7 +449,7 @@ function HexDetail() {
       {editingEncounter && (
         <EncounterEditorModal
           encounter={editingEncounter}
-          allNpcs={getAllNpcs()}
+          allNpcs={allNpcs}
           onSave={saveEncounter}
           onClose={() => setEditingEncounter(null)}
         />
@@ -452,9 +460,20 @@ function HexDetail() {
         <NpcEditorModal
           npc={editingNpc}
           factions={factions}
-          allNpcs={getAllNpcs()}
+          allNpcs={allNpcs}
           onSave={saveNpc}
           onClose={() => setEditingNpc(null)}
+        />
+      )}
+      {npcToDelete && (
+        <ConfirmDialog
+          title={`Delete ${npcToDelete.title}?`}
+          message="This will remove this NPC and clean up all relationship and encounter references across the campaign."
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          variant="danger"
+          onConfirm={executeDeleteNpc}
+          onCancel={() => setNpcToDelete(null)}
         />
       )}
     </div>
