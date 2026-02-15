@@ -60,7 +60,13 @@ export type IconName =
   | 'moon-new'
   // Search & Navigation Icons
   | 'search'
-  | 'star';
+  | 'star'
+  // NPC & Faction Icons
+  | 'shield'
+  | 'users'
+  | 'heart'
+  | 'skull'
+  | 'link';
 
 const icons: Record<IconName, JSX.Element> = {
   'arrow-left': (
@@ -1147,6 +1153,121 @@ const icons: Record<IconName, JSX.Element> = {
       {/* Primary - star outline */}
       <path
         d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </>
+  ),
+
+  // ============ NPC & Faction Icons ============
+
+  'shield': (
+    <>
+      {/* Secondary - shield fill */}
+      <path
+        d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+        fill="var(--icon-secondary)"
+      />
+      {/* Primary - shield outline */}
+      <path
+        d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </>
+  ),
+  'users': (
+    <>
+      {/* Secondary - body fills */}
+      <path
+        d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
+        fill="var(--icon-secondary)"
+      />
+      <circle cx="9" cy="7" r="4" fill="var(--icon-secondary)" />
+      {/* Primary - outlines */}
+      <path
+        d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2" fill="none" />
+      <path
+        d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </>
+  ),
+  'heart': (
+    <>
+      {/* Secondary - heart fill */}
+      <path
+        d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"
+        fill="var(--icon-secondary)"
+      />
+      {/* Primary - heart outline */}
+      <path
+        d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </>
+  ),
+  'skull': (
+    <>
+      {/* Secondary - skull fill */}
+      <circle cx="12" cy="10" r="8" fill="var(--icon-secondary)" />
+      {/* Primary - skull outline */}
+      <circle cx="12" cy="10" r="8" stroke="currentColor" strokeWidth="2" fill="none" />
+      {/* Eyes */}
+      <circle cx="9" cy="9" r="1.5" fill="currentColor" />
+      <circle cx="15" cy="9" r="1.5" fill="currentColor" />
+      {/* Jaw */}
+      <path
+        d="M8 18v3h2v-2h4v2h2v-3"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      {/* Nose */}
+      <path d="M12 12v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </>
+  ),
+  'link': (
+    <>
+      {/* Secondary - chain link fill */}
+      <path
+        d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
+        fill="var(--icon-secondary)"
+      />
+      {/* Primary - chain outline */}
+      <path
+        d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <path
+        d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"

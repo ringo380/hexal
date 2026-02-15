@@ -2,14 +2,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useCampaign } from '../stores/CampaignContext';
 import { useSelection } from '../stores/SelectionContext';
-import type { Hex, ContentItem, DiscoveryStatus, HexMarker, MarkerType } from '../types';
-import { createContentItem, createHex } from '../types';
+import type { Hex, ContentItem, DiscoveryStatus, HexMarker, MarkerType, Npc } from '../types';
+import { createContentItem, createNpc, createHex } from '../types';
 import type { Encounter, EncounterTemplate } from '../types/Campaign';
 import { createEncounter, instantiateFromTemplate } from '../types/Campaign';
+import { deleteNpcCleanup } from '../services/npcService';
+import ConfirmDialog from './modals/ConfirmDialog';
 import { getMarkerType, getMarkerColor, getMarkerIcon } from '../types/Markers';
 import ContentItemRow from './ui/ContentItemRow';
 import EncounterRow from './encounters/EncounterRow';
 import EncounterEditorModal from './encounters/EncounterEditorModal';
+import NpcRow from './npcs/NpcRow';
+import NpcEditorModal from './npcs/NpcEditorModal';
 import {
   WEATHER_ICONS,
   WEATHER_CONDITION_LABELS,
@@ -42,6 +46,7 @@ function HexDetail() {
     getHex,
     getOrCreateHex,
     updateHex,
+    updateCampaignData,
     timeWeather,
     getWeatherForHex,
     getWeatherEffectsForHex,
@@ -51,7 +56,8 @@ function HexDetail() {
     removeMarker,
     updateMarker,
     encounterTemplates,
-    getAllNpcs,
+    allNpcs,
+    factions,
     toggleBookmark,
     isBookmarked,
     regions,
@@ -64,7 +70,9 @@ function HexDetail() {
   const [hex, setHex] = useState<Hex | null>(null);
   const [editingItem, setEditingItem] = useState<{ item: ContentItem; category: ContentCategory } | null>(null);
   const [editingEncounter, setEditingEncounter] = useState<Encounter | null>(null);
+  const [editingNpc, setEditingNpc] = useState<Npc | null>(null);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const [npcToDelete, setNpcToDelete] = useState<{ id: string; title: string } | null>(null);
 
   // Load hex data when selection changes
   useEffect(() => {
@@ -120,6 +128,16 @@ function HexDetail() {
       setEditingEncounter(newEncounter);
       return;
     }
+    if (category === 'npcs') {
+      const newNpc = createNpc('New NPC');
+      const updated = {
+        ...currentHex,
+        npcs: [...currentHex.npcs, newNpc]
+      };
+      saveHex(updated);
+      setEditingNpc(newNpc);
+      return;
+    }
     const newItem = createContentItem(`New ${category.slice(0, -1)}`);
     const updated = {
       ...currentHex,
@@ -152,6 +170,40 @@ function HexDetail() {
     };
     saveHex(updatedHex);
     setEditingEncounter(null);
+  };
+
+  const saveNpc = (updated: Npc) => {
+    if (!hex || !selectedCoordinate) return;
+    const currentHex = getOrCreateHex(selectedCoordinate);
+    const updatedHex = {
+      ...currentHex,
+      npcs: currentHex.npcs.map(n =>
+        n.id === updated.id ? updated : n
+      )
+    };
+    saveHex(updatedHex);
+    setEditingNpc(null);
+  };
+
+  const confirmDeleteNpc = (npcId: string) => {
+    if (!hex) return;
+    const currentHex = getOrCreateHex(selectedCoordinate!);
+    const npc = currentHex.npcs.find(n => n.id === npcId);
+    if (npc) setNpcToDelete({ id: npcId, title: npc.title || 'Unnamed NPC' });
+  };
+
+  const executeDeleteNpc = () => {
+    if (!hex || !selectedCoordinate || !campaign || !npcToDelete) return;
+    const currentHex = getOrCreateHex(selectedCoordinate);
+    const updatedHex = {
+      ...currentHex,
+      npcs: currentHex.npcs.filter(n => n.id !== npcToDelete.id)
+    };
+    saveHex(updatedHex);
+    const hexKey = `${selectedCoordinate.q},${selectedCoordinate.r}`;
+    const cleanup = deleteNpcCleanup(campaign, npcToDelete.id, hexKey);
+    updateCampaignData(cleanup);
+    setNpcToDelete(null);
   };
 
 
@@ -356,8 +408,18 @@ function HexDetail() {
           onDelete={(id) => deleteItem('encounters', id)}
         />
 
-        {/* Other Content Sections */}
-        {(Object.keys(categoryConfig) as ContentCategory[]).filter(c => c !== 'encounters').map((category) => (
+        {/* NPC Section (dedicated) */}
+        <NpcSection
+          npcs={hex.npcs}
+          factions={factions}
+          onAdd={() => addItem('npcs')}
+          onToggleResolved={(id) => toggleResolved('npcs', id)}
+          onEdit={(npc) => setEditingNpc(npc)}
+          onDelete={(id) => confirmDeleteNpc(id)}
+        />
+
+        {/* Other Content Sections (excluding encounters and npcs) */}
+        {(Object.keys(categoryConfig) as ContentCategory[]).filter(c => c !== 'encounters' && c !== 'npcs').map((category) => (
           <ContentSection
             key={category}
             category={category}
@@ -387,9 +449,31 @@ function HexDetail() {
       {editingEncounter && (
         <EncounterEditorModal
           encounter={editingEncounter}
-          allNpcs={getAllNpcs()}
+          allNpcs={allNpcs}
           onSave={saveEncounter}
           onClose={() => setEditingEncounter(null)}
+        />
+      )}
+
+      {/* NPC Edit Modal */}
+      {editingNpc && (
+        <NpcEditorModal
+          npc={editingNpc}
+          factions={factions}
+          allNpcs={allNpcs}
+          onSave={saveNpc}
+          onClose={() => setEditingNpc(null)}
+        />
+      )}
+      {npcToDelete && (
+        <ConfirmDialog
+          title={`Delete ${npcToDelete.title}?`}
+          message="This will remove this NPC and clean up all relationship and encounter references across the campaign."
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          variant="danger"
+          onConfirm={executeDeleteNpc}
+          onCancel={() => setNpcToDelete(null)}
         />
       )}
     </div>
@@ -460,6 +544,53 @@ function EncounterSection({
               </div>
             )}
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// NPC section component (dedicated)
+interface NpcSectionProps {
+  npcs: Npc[];
+  factions: import('../types/Campaign').Faction[];
+  onAdd: () => void;
+  onToggleResolved: (id: string) => void;
+  onEdit: (npc: Npc) => void;
+  onDelete: (id: string) => void;
+}
+
+function NpcSection({ npcs, factions, onAdd, onToggleResolved, onEdit, onDelete }: NpcSectionProps) {
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  const getFaction = (factionId?: string) => {
+    if (!factionId) return undefined;
+    return factions.find(f => f.id === factionId);
+  };
+
+  return (
+    <div className="content-section">
+      <div className="section-header" onClick={() => setIsExpanded(!isExpanded)}>
+        <span className="section-icon"><Icon name="user" size={14} /></span>
+        <span className="section-title">NPCs</span>
+        <span className="section-count">{npcs.length}</span>
+        <span className="section-toggle"><Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} size={12} /></span>
+      </div>
+      {isExpanded && (
+        <div className="section-content">
+          {npcs.map((npc) => (
+            <NpcRow
+              key={npc.id}
+              npc={npc}
+              faction={getFaction(npc.factionId)}
+              onToggleResolved={() => onToggleResolved(npc.id)}
+              onEdit={() => onEdit(npc)}
+              onDelete={() => onDelete(npc.id)}
+            />
+          ))}
+          <button className="add-item-btn" onClick={onAdd}>
+            + Add NPC
+          </button>
         </div>
       )}
     </div>

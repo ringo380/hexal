@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import type { LinkedNpcRef, ContentItem } from '../../types/Campaign';
+import type { LinkedNpcRef, Npc } from '../../types/Campaign';
 import Icon from '../icons/Icon';
 
 interface NpcLinkerProps {
   linkedNpcs: LinkedNpcRef[];
-  allNpcs: Array<{ npc: ContentItem; hexKey: string }>;
+  allNpcs: Array<{ npc: Npc; hexKey: string }>;
   onChange: (linkedNpcs: LinkedNpcRef[]) => void;
 }
 

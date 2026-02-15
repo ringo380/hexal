@@ -100,7 +100,7 @@ describe('Sidebar filtering logic', () => {
       terrain: 'Forest',
       status: 'undiscovered',
       notes: 'Dense forest with wolves',
-      npcs: [{ id: 'npc1', title: 'Ranger', description: 'Forest patrol', isResolved: false }]
+      npcs: [{ id: 'npc1', title: 'Ranger', description: 'Forest patrol', isResolved: false, relationships: [], tags: [], isAlive: true }]
     }),
     makeHex(1, 0, {
       terrain: 'Mountains',

@@ -1,8 +1,8 @@
 // CampaignContext - Main state management for campaign data
 // Direct port from Swift CampaignStore using React Context + useReducer
 
-import React, { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react';
-import type { Campaign, Hex, HexCoordinate, HexMarker, MarkerType, ContentItem, EncounterTemplate, Region } from '../types';
+import React, { createContext, useContext, useReducer, useCallback, useMemo, useEffect, useRef } from 'react';
+import type { Campaign, Hex, HexCoordinate, HexMarker, MarkerType, Npc, EncounterTemplate, Region, Faction } from '../types';
 import { createCampaign, createHex, coordinateKey, createDefaultTimeWeather, createRegion, hexKey } from '../types';
 import { migrateCampaign } from '../types/Campaign';
 import { createMarker, createCustomMarkerType, DEFAULT_MARKER_TYPES } from '../types/Markers';
@@ -677,7 +677,10 @@ interface CampaignContextValue {
 
   // Encounter helpers
   encounterTemplates: EncounterTemplate[];
-  getAllNpcs: () => Array<{ npc: ContentItem; hexKey: string }>;
+  allNpcs: Array<{ npc: Npc; hexKey: string }>;
+
+  // NPC/Faction helpers
+  factions: Faction[];
 
   // Region operations
   regions: Region[];
@@ -998,6 +1001,9 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
   // Bookmarked hexes (with fallback to empty)
   const bookmarkedHexes = state.campaign?.bookmarkedHexes ?? [];
 
+  // Factions (with fallback to empty)
+  const factions = state.campaign?.factions ?? [];
+
   // Regions (with fallback to empty)
   const regions = state.campaign?.regions ?? [];
 
@@ -1071,10 +1077,10 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
     return (state.campaign?.bookmarkedHexes ?? []).includes(key);
   }, [state.campaign?.bookmarkedHexes]);
 
-  // Get all NPCs across all hexes (for NPC linker)
-  const getAllNpcs = useCallback((): Array<{ npc: ContentItem; hexKey: string }> => {
+  // Get all NPCs across all hexes (memoized for NPC linker, directory, relationship web)
+  const allNpcs = useMemo((): Array<{ npc: Npc; hexKey: string }> => {
     if (!state.campaign) return [];
-    const result: Array<{ npc: ContentItem; hexKey: string }> = [];
+    const result: Array<{ npc: Npc; hexKey: string }> = [];
     for (const [key, hex] of Object.entries(state.campaign.hexes)) {
       for (const npc of hex.npcs) {
         result.push({ npc, hexKey: key });
@@ -1146,7 +1152,10 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
 
     // Encounter helpers
     encounterTemplates,
-    getAllNpcs,
+    allNpcs,
+
+    // NPC/Faction helpers
+    factions,
 
     // Region operations
     regions,
