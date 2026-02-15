@@ -105,12 +105,31 @@ function App() {
     return cleanup;
   }, [loadCampaign]);
 
-  // Sync campaign state to player view windows
+  // Sync campaign state to player view windows (debounced to avoid IPC flood)
+  const syncTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const prevCampaignForSyncRef = useRef<typeof campaign>(null);
   useEffect(() => {
-    if (campaign) {
+    if (!campaign) return;
+
+    // Immediate sync on first campaign load (null → non-null)
+    if (!prevCampaignForSyncRef.current) {
+      prevCampaignForSyncRef.current = campaign;
       const playerData = filterCampaignForPlayer(campaign);
       window.electronAPI.syncPlayerView(playerData);
+      return;
     }
+
+    prevCampaignForSyncRef.current = campaign;
+
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(() => {
+      const playerData = filterCampaignForPlayer(campaign);
+      window.electronAPI.syncPlayerView(playerData);
+    }, 150);
+
+    return () => {
+      if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    };
   }, [campaign]);
 
   // Notify player windows when DM closes campaign
