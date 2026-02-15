@@ -6,6 +6,7 @@ import PlayerHexGrid from './PlayerHexGrid';
 import PlayerHexInfo from './PlayerHexInfo';
 import PlayerSidebar from './PlayerSidebar';
 import type { HexCoordinate } from '../../types';
+import { WEATHER_CONDITION_LABELS, TEMPERATURE_LABELS } from '../../types/Weather';
 
 type LayoutMode = 'presentation' | 'explorer';
 
@@ -46,7 +47,7 @@ function PlayerView({ campaign }: PlayerViewProps) {
   // Weather display
   const weather = campaign.timeWeather?.globalWeather;
   const weatherText = weather
-    ? `${weather.condition} | ${weather.temperature}°`
+    ? `${WEATHER_CONDITION_LABELS[weather.condition]} | ${TEMPERATURE_LABELS[weather.temperature]}`
     : null;
 
   return (
@@ -87,6 +88,7 @@ function PlayerView({ campaign }: PlayerViewProps) {
           campaign={campaign}
           selectedHexKey={selectedHexKey}
           onHexSelect={handleHexSelect}
+          onHexDeselect={() => setSelectedHexKey(null)}
         />
       </div>
 

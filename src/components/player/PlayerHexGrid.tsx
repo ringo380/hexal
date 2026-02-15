@@ -23,14 +23,16 @@ const MAX_ZOOM = 5.0;
 const ZOOM_STEP = 0.03;
 const ZOOM_ANIMATION_SPEED = 0.12;
 const DRAG_THRESHOLD = 3;
+const PAN_SPEED = 20;
 
 interface PlayerHexGridProps {
   campaign: PlayerCampaign;
   selectedHexKey: string | null;
   onHexSelect: (coord: HexCoordinate) => void;
+  onHexDeselect: () => void;
 }
 
-function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect }: PlayerHexGridProps) {
+function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect }: PlayerHexGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -376,6 +378,115 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect }: PlayerHexGridP
     setIsPotentialDrag(false);
     setIsDragging(false);
   }, []);
+
+  // Zoom control functions for keyboard shortcuts
+  const selectedCoordForZoom = selectedCoord;
+
+  const zoomIn = useCallback(() => {
+    const container = containerRef.current;
+    const newTargetZoom = Math.min(MAX_ZOOM, targetZoom + ZOOM_STEP);
+    if (newTargetZoom !== targetZoom) {
+      if (selectedCoordForZoom && container) {
+        const containerRect = container.getBoundingClientRect();
+        const hexWorld = hexCenter(selectedCoordForZoom);
+        setTargetPan({
+          x: containerRect.width / 2 - hexWorld.x * newTargetZoom,
+          y: containerRect.height / 2 - hexWorld.y * newTargetZoom
+        });
+      }
+      setTargetZoom(newTargetZoom);
+      if (!isAnimatingRef.current) isAnimatingRef.current = true;
+    }
+  }, [targetZoom, selectedCoordForZoom]);
+
+  const zoomOut = useCallback(() => {
+    const container = containerRef.current;
+    const newTargetZoom = Math.max(MIN_ZOOM, targetZoom - ZOOM_STEP);
+    if (newTargetZoom !== targetZoom) {
+      if (selectedCoordForZoom && container) {
+        const containerRect = container.getBoundingClientRect();
+        const hexWorld = hexCenter(selectedCoordForZoom);
+        setTargetPan({
+          x: containerRect.width / 2 - hexWorld.x * newTargetZoom,
+          y: containerRect.height / 2 - hexWorld.y * newTargetZoom
+        });
+      }
+      setTargetZoom(newTargetZoom);
+      if (!isAnimatingRef.current) isAnimatingRef.current = true;
+    }
+  }, [targetZoom, selectedCoordForZoom]);
+
+  const resetZoom = useCallback(() => {
+    setTargetZoom(1);
+    setTargetPan({ x: 0, y: 0 });
+    if (!isAnimatingRef.current) isAnimatingRef.current = true;
+  }, []);
+
+  // Keyboard navigation: WSAD/Arrow pan, Escape deselect
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      const canvasHasFocus = document.activeElement === canvasRef.current;
+      if (!canvasHasFocus) return;
+
+      let panDelta = { x: 0, y: 0 };
+      const key = e.key.toLowerCase();
+
+      switch (key) {
+        case 'w':
+        case 'arrowup':
+          panDelta.y = PAN_SPEED;
+          break;
+        case 's':
+        case 'arrowdown':
+          panDelta.y = -PAN_SPEED;
+          break;
+        case 'a':
+        case 'arrowleft':
+          panDelta.x = PAN_SPEED;
+          break;
+        case 'd':
+        case 'arrowright':
+          panDelta.x = -PAN_SPEED;
+          break;
+        case 'escape':
+          e.preventDefault();
+          onHexDeselect();
+          return;
+      }
+
+      if (panDelta.x !== 0 || panDelta.y !== 0) {
+        e.preventDefault();
+        setTargetPan(prev => ({ x: prev.x + panDelta.x, y: prev.y + panDelta.y }));
+        if (!isAnimatingRef.current) isAnimatingRef.current = true;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onHexDeselect]);
+
+  // Keyboard zoom: Cmd/Ctrl + Plus/Minus/Zero
+  useEffect(() => {
+    const handleZoomKeyDown = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey) {
+        if (e.key === '=' || e.key === '+') {
+          e.preventDefault();
+          zoomIn();
+        } else if (e.key === '-') {
+          e.preventDefault();
+          zoomOut();
+        } else if (e.key === '0') {
+          e.preventDefault();
+          resetZoom();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleZoomKeyDown);
+    return () => window.removeEventListener('keydown', handleZoomKeyDown);
+  }, [zoomIn, zoomOut, resetZoom]);
 
   return (
     <div className="player-hex-grid-container" ref={containerRef}>
