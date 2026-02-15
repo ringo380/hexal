@@ -143,6 +143,61 @@ describe('searchHex', () => {
     expect(matches[0].category).toBe('npcs');
   });
 
+  it('matches NPC race', () => {
+    const hex = makeHex({
+      npcs: [
+        { id: 'npc1', title: 'Legolas', description: '', isResolved: false, relationships: [], tags: [], isAlive: true, race: 'Wood Elf' }
+      ]
+    });
+    const matches = searchHex(hex, '0,0', 'elf');
+    expect(matches).toHaveLength(1);
+    expect(matches[0].category).toBe('npcs');
+  });
+
+  it('matches NPC class', () => {
+    const hex = makeHex({
+      npcs: [
+        { id: 'npc1', title: 'Ragnar', description: '', isResolved: false, relationships: [], tags: [], isAlive: true, class: 'Barbarian' }
+      ]
+    });
+    const matches = searchHex(hex, '0,0', 'barbarian');
+    expect(matches).toHaveLength(1);
+    expect(matches[0].category).toBe('npcs');
+  });
+
+  it('matches NPC tags', () => {
+    const hex = makeHex({
+      npcs: [
+        { id: 'npc1', title: 'Merchant Bob', description: '', isResolved: false, relationships: [], tags: ['quest-giver', 'shopkeeper'], isAlive: true }
+      ]
+    });
+    const matches = searchHex(hex, '0,0', 'shopkeeper');
+    expect(matches).toHaveLength(1);
+    expect(matches[0].category).toBe('npcs');
+  });
+
+  it('matches NPC appearance', () => {
+    const hex = makeHex({
+      npcs: [
+        { id: 'npc1', title: 'Old Man', description: '', isResolved: false, relationships: [], tags: [], isAlive: true, appearance: 'Long silver beard' }
+      ]
+    });
+    const matches = searchHex(hex, '0,0', 'silver beard');
+    expect(matches).toHaveLength(1);
+    expect(matches[0].category).toBe('npcs');
+  });
+
+  it('matches NPC personality', () => {
+    const hex = makeHex({
+      npcs: [
+        { id: 'npc1', title: 'Guard', description: '', isResolved: false, relationships: [], tags: [], isAlive: true, personality: 'Gruff but honorable' }
+      ]
+    });
+    const matches = searchHex(hex, '0,0', 'honorable');
+    expect(matches).toHaveLength(1);
+    expect(matches[0].category).toBe('npcs');
+  });
+
   it('matches treasure titles', () => {
     const hex = makeHex({
       treasures: [

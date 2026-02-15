@@ -20,6 +20,10 @@ export function moveNpc(
   const npc = fromHex.npcs.find(n => n.id === npcId);
   if (!npc) return { hexes };
 
+  // Reject move if target hex doesn't exist (prevents NPC data loss)
+  const toHex = hexes[toHexKey];
+  if (!toHex) return { hexes };
+
   // Remove NPC from source hex
   hexes[fromHexKey] = {
     ...fromHex,
@@ -27,13 +31,10 @@ export function moveNpc(
   };
 
   // Add NPC to target hex
-  const toHex = hexes[toHexKey];
-  if (toHex) {
-    hexes[toHexKey] = {
-      ...toHex,
-      npcs: [...toHex.npcs, npc]
-    };
-  }
+  hexes[toHexKey] = {
+    ...toHex,
+    npcs: [...toHex.npcs, npc]
+  };
 
   // Update relationship targetHexKey references across all NPCs
   // and encounter LinkedNpcRef.hexKey references
@@ -42,32 +43,30 @@ export function moveNpc(
 
     // Update NPC relationships pointing to the moved NPC
     const updatedNpcs = hex.npcs.map(n => {
+      let relsChanged = false;
       const updatedRels = n.relationships.map(r => {
         if (r.targetNpcId === npcId && r.targetHexKey === fromHexKey) {
           hexChanged = true;
+          relsChanged = true;
           return { ...r, targetHexKey: toHexKey };
         }
         return r;
       });
-      if (updatedRels !== n.relationships) {
-        return { ...n, relationships: updatedRels };
-      }
-      return n;
+      return relsChanged ? { ...n, relationships: updatedRels } : n;
     });
 
     // Update encounter LinkedNpcRef references
     const updatedEncounters = hex.encounters.map(e => {
+      let refsChanged = false;
       const updatedRefs = e.linkedNpcIds.map(ref => {
         if (ref.npcId === npcId && ref.hexKey === fromHexKey) {
           hexChanged = true;
+          refsChanged = true;
           return { ...ref, hexKey: toHexKey };
         }
         return ref;
       });
-      if (updatedRefs !== e.linkedNpcIds) {
-        return { ...e, linkedNpcIds: updatedRefs };
-      }
-      return e;
+      return refsChanged ? { ...e, linkedNpcIds: updatedRefs } : e;
     });
 
     if (hexChanged) {

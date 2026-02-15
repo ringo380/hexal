@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
 import type { Npc, NpcAttitude, Faction } from '../../types/Campaign';
-import { ATTITUDE_INFO } from '../../types/Campaign';
+import { ATTITUDE_INFO, parseHexKey } from '../../types/Campaign';
 import { moveNpc } from '../../services/npcService';
 import AlignmentBadge from '../npcs/AlignmentBadge';
 import AttitudeBadge from '../npcs/AttitudeBadge';
@@ -19,7 +19,7 @@ interface NpcDirectoryModalProps {
 type Tab = 'npcs' | 'factions';
 
 function NpcDirectoryModal({ onClose, onOpenRelationshipWeb }: NpcDirectoryModalProps) {
-  const { campaign, getAllNpcs, factions, updateCampaignData } = useCampaign();
+  const { campaign, allNpcs, factions, updateCampaignData } = useCampaign();
   const [activeTab, setActiveTab] = useState<Tab>('npcs');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterFaction, setFilterFaction] = useState<string>('');
@@ -28,8 +28,7 @@ function NpcDirectoryModal({ onClose, onOpenRelationshipWeb }: NpcDirectoryModal
   const [selectedNpcId, setSelectedNpcId] = useState<string | null>(null);
   const [editingNpc, setEditingNpc] = useState<{ npc: Npc; hexKey: string } | null>(null);
   const [moveTargetHex, setMoveTargetHex] = useState('');
-
-  const allNpcs = getAllNpcs();
+  const [moveError, setMoveError] = useState('');
 
   const filteredNpcs = allNpcs.filter(({ npc }) => {
     if (searchQuery) {
@@ -59,9 +58,25 @@ function NpcDirectoryModal({ onClose, onOpenRelationshipWeb }: NpcDirectoryModal
 
   const handleMoveNpc = () => {
     if (!campaign || !selectedEntry || !moveTargetHex.trim()) return;
-    const result = moveNpc(campaign, selectedEntry.npc.id, selectedEntry.hexKey, moveTargetHex.trim());
+    const trimmed = moveTargetHex.trim();
+
+    // Validate hex coordinate format
+    const parsed = parseHexKey(trimmed);
+    if (!parsed) {
+      setMoveError('Invalid format. Use q,r (e.g., 3,5)');
+      return;
+    }
+
+    // Validate target hex exists in campaign
+    if (!campaign.hexes[trimmed]) {
+      setMoveError('Hex does not exist in this campaign');
+      return;
+    }
+
+    const result = moveNpc(campaign, selectedEntry.npc.id, selectedEntry.hexKey, trimmed);
     updateCampaignData(result);
     setMoveTargetHex('');
+    setMoveError('');
     setSelectedNpcId(null);
   };
 
@@ -187,7 +202,8 @@ function NpcDirectoryModal({ onClose, onOpenRelationshipWeb }: NpcDirectoryModal
                   hexKey={selectedEntry.hexKey}
                   faction={getFaction(selectedEntry.npc.factionId)}
                   moveTargetHex={moveTargetHex}
-                  onMoveTargetChange={setMoveTargetHex}
+                  moveError={moveError}
+                  onMoveTargetChange={(v) => { setMoveTargetHex(v); setMoveError(''); }}
                   onMove={handleMoveNpc}
                   onEdit={() => setEditingNpc(selectedEntry)}
                   getNpcName={getNpcName}
@@ -231,6 +247,7 @@ interface NpcQuickCardProps {
   hexKey: string;
   faction?: Faction;
   moveTargetHex: string;
+  moveError: string;
   onMoveTargetChange: (value: string) => void;
   onMove: () => void;
   onEdit: () => void;
@@ -239,7 +256,7 @@ interface NpcQuickCardProps {
 
 function NpcQuickCard({
   npc, hexKey, faction,
-  moveTargetHex, onMoveTargetChange, onMove, onEdit, getNpcName
+  moveTargetHex, moveError, onMoveTargetChange, onMove, onEdit, getNpcName
 }: NpcQuickCardProps) {
   const subtitle = [npc.race, npc.class].filter(Boolean).join(' ');
 
@@ -341,6 +358,7 @@ function NpcQuickCard({
             Move
           </button>
         </div>
+        {moveError && <div className="npc-move-error">{moveError}</div>}
       </div>
     </div>
   );

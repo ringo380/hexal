@@ -69,6 +69,19 @@ describe('moveNpc', () => {
     expect(result.hexes['0,0'].npcs).toHaveLength(0);
   });
 
+  it('rejects move when target hex does not exist (prevents data loss)', () => {
+    const npc = createNpc('Safe NPC');
+    const hexes: Record<string, Hex> = {
+      '0,0': makeHex(0, 0, { npcs: [npc] })
+    };
+    const campaign = makeCampaign(hexes);
+    const result = moveNpc(campaign, npc.id, '0,0', '9,9');
+
+    // NPC should still be in source hex
+    expect(result.hexes['0,0'].npcs).toHaveLength(1);
+    expect(result.hexes['0,0'].npcs[0].id).toBe(npc.id);
+  });
+
   it('returns unchanged hexes when NPC is not found in source', () => {
     const hexes: Record<string, Hex> = {
       '0,0': makeHex(0, 0),

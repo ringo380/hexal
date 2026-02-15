@@ -16,13 +16,11 @@ interface NodePosition {
 }
 
 function RelationshipWebModal({ onClose }: RelationshipWebModalProps) {
-  const { getAllNpcs, factions } = useCampaign();
+  const { allNpcs, factions } = useCampaign();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [filterFactionId, setFilterFactionId] = useState<string>('');
   const [showDead, setShowDead] = useState(true);
-
-  const allNpcs = getAllNpcs();
 
   const filteredNpcs = allNpcs.filter(({ npc }) => {
     if (filterFactionId && npc.factionId !== filterFactionId) return false;
