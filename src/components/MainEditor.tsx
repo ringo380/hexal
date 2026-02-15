@@ -18,6 +18,8 @@ import EncounterTableEditorModal from './modals/EncounterTableEditorModal';
 import LandmarkTableEditorModal from './modals/LandmarkTableEditorModal';
 import EncounterTemplateLibrary from './modals/EncounterTemplateLibrary';
 import RegionManagerModal from './modals/RegionManagerModal';
+import NpcDirectoryModal from './modals/NpcDirectoryModal';
+import RelationshipWebModal from './modals/RelationshipWebModal';
 import CommandPalette from './CommandPalette';
 import Icon from './icons/Icon';
 import { CATEGORY_INFO, type ContentCategory } from '../types/Campaign';
@@ -51,6 +53,8 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
   const [showLandmarkTableEditor, setShowLandmarkTableEditor] = useState(false);
   const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
   const [showRegionManager, setShowRegionManager] = useState(false);
+  const [showNpcDirectory, setShowNpcDirectory] = useState(false);
+  const [showRelationshipWeb, setShowRelationshipWeb] = useState(false);
 
   // Register export handler for menu command
   useEffect(() => {
@@ -304,6 +308,9 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
           <button className="btn btn-secondary" onClick={() => setShowTemplateLibrary(true)}>
             <Icon name="sparkle" size={16} /> Templates
           </button>
+          <button className="btn btn-secondary" onClick={() => setShowNpcDirectory(true)}>
+            <Icon name="users" size={16} /> NPCs
+          </button>
           <button className="btn btn-secondary" onClick={() => setShowRegionManager(true)}>
             <Icon name="map" size={16} /> Regions
           </button>
@@ -380,6 +387,18 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
       )}
       {showRegionManager && (
         <RegionManagerModal onClose={() => setShowRegionManager(false)} />
+      )}
+      {showNpcDirectory && (
+        <NpcDirectoryModal
+          onClose={() => setShowNpcDirectory(false)}
+          onOpenRelationshipWeb={() => {
+            setShowNpcDirectory(false);
+            setShowRelationshipWeb(true);
+          }}
+        />
+      )}
+      {showRelationshipWeb && (
+        <RelationshipWebModal onClose={() => setShowRelationshipWeb(false)} />
       )}
       {isCommandPaletteOpen && (
         <CommandPalette onClose={closeCommandPalette} />

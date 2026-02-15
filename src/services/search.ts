@@ -90,8 +90,8 @@ export function searchHex(hex: Hex, hexKey: string, query: string, regionName?: 
     }
   }
 
-  // Content categories (non-encounter)
-  const categories: ContentCategory[] = ['locations', 'npcs', 'treasures', 'clues'];
+  // Content categories (non-encounter, non-NPC)
+  const categories: ContentCategory[] = ['locations', 'treasures', 'clues'];
   for (const category of categories) {
     for (const item of hex[category]) {
       if (item.title.toLowerCase().includes(q)) {
@@ -99,6 +99,26 @@ export function searchHex(hex: Hex, hexKey: string, query: string, regionName?: 
       } else if (item.description.toLowerCase().includes(q)) {
         matches.push({ hexKey, matchType: 'content-description', category, itemTitle: item.title, matchText: item.description });
       }
+    }
+  }
+
+  // NPCs (extended fields)
+  for (const npc of hex.npcs) {
+    if (npc.title.toLowerCase().includes(q)) {
+      matches.push({ hexKey, matchType: 'content-title', category: 'npcs', itemTitle: npc.title, matchText: npc.title });
+    } else if (npc.description.toLowerCase().includes(q)) {
+      matches.push({ hexKey, matchType: 'content-description', category: 'npcs', itemTitle: npc.title, matchText: npc.description });
+    } else if (npc.race && npc.race.toLowerCase().includes(q)) {
+      matches.push({ hexKey, matchType: 'content-description', category: 'npcs', itemTitle: npc.title, matchText: npc.race });
+    } else if (npc.class && npc.class.toLowerCase().includes(q)) {
+      matches.push({ hexKey, matchType: 'content-description', category: 'npcs', itemTitle: npc.title, matchText: npc.class });
+    } else if (npc.appearance && npc.appearance.toLowerCase().includes(q)) {
+      matches.push({ hexKey, matchType: 'content-description', category: 'npcs', itemTitle: npc.title, matchText: npc.appearance });
+    } else if (npc.personality && npc.personality.toLowerCase().includes(q)) {
+      matches.push({ hexKey, matchType: 'content-description', category: 'npcs', itemTitle: npc.title, matchText: npc.personality });
+    } else if (npc.tags?.some(t => t.toLowerCase().includes(q))) {
+      const matchTag = npc.tags.find(t => t.toLowerCase().includes(q))!;
+      matches.push({ hexKey, matchType: 'content-description', category: 'npcs', itemTitle: npc.title, matchText: matchTag });
     }
   }
 

@@ -59,6 +59,12 @@ export interface Campaign {
    * Optional for backward compatibility with legacy campaign files.
    */
   landmarkTables?: LandmarkTable[];
+
+  /**
+   * NPC factions for this campaign.
+   * Optional for backward compatibility with legacy campaign files.
+   */
+  factions?: Faction[];
 }
 
 export interface Hex {
@@ -70,7 +76,7 @@ export interface Hex {
   tags: string[];
   locations: ContentItem[];
   encounters: Encounter[];
-  npcs: ContentItem[];
+  npcs: Npc[];
   treasures: ContentItem[];
   clues: ContentItem[];
   /** Visual markers/figurines on this hex. Optional for backward compatibility with legacy files. */
@@ -231,7 +237,8 @@ export function createCampaign(name: string, gridWidth: number, gridHeight: numb
     bookmarkedHexes: [],
     regions: [],
     generationConfig: createDefaultGenerationConfig(),
-    landmarkTables: DEFAULT_LANDMARK_TABLES
+    landmarkTables: DEFAULT_LANDMARK_TABLES,
+    factions: []
   };
 }
 
@@ -392,6 +399,148 @@ export const OUTCOME_INFO: Record<EncounterOutcome, { label: string; color: stri
   bypassed: { label: 'Bypassed', color: '#9c27b0' }
 };
 
+// ============ NPC SYSTEM ============
+
+export type NpcAlignment =
+  | 'lawful-good' | 'neutral-good' | 'chaotic-good'
+  | 'lawful-neutral' | 'true-neutral' | 'chaotic-neutral'
+  | 'lawful-evil' | 'neutral-evil' | 'chaotic-evil'
+  | 'unaligned';
+
+export type NpcAttitude = 'friendly' | 'indifferent' | 'hostile' | 'unknown';
+
+export type RelationshipType =
+  | 'ally' | 'enemy' | 'rival' | 'family' | 'mentor'
+  | 'student' | 'employer' | 'employee' | 'romantic' | 'other';
+
+export interface NpcRelationship {
+  targetNpcId: string;
+  targetHexKey: string; // "q,r" format
+  type: RelationshipType;
+  description?: string;
+}
+
+export interface Npc extends ContentItem {
+  race?: string;
+  class?: string;
+  alignment?: NpcAlignment;
+  attitude?: NpcAttitude;
+  appearance?: string;
+  personality?: string;
+  factionId?: string;
+  factionRole?: string;
+  relationships: NpcRelationship[];
+  tags: string[];
+  isAlive: boolean;
+}
+
+export interface Faction {
+  id: string;
+  name: string;
+  description: string;
+  alignment?: NpcAlignment;
+  color: string;
+  goals?: string;
+  headquarters?: string;
+  tags: string[];
+  isKnownToPlayers: boolean;
+}
+
+// NPC alignment display info
+export const ALIGNMENT_LABELS: Record<NpcAlignment, string> = {
+  'lawful-good': 'LG',
+  'neutral-good': 'NG',
+  'chaotic-good': 'CG',
+  'lawful-neutral': 'LN',
+  'true-neutral': 'N',
+  'chaotic-neutral': 'CN',
+  'lawful-evil': 'LE',
+  'neutral-evil': 'NE',
+  'chaotic-evil': 'CE',
+  'unaligned': 'UA'
+};
+
+export const ALIGNMENT_COLORS: Record<NpcAlignment, string> = {
+  'lawful-good': '#4a9eff',
+  'neutral-good': '#4caf50',
+  'chaotic-good': '#8bc34a',
+  'lawful-neutral': '#607d8b',
+  'true-neutral': '#9e9e9e',
+  'chaotic-neutral': '#ff9800',
+  'lawful-evil': '#9c27b0',
+  'neutral-evil': '#f44336',
+  'chaotic-evil': '#e91e63',
+  'unaligned': '#666666'
+};
+
+export const ATTITUDE_INFO: Record<NpcAttitude, { label: string; color: string }> = {
+  friendly: { label: 'Friendly', color: '#4caf50' },
+  indifferent: { label: 'Indifferent', color: '#9e9e9e' },
+  hostile: { label: 'Hostile', color: '#f44336' },
+  unknown: { label: 'Unknown', color: '#666666' }
+};
+
+export const RELATIONSHIP_TYPE_INFO: Record<RelationshipType, { label: string; color: string }> = {
+  ally: { label: 'Ally', color: '#4caf50' },
+  enemy: { label: 'Enemy', color: '#f44336' },
+  rival: { label: 'Rival', color: '#ff9800' },
+  family: { label: 'Family', color: '#4a9eff' },
+  mentor: { label: 'Mentor', color: '#9c27b0' },
+  student: { label: 'Student', color: '#00bcd4' },
+  employer: { label: 'Employer', color: '#607d8b' },
+  employee: { label: 'Employee', color: '#8bc34a' },
+  romantic: { label: 'Romantic', color: '#e91e63' },
+  other: { label: 'Other', color: '#666666' }
+};
+
+export const FACTION_COLORS = [
+  '#4a9eff', '#4caf50', '#f44336', '#ff9800', '#9c27b0', '#00bcd4',
+  '#e91e63', '#8bc34a', '#ff5722', '#607d8b', '#3f51b5', '#cddc39'
+];
+
+export function createNpc(title: string = ''): Npc {
+  return {
+    id: crypto.randomUUID(),
+    title,
+    description: '',
+    difficulty: undefined,
+    isResolved: false,
+    relationships: [],
+    tags: [],
+    isAlive: true
+  };
+}
+
+export function createFaction(name: string = '', color: string = '#4a9eff'): Faction {
+  return {
+    id: crypto.randomUUID(),
+    name,
+    description: '',
+    color,
+    tags: [],
+    isKnownToPlayers: false
+  };
+}
+
+export function createNpcRelationship(
+  targetNpcId: string,
+  targetHexKey: string,
+  type: RelationshipType = 'ally'
+): NpcRelationship {
+  return { targetNpcId, targetHexKey, type };
+}
+
+/** Migrate a legacy ContentItem to the full Npc type */
+export function migrateNpcData(item: ContentItem): Npc {
+  if ('relationships' in item) return item as Npc;
+  return {
+    ...item,
+    relationships: [],
+    tags: [],
+    isAlive: true
+  };
+}
+
 // ============ REGION SYSTEM ============
 
 export interface Region {
@@ -510,7 +659,7 @@ function inferEncounterType(difficulty?: string): EncounterType {
   return 'combat';
 }
 
-/** Migrate an entire campaign's encounter data (non-destructive) */
+/** Migrate an entire campaign's encounter and NPC data (non-destructive) */
 export function migrateCampaign(campaign: Campaign): Campaign {
   let changed = false;
   const hexes: Record<string, Hex> = {};
@@ -520,7 +669,12 @@ export function migrateCampaign(campaign: Campaign): Campaign {
       if (migrated !== e) changed = true;
       return migrated;
     });
-    hexes[key] = { ...hex, encounters: migratedEncounters };
+    const migratedNpcs = hex.npcs.map(n => {
+      const migrated = migrateNpcData(n);
+      if (migrated !== n) changed = true;
+      return migrated;
+    });
+    hexes[key] = { ...hex, encounters: migratedEncounters, npcs: migratedNpcs };
   }
   if (!changed
     && campaign.encounterTemplates !== undefined
@@ -528,6 +682,7 @@ export function migrateCampaign(campaign: Campaign): Campaign {
     && campaign.regions !== undefined
     && campaign.generationConfig !== undefined
     && campaign.landmarkTables !== undefined
+    && campaign.factions !== undefined
   ) return campaign;
   return {
     ...campaign,
@@ -536,7 +691,8 @@ export function migrateCampaign(campaign: Campaign): Campaign {
     bookmarkedHexes: campaign.bookmarkedHexes ?? [],
     regions: campaign.regions ?? [],
     generationConfig: campaign.generationConfig ?? createDefaultGenerationConfig(),
-    landmarkTables: campaign.landmarkTables ?? []
+    landmarkTables: campaign.landmarkTables ?? [],
+    factions: campaign.factions ?? []
   };
 }
 

@@ -7,7 +7,7 @@ import {
   migrateCampaign,
   hasUnresolvedContent
 } from '../types/Campaign';
-import type { Campaign, Hex, Encounter, ContentItem } from '../types/Campaign';
+import type { Campaign, Hex, Encounter, ContentItem, Npc } from '../types/Campaign';
 
 describe('hexKey', () => {
   it('formats coordinate as "q,r"', () => {
@@ -97,7 +97,7 @@ describe('hasUnresolvedContent', () => {
   it('returns false when all content is resolved', () => {
     const hex = createHex({ q: 0, r: 0 });
     hex.locations = [{ id: '1', title: 'Temple', description: '', isResolved: true }];
-    hex.npcs = [{ id: '2', title: 'Guard', description: '', isResolved: true }];
+    hex.npcs = [{ id: '2', title: 'Guard', description: '', isResolved: true, relationships: [], tags: [], isAlive: true }];
     expect(hasUnresolvedContent(hex)).toBe(false);
   });
 });
@@ -151,6 +151,7 @@ describe('migrateCampaign', () => {
       regions: [],
       generationConfig: { seed: '', biomeClusteringStrength: 0.6, encounterDensity: 0.4, landmarkDensity: 0.2, terrainVariety: 0.5 },
       landmarkTables: [],
+      factions: [],
     });
     const migrated = migrateCampaign(campaign);
     // No encounter migration needed, fields exist => same reference
@@ -214,5 +215,73 @@ describe('migrateCampaign', () => {
     expect(enc.creatures).toEqual([]);
     expect(enc.rewards).toEqual([]);
     expect(enc.outcome).toBe('pending');
+  });
+
+  it('migrates legacy NPC ContentItems to Npc type', () => {
+    const legacyNpc: ContentItem = {
+      id: 'npc-1',
+      title: 'Old Guard',
+      description: 'A guard from old data',
+      isResolved: false
+    };
+    const hex = createHex({ q: 0, r: 0 });
+    (hex as Hex).npcs = [legacyNpc as unknown as Npc];
+
+    const campaign = makeLegacyCampaign({
+      hexes: { '0,0': hex },
+      encounterTemplates: [],
+      bookmarkedHexes: []
+    });
+
+    const migrated = migrateCampaign(campaign);
+    const npc = migrated.hexes['0,0'].npcs[0];
+    expect(npc.relationships).toEqual([]);
+    expect(npc.tags).toEqual([]);
+    expect(npc.isAlive).toBe(true);
+    expect(npc.title).toBe('Old Guard');
+  });
+
+  it('preserves existing Npc data through migration', () => {
+    const existingNpc: Npc = {
+      id: 'npc-2',
+      title: 'Modern NPC',
+      description: '',
+      isResolved: false,
+      relationships: [{ targetNpcId: 'npc-3', targetHexKey: '1,0', type: 'ally' }],
+      tags: ['quest-giver'],
+      isAlive: true,
+      race: 'Elf',
+      attitude: 'friendly'
+    };
+    const hex = createHex({ q: 0, r: 0 });
+    hex.npcs = [existingNpc];
+
+    const campaign = makeLegacyCampaign({
+      hexes: { '0,0': hex },
+      encounterTemplates: [],
+      bookmarkedHexes: []
+    });
+
+    const migrated = migrateCampaign(campaign);
+    const npc = migrated.hexes['0,0'].npcs[0];
+    expect(npc.relationships).toHaveLength(1);
+    expect(npc.tags).toEqual(['quest-giver']);
+    expect(npc.race).toBe('Elf');
+    expect(npc.attitude).toBe('friendly');
+  });
+
+  it('adds factions: [] when missing', () => {
+    const legacy = makeLegacyCampaign();
+    expect(legacy.factions).toBeUndefined();
+
+    const migrated = migrateCampaign(legacy);
+    expect(migrated.factions).toEqual([]);
+  });
+
+  it('preserves existing factions', () => {
+    const factions = [{ id: 'f1', name: 'Guild', description: '', color: '#ff0000', tags: [], isKnownToPlayers: true }];
+    const campaign = makeLegacyCampaign({ factions });
+    const migrated = migrateCampaign(campaign);
+    expect(migrated.factions).toEqual(factions);
   });
 });
