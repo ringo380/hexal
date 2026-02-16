@@ -11,15 +11,18 @@
  * Run: npm run screenshots
  */
 import { _electron as electron } from 'playwright';
-import { copyFileSync, mkdirSync, existsSync, unlinkSync } from 'fs';
-import { join } from 'path';
+import { copyFileSync, mkdirSync, existsSync, unlinkSync, renameSync } from 'fs';
+import { join, dirname } from 'path';
 import { homedir } from 'os';
+import { fileURLToPath } from 'url';
 
-// ── Paths ──────────────────────────────────────────────────────────
-const FIXTURE_SRC  = join(import.meta.dirname, 'fixtures', 'showcase-campaign.hexal');
+// ── Paths (use fileURLToPath for Node < 20.11 compat) ─────────────
+const __dirname    = dirname(fileURLToPath(import.meta.url));
+const FIXTURE_SRC  = join(__dirname, 'fixtures', 'showcase-campaign.hexal');
 const HEXAL_DIR    = join(homedir(), 'Documents', 'Hexal');
 const FIXTURE_DEST = join(HEXAL_DIR, 'The Sundered Reaches.hexal');
-const SCREENSHOTS  = join(import.meta.dirname, '..', 'docs', 'screenshots');
+const BACKUP_DEST  = FIXTURE_DEST + '.bak';
+const SCREENSHOTS  = join(__dirname, '..', 'docs', 'screenshots');
 
 // ── Helpers (reused from smoke.mjs) ────────────────────────────────
 
@@ -103,9 +106,14 @@ async function main() {
   // Ensure output directory exists
   mkdirSync(SCREENSHOTS, { recursive: true });
 
-  // Copy fixture to ~/Documents/Hexal/ so the app can find it
+  // Copy fixture to ~/Documents/Hexal/ so the app can find it.
+  // Back up any existing file first to avoid data loss.
   mkdirSync(HEXAL_DIR, { recursive: true });
   const fixtureExisted = existsSync(FIXTURE_DEST);
+  if (fixtureExisted) {
+    renameSync(FIXTURE_DEST, BACKUP_DEST);
+    console.log('Backed up existing campaign to', BACKUP_DEST);
+  }
   copyFileSync(FIXTURE_SRC, FIXTURE_DEST);
   console.log('Copied showcase fixture to', FIXTURE_DEST);
 
@@ -217,6 +225,7 @@ async function main() {
 
     // ── 9. Player View ─────────────────────────────────────────────
     console.log('9/13 Player View');
+    let playerViewCaptured = false;
     // Open player view via toolbar or keyboard
     const playerViewBtn = window.locator('button:has-text("Player View"), button:has-text("Player")');
     if (await playerViewBtn.count() > 0) {
@@ -231,14 +240,16 @@ async function main() {
           await w.setViewportSize({ width: 1600, height: 1000 });
           await w.waitForTimeout(1000);
           await w.screenshot({ path: join(SCREENSHOTS, 'player-view.png') });
-          console.log('  captured: player-view.png');
+          console.log('  captured: player-view.png (player window)');
+          playerViewCaptured = true;
           await w.close();
           break;
         }
       }
     }
-    // If no separate window was captured, capture current state
-    if (!existsSync(join(SCREENSHOTS, 'player-view.png'))) {
+    // Fallback: capture main window if player view window wasn't found
+    if (!playerViewCaptured) {
+      console.log('  player view window not found, capturing main window as fallback');
       await capture(window, 'player-view.png');
     }
     await window.waitForTimeout(500);
@@ -300,13 +311,17 @@ async function main() {
     }
     process.exitCode = 1;
   } finally {
-    // Clean up fixture copy if we created it
-    if (!fixtureExisted && existsSync(FIXTURE_DEST)) {
-      try {
+    // Restore original campaign or remove fixture copy
+    try {
+      if (fixtureExisted && existsSync(BACKUP_DEST)) {
+        unlinkSync(FIXTURE_DEST);
+        renameSync(BACKUP_DEST, FIXTURE_DEST);
+        console.log('Restored original campaign from backup');
+      } else if (!fixtureExisted && existsSync(FIXTURE_DEST)) {
         unlinkSync(FIXTURE_DEST);
         console.log('Cleaned up fixture copy');
-      } catch { /* ignore */ }
-    }
+      }
+    } catch { /* ignore cleanup errors */ }
     if (electronApp) {
       await electronApp.close();
     }
