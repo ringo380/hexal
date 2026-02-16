@@ -1,0 +1,818 @@
+{
+  "id": "showcase-0001-0001-0001-000000000001",
+  "name": "The Sundered Reaches",
+  "gridWidth": 20,
+  "gridHeight": 15,
+  "createdAt": "2026-01-01T12:00:00.000Z",
+  "modifiedAt": "2026-02-15T12:00:00.000Z",
+  "terrainTypes": [
+    { "id": "terrain-plains",    "name": "Plains",    "colorHex": "#90EE90", "icon": "leaf",      "weight": 3, "moveCost": 1, "elevation": 1, "isDefault": true },
+    { "id": "terrain-forest",    "name": "Forest",    "colorHex": "#228B22", "icon": "tree",      "weight": 2, "moveCost": 2, "elevation": 2, "isDefault": true },
+    { "id": "terrain-hills",     "name": "Hills",     "colorHex": "#DEB887", "icon": "triangle",  "weight": 2, "moveCost": 2, "elevation": 3, "isDefault": true },
+    { "id": "terrain-mountains", "name": "Mountains", "colorHex": "#A0A0A0", "icon": "mountain",  "weight": 1, "moveCost": 4, "elevation": 5, "isDefault": true },
+    { "id": "terrain-swamp",     "name": "Swamp",     "colorHex": "#556B2F", "icon": "drop",      "weight": 1, "moveCost": 3, "elevation": 0, "isDefault": true },
+    { "id": "terrain-desert",    "name": "Desert",    "colorHex": "#F4A460", "icon": "sun",       "weight": 1, "moveCost": 1, "elevation": 1, "isDefault": true },
+    { "id": "terrain-coast",     "name": "Coast",     "colorHex": "#87CEEB", "icon": "water",     "weight": 1, "moveCost": 5, "elevation": 0, "isDefault": true },
+    { "id": "terrain-jungle",    "name": "Jungle",    "colorHex": "#006400", "icon": "leaf",      "weight": 1, "moveCost": 3, "elevation": 2, "isDefault": true },
+    { "id": "terrain-tundra",    "name": "Tundra",    "colorHex": "#E0FFFF", "icon": "snowflake", "weight": 1, "moveCost": 2, "elevation": 2, "isDefault": true },
+    { "id": "terrain-grassland", "name": "Grassland", "colorHex": "#7CFC00", "icon": "wind",      "weight": 2, "moveCost": 1, "elevation": 1, "isDefault": true }
+  ],
+  "encounterTables": [
+    {
+      "id": "et-forest", "name": "Forest Encounters", "terrain": "Forest",
+      "entries": [
+        { "id": "ee-f1", "title": "Wolf Pack",       "description": "2d4 wolves hunting in the forest",        "difficulty": "CR 2",        "weight": 1 },
+        { "id": "ee-f2", "title": "Bandit Camp",      "description": "A group of bandits has made camp here",   "difficulty": "CR 3",        "weight": 1 },
+        { "id": "ee-f3", "title": "Ancient Shrine",   "description": "An overgrown shrine to a forgotten deity","difficulty": "Exploration", "weight": 1 },
+        { "id": "ee-f4", "title": "Treant Guardian",  "description": "An ancient treant watches over this grove","difficulty": "CR 9",       "weight": 1 }
+      ]
+    },
+    {
+      "id": "et-plains", "name": "Plains Encounters", "terrain": "Plains",
+      "entries": [
+        { "id": "ee-p1", "title": "Traveling Merchant", "description": "A merchant with a cart of goods",         "difficulty": "Social",      "weight": 1 },
+        { "id": "ee-p2", "title": "Gnoll Raiders",      "description": "1d6+2 gnolls on a raiding party",        "difficulty": "CR 4",        "weight": 1 },
+        { "id": "ee-p3", "title": "Ancient Battlefield", "description": "Bones and rusted weapons litter the ground","difficulty": "Exploration","weight": 1 }
+      ]
+    },
+    {
+      "id": "et-mountains", "name": "Mountains Encounters", "terrain": "Mountains",
+      "entries": [
+        { "id": "ee-m1", "title": "Giant Eagle Nest",       "description": "A pair of giant eagles have nested here",    "difficulty": "CR 2",  "weight": 1 },
+        { "id": "ee-m2", "title": "Orc Warband",            "description": "2d6 orcs traveling through the pass",        "difficulty": "CR 5",  "weight": 1 },
+        { "id": "ee-m3", "title": "Dragon's Lair Entrance", "description": "A cave that leads deeper into the mountain", "difficulty": "CR 15+","weight": 1 }
+      ]
+    }
+  ],
+  "timeWeather": {
+    "calendar": {
+      "preset": "simple",
+      "name": "Simple Calendar",
+      "months": [
+        { "name": "Month 1",  "days": 30, "season": "winter" },
+        { "name": "Month 2",  "days": 30, "season": "winter" },
+        { "name": "Month 3",  "days": 30, "season": "winter" },
+        { "name": "Month 4",  "days": 30, "season": "spring" },
+        { "name": "Month 5",  "days": 30, "season": "spring" },
+        { "name": "Month 6",  "days": 30, "season": "spring" },
+        { "name": "Month 7",  "days": 30, "season": "summer" },
+        { "name": "Month 8",  "days": 30, "season": "summer" },
+        { "name": "Month 9",  "days": 30, "season": "summer" },
+        { "name": "Month 10", "days": 30, "season": "autumn" },
+        { "name": "Month 11", "days": 30, "season": "autumn" },
+        { "name": "Month 12", "days": 30, "season": "autumn" }
+      ],
+      "daysPerWeek": 7,
+      "weekDayNames": ["Day 1","Day 2","Day 3","Day 4","Day 5","Day 6","Day 7"],
+      "hoursPerDay": 24
+    },
+    "currentTime": { "year": 1, "month": 6, "day": 15, "hour": 12, "minute": 0 },
+    "timeSpeed": "normal",
+    "globalWeather": {
+      "condition": "partly-cloudy",
+      "temperature": "warm",
+      "wind": "light",
+      "precipitation": "none"
+    },
+    "zoneWeathers": {},
+    "hexWeatherOverrides": {},
+    "weatherHistory": [
+      {
+        "timestamp": { "year": 1, "month": 6, "day": 14, "hour": 6, "minute": 0 },
+        "weather": { "condition": "clear", "temperature": "warm", "wind": "calm", "precipitation": "none" }
+      },
+      {
+        "timestamp": { "year": 1, "month": 6, "day": 15, "hour": 0, "minute": 0 },
+        "weather": { "condition": "partly-cloudy", "temperature": "warm", "wind": "light", "precipitation": "none" }
+      }
+    ],
+    "dynamicWeather": true,
+    "seasonalEffects": true,
+    "weatherChangeInterval": 6
+  },
+  "markerTypes": [
+    { "id": "settlement-small",   "name": "Village",    "icon": "\u25cf", "category": "settlement", "defaultColor": "#8B4513", "isBuiltIn": true },
+    { "id": "settlement-medium",  "name": "Town",       "icon": "\u25c9", "category": "settlement", "defaultColor": "#CD853F", "isBuiltIn": true },
+    { "id": "settlement-large",   "name": "City",       "icon": "\u2b24", "category": "settlement", "defaultColor": "#DAA520", "isBuiltIn": true },
+    { "id": "settlement-capital", "name": "Capital",    "icon": "\u2605", "category": "settlement", "defaultColor": "#FFD700", "isBuiltIn": true },
+    { "id": "military-camp",      "name": "Camp",       "icon": "\u25b2", "category": "military",   "defaultColor": "#8B0000", "isBuiltIn": true },
+    { "id": "military-fort",      "name": "Fort",       "icon": "\u25a0", "category": "military",   "defaultColor": "#A52A2A", "isBuiltIn": true },
+    { "id": "military-patrol",    "name": "Patrol",     "icon": "\u2694", "category": "military",   "defaultColor": "#DC143C", "isBuiltIn": true },
+    { "id": "military-conflict",  "name": "Battle",     "icon": "\ud83d\udca5", "category": "military",  "defaultColor": "#FF4500", "isBuiltIn": true },
+    { "id": "landmark-tower",     "name": "Tower",      "icon": "\ud83d\uddfc", "category": "landmark",  "defaultColor": "#4682B4", "isBuiltIn": true },
+    { "id": "landmark-ruin",      "name": "Ruins",      "icon": "\ud83c\udfd6", "category": "landmark",  "defaultColor": "#696969", "isBuiltIn": true },
+    { "id": "landmark-sacred",    "name": "Temple",     "icon": "\u26ea",       "category": "landmark",  "defaultColor": "#9370DB", "isBuiltIn": true },
+    { "id": "landmark-monument",  "name": "Monument",   "icon": "\ud83d\uddff", "category": "landmark",  "defaultColor": "#708090", "isBuiltIn": true },
+    { "id": "landmark-industrial","name": "Factory",    "icon": "\ud83c\udfed", "category": "landmark",  "defaultColor": "#808080", "isBuiltIn": true },
+    { "id": "landmark-transport", "name": "Port",       "icon": "\u2693",       "category": "landmark",  "defaultColor": "#4169E1", "isBuiltIn": true },
+    { "id": "nature-cave",        "name": "Cave",       "icon": "\u25d0",       "category": "landmark",  "defaultColor": "#2F4F4F", "isBuiltIn": true },
+    { "id": "nature-water",       "name": "Spring",     "icon": "\ud83d\udca7", "category": "landmark",  "defaultColor": "#00CED1", "isBuiltIn": true },
+    { "id": "hazard-danger",      "name": "Danger",     "icon": "\u26a0",       "category": "landmark",  "defaultColor": "#FF6347", "isBuiltIn": true },
+    { "id": "hazard-blocked",     "name": "Blocked",    "icon": "\u26d4",       "category": "landmark",  "defaultColor": "#B22222", "isBuiltIn": true },
+    { "id": "player-1",  "name": "Player 1", "icon": "\u25c6", "category": "player", "defaultColor": "#FF6B6B", "isBuiltIn": true },
+    { "id": "player-2",  "name": "Player 2", "icon": "\u25c6", "category": "player", "defaultColor": "#4ECDC4", "isBuiltIn": true },
+    { "id": "player-3",  "name": "Player 3", "icon": "\u25c6", "category": "player", "defaultColor": "#45B7D1", "isBuiltIn": true },
+    { "id": "player-4",  "name": "Player 4", "icon": "\u25c6", "category": "player", "defaultColor": "#96CEB4", "isBuiltIn": true },
+    { "id": "player-5",  "name": "Player 5", "icon": "\u25c6", "category": "player", "defaultColor": "#FFEAA7", "isBuiltIn": true },
+    { "id": "player-6",  "name": "Player 6", "icon": "\u25c6", "category": "player", "defaultColor": "#DDA0DD", "isBuiltIn": true },
+    { "id": "party",     "name": "Party",    "icon": "\ud83d\udc65", "category": "player", "defaultColor": "#FFD700", "isBuiltIn": true },
+    { "id": "npc-ally",  "name": "Ally NPC", "icon": "\ud83d\udee1", "category": "player", "defaultColor": "#32CD32", "isBuiltIn": true },
+    { "id": "npc-enemy", "name": "Enemy NPC","icon": "\u2620",       "category": "player", "defaultColor": "#8B0000", "isBuiltIn": true },
+    { "id": "marker-flag",     "name": "Flag",      "icon": "\ud83d\udea9", "category": "custom", "defaultColor": "#E74C3C", "isBuiltIn": true },
+    { "id": "marker-star",     "name": "Objective",  "icon": "\u2b50",       "category": "custom", "defaultColor": "#F39C12", "isBuiltIn": true },
+    { "id": "marker-question", "name": "Unknown",    "icon": "\u2753",       "category": "custom", "defaultColor": "#9B59B6", "isBuiltIn": true },
+    { "id": "marker-exclaim",  "name": "Important",  "icon": "\u2757",       "category": "custom", "defaultColor": "#E67E22", "isBuiltIn": true },
+    { "id": "marker-pin",      "name": "Pin",        "icon": "\ud83d\udccd", "category": "custom", "defaultColor": "#3498DB", "isBuiltIn": true }
+  ],
+  "encounterTemplates": [
+    {
+      "id": "tmpl-goblin-ambush",
+      "name": "Goblin Ambush",
+      "description": "A band of goblins lying in wait along a forest path",
+      "encounterType": "combat",
+      "difficulty": "Easy",
+      "creatures": [
+        { "id": "cr-tmpl-g1", "name": "Goblin", "count": 4, "cr": "1/4" },
+        { "id": "cr-tmpl-g2", "name": "Goblin Boss", "count": 1, "cr": "1" }
+      ],
+      "rewards": [
+        { "id": "rw-tmpl-g1", "type": "gold", "description": "Looted coin purses", "quantity": 25 },
+        { "id": "rw-tmpl-g2", "type": "item", "description": "Crude map showing goblin hideout" }
+      ],
+      "tags": ["goblin", "ambush", "forest"],
+      "terrainAffinity": ["Forest", "Hills"]
+    },
+    {
+      "id": "tmpl-bandit-toll",
+      "name": "Bandit Toll Bridge",
+      "description": "Bandits have set up a toll on a key bridge crossing",
+      "encounterType": "social",
+      "difficulty": "Medium",
+      "creatures": [
+        { "id": "cr-tmpl-b1", "name": "Bandit", "count": 3, "cr": "1/8" },
+        { "id": "cr-tmpl-b2", "name": "Bandit Captain", "count": 1, "cr": "2" }
+      ],
+      "rewards": [
+        { "id": "rw-tmpl-b1", "type": "gold", "description": "Recovered tolls", "quantity": 50 }
+      ],
+      "tags": ["bandit", "social", "bridge"],
+      "terrainAffinity": ["Plains", "Grassland"]
+    }
+  ],
+  "bookmarkedHexes": ["5,4", "10,7", "15,3"],
+  "regions": [
+    {
+      "id": "region-greenwood",
+      "name": "The Greenwood",
+      "color": "#4caf50",
+      "description": "A vast, ancient forest stretching across the western reaches. Home to druids, fey creatures, and the remnants of an elven civilization.",
+      "hexKeys": ["3,3","3,4","3,5","4,3","4,4","4,5","5,3","5,4","5,5","6,3","6,4","6,5","4,6","5,6"],
+      "tags": ["forest", "fey", "elven"],
+      "isDiscovered": true,
+      "notes": "The party discovered the Greenwood in Session 1. The druids here are wary of outsiders."
+    },
+    {
+      "id": "region-stormhaven",
+      "name": "Stormhaven Coast",
+      "color": "#4a9eff",
+      "description": "A windswept coastline dotted with fishing villages and ancient lighthouses. Storms roll in frequently from the sea.",
+      "hexKeys": ["0,7","0,8","0,9","1,7","1,8","1,9","2,7","2,8","2,9","0,10","1,10","2,10"],
+      "tags": ["coast", "settlements", "storms"],
+      "isDiscovered": true,
+      "notes": "The starting region. Port Stormhaven is the main hub for the campaign."
+    },
+    {
+      "id": "region-ironpeaks",
+      "name": "Iron Peaks",
+      "color": "#f44336",
+      "description": "Jagged mountain range rich in iron ore. Dwarven mining outposts dot the slopes, but orcs control the higher passes.",
+      "hexKeys": ["14,2","15,2","16,2","14,3","15,3","16,3","15,4","16,4","17,2","17,3"],
+      "tags": ["mountains", "dwarves", "orcs", "mining"],
+      "isDiscovered": false,
+      "notes": ""
+    }
+  ],
+  "generationConfig": {
+    "seed": "sundered-reaches-42",
+    "biomeClusteringStrength": 0.65,
+    "encounterDensity": 0.45,
+    "landmarkDensity": 0.3,
+    "terrainVariety": 0.55
+  },
+  "landmarkTables": [
+    {
+      "id": "lt-forest", "name": "Forest Landmarks", "terrain": "Forest",
+      "entries": [
+        { "id": "le-f1", "title": "Ancient Oak",        "description": "A massive oak tree, centuries old",             "rarity": "common",    "weight": 3 },
+        { "id": "le-f2", "title": "Druid Circle",       "description": "Standing stones arranged in a circle",          "rarity": "uncommon",  "weight": 2 },
+        { "id": "le-f3", "title": "Fairy Ring",         "description": "A ring of luminous mushrooms",                  "rarity": "rare",      "weight": 1 }
+      ]
+    },
+    {
+      "id": "lt-mountains", "name": "Mountain Landmarks", "terrain": "Mountains",
+      "entries": [
+        { "id": "le-m1", "title": "Abandoned Mine",     "description": "A boarded-up mine entrance",                    "rarity": "common",    "weight": 3 },
+        { "id": "le-m2", "title": "Eagle's Perch",      "description": "A rocky outcropping with sweeping views",       "rarity": "uncommon",  "weight": 2 },
+        { "id": "le-m3", "title": "Crystal Cavern",     "description": "A cave filled with glowing crystals",           "rarity": "rare",      "weight": 1 }
+      ]
+    }
+  ],
+  "factions": [
+    {
+      "id": "faction-druids",
+      "name": "Circle of the Green",
+      "description": "An ancient druidic order that protects the Greenwood. They maintain a strict neutrality in the affairs of civilization but fiercely defend the forest.",
+      "alignment": "true-neutral",
+      "color": "#4caf50",
+      "goals": "Preserve the Greenwood and its ancient magic. Prevent deforestation and corruption of the land.",
+      "headquarters": "The Elder Grove (hex 5,4)",
+      "tags": ["druid", "nature", "neutral"],
+      "isKnownToPlayers": true
+    },
+    {
+      "id": "faction-ironguard",
+      "name": "The Iron Guard",
+      "description": "A dwarven military order charged with defending the Iron Peaks mining operations. They distrust outsiders but may hire mercenaries.",
+      "alignment": "lawful-neutral",
+      "color": "#f44336",
+      "goals": "Secure the mountain passes from orc incursions. Expand mining operations deeper into the peaks.",
+      "headquarters": "Ironhold Fortress (hex 15,3)",
+      "tags": ["dwarf", "military", "mining"],
+      "isKnownToPlayers": false
+    }
+  ],
+  "sessions": [
+    {
+      "id": "session-001",
+      "number": 1,
+      "title": "Arrival at Stormhaven",
+      "summary": "The party arrived at Port Stormhaven by ship and explored the town. They met the harbormaster, learned about strange disappearances along the coast, and accepted a job to investigate.",
+      "realWorldDate": "2026-01-15",
+      "inGameTimeStart": { "year": 1, "month": 6, "day": 1, "hour": 8, "minute": 0 },
+      "inGameTimeEnd": { "year": 1, "month": 6, "day": 1, "hour": 20, "minute": 0 },
+      "hexesVisited": ["1,8", "1,9", "2,8"],
+      "isVisibleToPlayers": true
+    },
+    {
+      "id": "session-002",
+      "number": 2,
+      "title": "Into the Greenwood",
+      "summary": "Following rumors of a druid who might know about the disappearances, the party traveled inland to the Greenwood. They encountered wolves and found the outskirts of the Elder Grove.",
+      "realWorldDate": "2026-01-22",
+      "inGameTimeStart": { "year": 1, "month": 6, "day": 2, "hour": 7, "minute": 0 },
+      "inGameTimeEnd": { "year": 1, "month": 6, "day": 3, "hour": 18, "minute": 0 },
+      "hexesVisited": ["2,7", "3,6", "3,5", "4,5", "5,4"],
+      "isVisibleToPlayers": true
+    }
+  ],
+  "sessionLog": [
+    {
+      "id": "log-001",
+      "sessionId": "session-001",
+      "title": "Arrived at Port Stormhaven",
+      "description": "The party disembarked from the merchant vessel \"The Silver Gull\" and took in the sights of the bustling port town.",
+      "inGameTime": { "year": 1, "month": 6, "day": 1, "hour": 9, "minute": 0 },
+      "hexKeys": ["1,8"],
+      "tags": ["travel"],
+      "isVisibleToPlayers": true
+    },
+    {
+      "id": "log-002",
+      "sessionId": "session-001",
+      "title": "Met Harbormaster Kael",
+      "description": "Kael told the party about fishermen going missing along the northern coast. He offered 50gp to investigate.",
+      "inGameTime": { "year": 1, "month": 6, "day": 1, "hour": 11, "minute": 30 },
+      "hexKeys": ["1,8"],
+      "tags": ["social", "quest"],
+      "isVisibleToPlayers": true
+    },
+    {
+      "id": "log-003",
+      "sessionId": "session-002",
+      "title": "Wolf encounter on the road",
+      "description": "A pack of 4 wolves attacked the party as they traveled through the forest edge. Dispatched without serious injury.",
+      "inGameTime": { "year": 1, "month": 6, "day": 2, "hour": 14, "minute": 0 },
+      "hexKeys": ["3,5"],
+      "tags": ["combat"],
+      "isVisibleToPlayers": true
+    },
+    {
+      "id": "log-004",
+      "sessionId": "session-002",
+      "title": "Discovered the Elder Grove",
+      "description": "Found the entrance to the druids' sacred grove. A sentinel druid named Thorn agreed to speak with the party at dawn.",
+      "inGameTime": { "year": 1, "month": 6, "day": 3, "hour": 16, "minute": 0 },
+      "hexKeys": ["5,4"],
+      "tags": ["discovery", "social"],
+      "isVisibleToPlayers": true
+    }
+  ],
+  "hexes": {
+    "1,8": {
+      "id": "hex-0108", "coordinate": { "q": 1, "r": 8 }, "terrain": "Coast", "status": "cleared",
+      "notes": "Port Stormhaven - the main hub of the campaign. A busy fishing town with a stone harbor.",
+      "tags": ["starting-area", "town"],
+      "locations": [
+        { "id": "loc-0108-1", "title": "The Salty Dog Tavern", "description": "A rowdy dockside tavern popular with sailors. The innkeeper, Marta, knows all the local gossip.", "difficulty": "Social", "isResolved": false },
+        { "id": "loc-0108-2", "title": "Stormhaven Harbor", "description": "A well-maintained stone harbor with a lighthouse. Ships from across the realm dock here.", "isResolved": false }
+      ],
+      "encounters": [
+        {
+          "id": "enc-0108-1", "title": "Bar Fight at the Salty Dog", "description": "A drunk sailor picks a fight with the party over a spilled drink.",
+          "encounterType": "social", "difficulty": "Easy",
+          "creatures": [{ "id": "cr-0108-1", "name": "Drunk Sailor", "count": 2, "cr": "1/8" }],
+          "linkedNpcIds": [{ "npcId": "npc-0108-1", "hexKey": "1,8" }],
+          "rewards": [{ "id": "rw-0108-1", "type": "other", "description": "Marta's gratitude and free drinks for a week" }],
+          "outcome": "negotiated", "outcomeNotes": "Party bought the sailors a round and defused the situation", "isResolved": true
+        }
+      ],
+      "npcs": [
+        {
+          "id": "npc-0108-1", "title": "Harbormaster Kael", "description": "A weathered half-elf who manages the port. He's worried about missing fishermen and is offering bounties for information.",
+          "race": "Half-Elf", "class": "Commoner", "alignment": "lawful-good", "attitude": "friendly",
+          "appearance": "Tall with silver-streaked dark hair, always wearing a blue captain's coat",
+          "personality": "Stern but fair. Deeply cares about the people of Stormhaven.",
+          "factionId": null, "factionRole": null,
+          "relationships": [{ "targetNpcId": "npc-0108-2", "targetHexKey": "1,8", "type": "employer", "description": "Kael oversees the dockworkers" }],
+          "tags": ["quest-giver", "authority"], "isAlive": true, "isResolved": false
+        },
+        {
+          "id": "npc-0108-2", "title": "Marta Ironbrew", "description": "The stout dwarven innkeeper of The Salty Dog. She's a retired adventurer with stories for days.",
+          "race": "Dwarf", "class": "Commoner", "alignment": "chaotic-good", "attitude": "friendly",
+          "appearance": "Short and stocky with bright red braided hair and a missing left pinky finger",
+          "personality": "Boisterous and generous. Will arm-wrestle anyone for a free meal.",
+          "factionId": null, "factionRole": null,
+          "relationships": [{ "targetNpcId": "npc-0108-1", "targetHexKey": "1,8", "type": "ally", "description": "Old friends" }],
+          "tags": ["innkeeper", "information"], "isAlive": true, "isResolved": false
+        }
+      ],
+      "treasures": [
+        { "id": "tr-0108-1", "title": "Kael's Bounty Reward", "description": "50gp offered for information about missing fishermen", "isResolved": false }
+      ],
+      "clues": [
+        { "id": "cl-0108-1", "title": "Missing Fishermen Reports", "description": "Three fishing boats haven't returned in the past month. All disappeared near the northern shoals.", "isResolved": false }
+      ],
+      "markers": [
+        { "id": "mk-0108-1", "typeId": "settlement-medium", "label": "Port Stormhaven", "isVisible": true },
+        { "id": "mk-0108-2", "typeId": "party", "isVisible": true }
+      ],
+      "connections": { "rivers": [], "roads": [1, 2] }
+    },
+    "1,9": {
+      "id": "hex-0109", "coordinate": { "q": 1, "r": 9 }, "terrain": "Coast", "status": "discovered",
+      "notes": "Rocky coastline with tide pools. A trail leads north from Port Stormhaven.",
+      "tags": [],
+      "locations": [
+        { "id": "loc-0109-1", "title": "Tide Pool Grotto", "description": "A sheltered cove with colorful tide pools. Occasionally sea creatures wash up here.", "isResolved": false }
+      ],
+      "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [],
+      "connections": { "rivers": [], "roads": [] }
+    },
+    "0,8": {
+      "id": "hex-0008", "coordinate": { "q": 0, "r": 8 }, "terrain": "Coast", "status": "discovered",
+      "notes": "Open ocean visible from the western shore.",
+      "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [],
+      "connections": { "rivers": [], "roads": [] }
+    },
+    "2,8": {
+      "id": "hex-0208", "coordinate": { "q": 2, "r": 8 }, "terrain": "Plains", "status": "discovered",
+      "notes": "Grasslands stretching east from Port Stormhaven. A well-worn trade road crosses through.",
+      "tags": [],
+      "locations": [
+        { "id": "loc-0208-1", "title": "Crossroads Shrine", "description": "A small wayside shrine where travelers leave offerings for safe passage.", "isResolved": false }
+      ],
+      "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [],
+      "connections": { "rivers": [], "roads": [4, 1] }
+    },
+    "0,7": {
+      "id": "hex-0007", "coordinate": { "q": 0, "r": 7 }, "terrain": "Coast", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "0,9": {
+      "id": "hex-0009", "coordinate": { "q": 0, "r": 9 }, "terrain": "Coast", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "0,10": {
+      "id": "hex-0010", "coordinate": { "q": 0, "r": 10 }, "terrain": "Coast", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "1,7": {
+      "id": "hex-0107", "coordinate": { "q": 1, "r": 7 }, "terrain": "Coast", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "1,10": {
+      "id": "hex-0110", "coordinate": { "q": 1, "r": 10 }, "terrain": "Coast", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "2,7": {
+      "id": "hex-0207", "coordinate": { "q": 2, "r": 7 }, "terrain": "Grassland", "status": "discovered",
+      "notes": "Rolling grasslands with scattered wildflowers.",
+      "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "2,9": {
+      "id": "hex-0209", "coordinate": { "q": 2, "r": 9 }, "terrain": "Swamp", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [3, 0], "roads": [] }
+    },
+    "2,10": {
+      "id": "hex-0210", "coordinate": { "q": 2, "r": 10 }, "terrain": "Swamp", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [3], "roads": [] }
+    },
+    "3,3": {
+      "id": "hex-0303", "coordinate": { "q": 3, "r": 3 }, "terrain": "Forest", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "3,4": {
+      "id": "hex-0304", "coordinate": { "q": 3, "r": 4 }, "terrain": "Forest", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "3,5": {
+      "id": "hex-0305", "coordinate": { "q": 3, "r": 5 }, "terrain": "Forest", "status": "discovered",
+      "notes": "Dense forest at the edge of the Greenwood. Wolf tracks everywhere.",
+      "tags": ["dangerous"],
+      "locations": [],
+      "encounters": [
+        {
+          "id": "enc-0305-1", "title": "Wolf Pack", "description": "A hungry pack of 4 wolves ambushed the party on a game trail.",
+          "encounterType": "combat", "difficulty": "Easy",
+          "creatures": [{ "id": "cr-0305-1", "name": "Wolf", "count": 4, "cr": "1/4" }],
+          "linkedNpcIds": [],
+          "rewards": [{ "id": "rw-0305-1", "type": "xp", "description": "Combat experience", "quantity": 200 }],
+          "outcome": "victory", "outcomeNotes": "Party dispatched the wolves without injury", "isResolved": true
+        }
+      ],
+      "npcs": [], "treasures": [], "clues": [],
+      "markers": [],
+      "connections": { "rivers": [], "roads": [] }
+    },
+    "3,6": {
+      "id": "hex-0306", "coordinate": { "q": 3, "r": 6 }, "terrain": "Forest", "status": "discovered",
+      "notes": "Transitional forest. Signs of old elven carvings on some trees.",
+      "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [],
+      "clues": [
+        { "id": "cl-0306-1", "title": "Elven Tree Carvings", "description": "Ancient carvings in an unfamiliar elvish dialect. Seem to mark a boundary or warning.", "isResolved": false }
+      ],
+      "markers": [],
+      "connections": { "rivers": [], "roads": [] }
+    },
+    "4,3": {
+      "id": "hex-0403", "coordinate": { "q": 4, "r": 3 }, "terrain": "Forest", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "4,4": {
+      "id": "hex-0404", "coordinate": { "q": 4, "r": 4 }, "terrain": "Forest", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [],
+      "connections": { "rivers": [2, 5], "roads": [] }
+    },
+    "4,5": {
+      "id": "hex-0405", "coordinate": { "q": 4, "r": 5 }, "terrain": "Forest", "status": "discovered",
+      "notes": "Deep forest with thick canopy. Occasional fey lights visible at night.",
+      "tags": ["fey"],
+      "locations": [
+        { "id": "loc-0405-1", "title": "Moonpool Clearing", "description": "A natural clearing with a pool that reflects moonlight even during the day. The druids consider it sacred.", "isResolved": false }
+      ],
+      "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [],
+      "connections": { "rivers": [2, 5], "roads": [] }
+    },
+    "4,6": {
+      "id": "hex-0406", "coordinate": { "q": 4, "r": 6 }, "terrain": "Forest", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "5,3": {
+      "id": "hex-0503", "coordinate": { "q": 5, "r": 3 }, "terrain": "Forest", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "5,4": {
+      "id": "hex-0504", "coordinate": { "q": 5, "r": 4 }, "terrain": "Forest", "status": "discovered",
+      "notes": "The Elder Grove - heart of the Greenwood and seat of the druidic Circle of the Green.",
+      "tags": ["sacred", "druid"],
+      "locations": [
+        { "id": "loc-0504-1", "title": "The Elder Grove", "description": "A ring of ancient, massive oak trees surrounds a natural amphitheater. The air hums with primal magic. This is the meeting place of the Circle of the Green.", "difficulty": "Exploration", "isResolved": false },
+        { "id": "loc-0504-2", "title": "Thorn's Cottage", "description": "A modest cottage woven from living branches at the edge of the grove. Herbs hang drying from every surface.", "isResolved": false }
+      ],
+      "encounters": [
+        {
+          "id": "enc-0504-1", "title": "Meeting with Archdruid Thorn", "description": "The party met with Archdruid Thorn to discuss the coastal disappearances. He revealed that dark magic has been detected near the northern shoals.",
+          "encounterType": "social", "difficulty": "Medium",
+          "creatures": [],
+          "linkedNpcIds": [{ "npcId": "npc-0504-1", "hexKey": "5,4" }],
+          "rewards": [{ "id": "rw-0504-1", "type": "item", "description": "Thorn's Warding Charm - advantage on saves vs dark magic" }],
+          "outcome": "negotiated", "outcomeNotes": "Thorn agreed to help if the party deals with a corruption spreading in the eastern forest", "isResolved": true
+        }
+      ],
+      "npcs": [
+        {
+          "id": "npc-0504-1", "title": "Archdruid Thorn", "description": "The leader of the Circle of the Green. An ancient firbolg druid who has tended the Greenwood for over 300 years.",
+          "race": "Firbolg", "class": "Druid", "alignment": "true-neutral", "attitude": "indifferent",
+          "appearance": "Towering figure with bark-like skin, moss-green hair, and eyes like deep forest pools",
+          "personality": "Patient and enigmatic. Speaks in riddles. Deeply connected to the forest.",
+          "factionId": "faction-druids", "factionRole": "Leader",
+          "relationships": [{ "targetNpcId": "npc-0605-1", "targetHexKey": "6,5", "type": "mentor", "description": "Training the young ranger" }],
+          "tags": ["druid", "leader", "quest-giver"], "isAlive": true, "isResolved": false
+        }
+      ],
+      "treasures": [
+        { "id": "tr-0504-1", "title": "Thorn's Warding Charm", "description": "A wooden charm carved from elder oak. Grants advantage on saving throws against necromantic magic.", "isResolved": false }
+      ],
+      "clues": [
+        { "id": "cl-0504-1", "title": "Dark Magic at the Shoals", "description": "Thorn detected necromantic energy emanating from the northern coastal area. Something is animating the dead beneath the waves.", "isResolved": false }
+      ],
+      "markers": [
+        { "id": "mk-0504-1", "typeId": "landmark-sacred", "label": "Elder Grove", "isVisible": true }
+      ],
+      "connections": { "rivers": [], "roads": [] }
+    },
+    "5,5": {
+      "id": "hex-0505", "coordinate": { "q": 5, "r": 5 }, "terrain": "Forest", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "5,6": {
+      "id": "hex-0506", "coordinate": { "q": 5, "r": 6 }, "terrain": "Forest", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "6,3": {
+      "id": "hex-0603", "coordinate": { "q": 6, "r": 3 }, "terrain": "Forest", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "6,4": {
+      "id": "hex-0604", "coordinate": { "q": 6, "r": 4 }, "terrain": "Hills", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "6,5": {
+      "id": "hex-0605", "coordinate": { "q": 6, "r": 5 }, "terrain": "Forest", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [],
+      "encounters": [],
+      "npcs": [
+        {
+          "id": "npc-0605-1", "title": "Ranger Elara", "description": "A young wood elf ranger who patrols the eastern edge of the Greenwood. She's suspicious of outsiders but loyal to the Circle.",
+          "race": "Wood Elf", "class": "Ranger", "alignment": "chaotic-good", "attitude": "indifferent",
+          "appearance": "Lithe and agile with copper skin, green eyes, and dark hair woven with leaves",
+          "personality": "Cautious and observant. Quick to action when nature is threatened.",
+          "factionId": "faction-druids", "factionRole": "Scout",
+          "relationships": [{ "targetNpcId": "npc-0504-1", "targetHexKey": "5,4", "type": "student", "description": "Studying under the Archdruid" }],
+          "tags": ["ranger", "scout", "potential-ally"], "isAlive": true, "isResolved": false
+        }
+      ],
+      "treasures": [], "clues": [],
+      "markers": [],
+      "connections": { "rivers": [], "roads": [] }
+    },
+    "10,7": {
+      "id": "hex-1007", "coordinate": { "q": 10, "r": 7 }, "terrain": "Plains", "status": "discovered",
+      "notes": "Central plains crossroads. A major trade route passes through here.",
+      "tags": ["crossroads"],
+      "locations": [
+        { "id": "loc-1007-1", "title": "Wayfarers' Rest Inn", "description": "A large coaching inn at the crossroads. Popular stop for merchants and travelers. The innkeeper is known for his meat pies.", "isResolved": false }
+      ],
+      "encounters": [
+        {
+          "id": "enc-1007-1", "title": "Merchant Caravan", "description": "A merchant caravan heading south offers to trade supplies and share news of the road ahead.",
+          "encounterType": "social", "difficulty": "Easy",
+          "creatures": [],
+          "linkedNpcIds": [],
+          "rewards": [{ "id": "rw-1007-1", "type": "item", "description": "Discounted supplies and a rough map of the southern trade route" }],
+          "outcome": "pending", "outcomeNotes": "", "isResolved": false
+        }
+      ],
+      "npcs": [], "treasures": [], "clues": [],
+      "markers": [
+        { "id": "mk-1007-1", "typeId": "settlement-small", "label": "Wayfarers' Rest", "isVisible": true }
+      ],
+      "connections": { "rivers": [], "roads": [0, 3] }
+    },
+    "14,2": {
+      "id": "hex-1402", "coordinate": { "q": 14, "r": 2 }, "terrain": "Mountains", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "14,3": {
+      "id": "hex-1403", "coordinate": { "q": 14, "r": 3 }, "terrain": "Hills", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "15,2": {
+      "id": "hex-1502", "coordinate": { "q": 15, "r": 2 }, "terrain": "Mountains", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "15,3": {
+      "id": "hex-1503", "coordinate": { "q": 15, "r": 3 }, "terrain": "Mountains", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [
+        { "id": "loc-1503-1", "title": "Ironhold Fortress", "description": "A massive dwarven fortress carved into the mountainside. The seat of the Iron Guard.", "isResolved": false }
+      ],
+      "encounters": [
+        {
+          "id": "enc-1503-1", "title": "Orc Raiding Party", "description": "A band of orcs has been spotted near the fortress approach. The Iron Guard is on high alert.",
+          "encounterType": "combat", "difficulty": "Hard",
+          "creatures": [
+            { "id": "cr-1503-1", "name": "Orc", "count": 6, "cr": "1/2" },
+            { "id": "cr-1503-2", "name": "Orc War Chief", "count": 1, "cr": "4" }
+          ],
+          "linkedNpcIds": [],
+          "rewards": [
+            { "id": "rw-1503-1", "type": "gold", "description": "Bounty from the Iron Guard", "quantity": 100 },
+            { "id": "rw-1503-2", "type": "xp", "description": "Combat experience", "quantity": 500 }
+          ],
+          "outcome": "pending", "outcomeNotes": "", "isResolved": false
+        }
+      ],
+      "npcs": [
+        {
+          "id": "npc-1503-1", "title": "Commander Durgan Ironbeard", "description": "The gruff dwarven commander of the Iron Guard. Fiercely protective of his people and suspicious of non-dwarves.",
+          "race": "Dwarf", "class": "Fighter", "alignment": "lawful-neutral", "attitude": "hostile",
+          "appearance": "Broad-shouldered dwarf with an iron-grey beard braided with metal rings. Missing his right ear.",
+          "personality": "Gruff, direct, and uncompromising. Respects strength and honesty above all.",
+          "factionId": "faction-ironguard", "factionRole": "Commander",
+          "relationships": [],
+          "tags": ["military", "leader", "dwarf"], "isAlive": true, "isResolved": false
+        }
+      ],
+      "treasures": [], "clues": [],
+      "markers": [
+        { "id": "mk-1503-1", "typeId": "military-fort", "label": "Ironhold Fortress", "isVisible": true },
+        { "id": "mk-1503-2", "typeId": "hazard-danger", "label": "Orc Activity", "isVisible": true }
+      ],
+      "connections": { "rivers": [], "roads": [0, 3] }
+    },
+    "15,4": {
+      "id": "hex-1504", "coordinate": { "q": 15, "r": 4 }, "terrain": "Hills", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "16,2": {
+      "id": "hex-1602", "coordinate": { "q": 16, "r": 2 }, "terrain": "Mountains", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "16,3": {
+      "id": "hex-1603", "coordinate": { "q": 16, "r": 3 }, "terrain": "Mountains", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "16,4": {
+      "id": "hex-1604", "coordinate": { "q": 16, "r": 4 }, "terrain": "Mountains", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "17,2": {
+      "id": "hex-1702", "coordinate": { "q": 17, "r": 2 }, "terrain": "Mountains", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "17,3": {
+      "id": "hex-1703", "coordinate": { "q": 17, "r": 3 }, "terrain": "Tundra", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "8,5": {
+      "id": "hex-0805", "coordinate": { "q": 8, "r": 5 }, "terrain": "Desert", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [
+        { "id": "loc-0805-1", "title": "Buried Obelisk", "description": "The top of an ancient stone obelisk protrudes from the sand, covered in strange runes.", "isResolved": false }
+      ],
+      "encounters": [], "npcs": [], "treasures": [],
+      "clues": [
+        { "id": "cl-0805-1", "title": "Obelisk Runes", "description": "The runes appear to be a form of primordial writing. They seem to describe a great seal or binding.", "isResolved": false }
+      ],
+      "markers": [
+        { "id": "mk-0805-1", "typeId": "landmark-monument", "label": "Buried Obelisk", "isVisible": true }
+      ],
+      "connections": { "rivers": [], "roads": [] }
+    },
+    "12,10": {
+      "id": "hex-1210", "coordinate": { "q": 12, "r": 10 }, "terrain": "Jungle", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [
+        { "id": "loc-1210-1", "title": "Overgrown Temple", "description": "A crumbling stone temple nearly swallowed by jungle vines. Faint magical emanations come from within.", "isResolved": false }
+      ],
+      "encounters": [
+        {
+          "id": "enc-1210-1", "title": "Temple Guardian Construct",
+          "description": "An ancient stone golem still guards the temple entrance, attacking anyone who approaches.",
+          "encounterType": "combat", "difficulty": "Hard",
+          "creatures": [{ "id": "cr-1210-1", "name": "Stone Golem", "count": 1, "cr": "10" }],
+          "linkedNpcIds": [],
+          "rewards": [
+            { "id": "rw-1210-1", "type": "item", "description": "Golem's Heart Crystal - radiates conjuration magic" },
+            { "id": "rw-1210-2", "type": "xp", "description": "Combat experience", "quantity": 1000 }
+          ],
+          "outcome": "pending", "outcomeNotes": "", "isResolved": false
+        }
+      ],
+      "npcs": [], "treasures": [
+        { "id": "tr-1210-1", "title": "Temple Treasury", "description": "Behind the golem lies a sealed chamber rumored to contain treasures of the lost civilization.", "isResolved": false }
+      ],
+      "clues": [],
+      "markers": [
+        { "id": "mk-1210-1", "typeId": "landmark-ruin", "label": "Overgrown Temple", "isVisible": true }
+      ],
+      "connections": { "rivers": [], "roads": [] }
+    },
+    "7,8": {
+      "id": "hex-0708", "coordinate": { "q": 7, "r": 8 }, "terrain": "Grassland", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "8,7": {
+      "id": "hex-0807", "coordinate": { "q": 8, "r": 7 }, "terrain": "Plains", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [0, 3] }
+    },
+    "9,7": {
+      "id": "hex-0907", "coordinate": { "q": 9, "r": 7 }, "terrain": "Plains", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [0, 3] }
+    },
+    "11,7": {
+      "id": "hex-1107", "coordinate": { "q": 11, "r": 7 }, "terrain": "Grassland", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [0, 3] }
+    },
+    "9,4": {
+      "id": "hex-0904", "coordinate": { "q": 9, "r": 4 }, "terrain": "Hills", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "10,3": {
+      "id": "hex-1003", "coordinate": { "q": 10, "r": 3 }, "terrain": "Hills", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "13,6": {
+      "id": "hex-1306", "coordinate": { "q": 13, "r": 6 }, "terrain": "Grassland", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "18,5": {
+      "id": "hex-1805", "coordinate": { "q": 18, "r": 5 }, "terrain": "Tundra", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [], "roads": [] }
+    },
+    "5,10": {
+      "id": "hex-0510", "coordinate": { "q": 5, "r": 10 }, "terrain": "Swamp", "status": "undiscovered",
+      "notes": "", "tags": [],
+      "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
+      "markers": [], "connections": { "rivers": [0, 3], "roads": [] }
+    }
+  }
+}
