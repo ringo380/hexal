@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hexal - D&D Hex Crawl Campaign Manager</title>
+  <meta name="description" content="A cross-platform desktop application for managing D&D hex crawl campaigns. Visual hex grid editor, procedural generation, player view, and more.">
+  <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Hexal - D&D Hex Crawl Campaign Manager">
+  <meta property="og:description" content="A cross-platform desktop application for managing D&D hex crawl campaigns with visual hex grid editing, procedural generation, and player view.">
+  <meta property="og:image" content="screenshots/hex-grid-overview.png">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://ringo380.github.io/hexal/">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Hexal - D&D Hex Crawl Campaign Manager">
+  <meta name="twitter:description" content="A cross-platform desktop application for managing D&D hex crawl campaigns.">
+  <meta name="twitter:image" content="screenshots/hex-grid-overview.png">
+
+  <style>
+    /* ── Reset & Variables ──────────────────────────────────────── */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-primary: #1e1e1e;
+      --bg-secondary: #252526;
+      --bg-tertiary: #2d2d2d;
+      --bg-hover: #3a3a3a;
+      --text-primary: #e0e0e0;
+      --text-secondary: #a0a0a0;
+      --text-muted: #666666;
+      --border-color: #3c3c3c;
+      --accent-color: #4a9eff;
+      --accent-hover: #5aadff;
+      --success-color: #4caf50;
+      --warning-color: #ff9800;
+      --danger-color: #f44336;
+      --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'SF Mono', 'Fira Code', Consolas, monospace;
+      --max-width: 1200px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-family);
+      color: var(--text-primary);
+      background: var(--bg-primary);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: var(--accent-color); text-decoration: none; }
+    a:hover { color: var(--accent-hover); }
+
+    img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    /* ── Nav ────────────────────────────────────────────────────── */
+    .nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(30, 30, 30, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0 24px;
+    }
+    .nav-inner {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 56px;
+    }
+    .nav-brand {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 18px; font-weight: 700; color: var(--text-primary);
+    }
+    .nav-brand img { width: 28px; height: 28px; border-radius: 6px; box-shadow: none; }
+    .nav-links { display: flex; gap: 24px; }
+    .nav-links a { color: var(--text-secondary); font-size: 14px; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--text-primary); }
+
+    /* ── Container ──────────────────────────────────────────────── */
+    .container {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    section { padding: 80px 0; }
+
+    /* ── Hero ───────────────────────────────────────────────────── */
+    .hero {
+      padding: 140px 0 80px;
+      text-align: center;
+    }
+    .hero-icon {
+      width: 80px; height: 80px;
+      border-radius: 20px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 24px rgba(74, 158, 255, 0.2);
+    }
+    .hero h1 {
+      font-size: 56px; font-weight: 800;
+      letter-spacing: -1.5px;
+      background: linear-gradient(135deg, var(--text-primary), var(--accent-color));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 16px;
+    }
+    .hero .tagline {
+      font-size: 22px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+    .hero .version {
+      display: inline-block;
+      background: var(--bg-tertiary);
+      color: var(--accent-color);
+      font-size: 13px; font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      margin-bottom: 32px;
+    }
+    .hero-buttons {
+      display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+      margin-bottom: 48px;
+    }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 15px; font-weight: 600;
+      transition: all 0.2s;
+      border: none; cursor: pointer;
+    }
+    .btn-primary {
+      background: var(--accent-color);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--accent-hover); color: #fff; }
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+    .btn-secondary:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+    .hero-screenshot { margin-top: 16px; }
+    .hero-screenshot img {
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+    }
+
+    /* ── Feature Grid ───────────────────────────────────────────── */
+    .section-title {
+      font-size: 36px; font-weight: 700;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    .section-subtitle {
+      color: var(--text-secondary);
+      text-align: center;
+      font-size: 17px;
+      margin-bottom: 48px;
+    }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+    .feature-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 28px;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .feature-card:hover {
+      border-color: var(--accent-color);
+      transform: translateY(-2px);
+    }
+    .feature-card .icon {
+      font-size: 28px;
+      margin-bottom: 12px;
+    }
+    .feature-card h3 {
+      font-size: 17px; font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .feature-card p {
+      color: var(--text-secondary);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── Feature Showcase ───────────────────────────────────────── */
+    .showcase-item {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: center;
+      margin-bottom: 80px;
+    }
+    .showcase-item:nth-child(even) { direction: rtl; }
+    .showcase-item:nth-child(even) > * { direction: ltr; }
+    .showcase-text h3 {
+      font-size: 28px; font-weight: 700;
+      margin-bottom: 16px;
+    }
+    .showcase-text p {
+      color: var(--text-secondary);
+      font-size: 16px;
+      line-height: 1.7;
+    }
+    .showcase-image img {
+      border: 1px solid var(--border-color);
+    }
+
+    /* ── Tech Stack ─────────────────────────────────────────────── */
+    .tech-badges {
+      display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+    }
+    .tech-badge {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 14px; font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    /* ── Getting Started ────────────────────────────────────────── */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      margin-top: 48px;
+    }
+    .step {
+      text-align: center;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 32px 24px;
+    }
+    .step-number {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 40px; height: 40px;
+      background: var(--accent-color);
+      color: #fff;
+      border-radius: 50%;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+    .step h3 {
+      font-size: 17px; font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .step p {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    /* ── Footer ─────────────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border-color);
+      padding: 32px 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    footer a { color: var(--text-secondary); }
+
+    /* ── Responsive ─────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .hero h1 { font-size: 40px; }
+      .feature-grid { grid-template-columns: repeat(2, 1fr); }
+      .showcase-item { grid-template-columns: 1fr; gap: 24px; }
+      .showcase-item:nth-child(even) { direction: ltr; }
+      .steps { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      .hero h1 { font-size: 32px; }
+      .hero .tagline { font-size: 18px; }
+      .feature-grid { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="#" class="nav-brand">
+        <img src="assets/icon.png" alt="Hexal icon">
+        Hexal
+      </a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#showcase">Showcase</a>
+        <a href="#getting-started">Get Started</a>
+        <a href="https://github.com/ringo380/hexal">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <img src="assets/icon.png" alt="Hexal" class="hero-icon">
+      <h1>Hexal</h1>
+      <p class="tagline">D&D Hex Crawl Campaign Manager</p>
+      <span class="version">v1.2.5</span>
+      <div class="hero-buttons">
+        <a href="https://github.com/ringo380/hexal/releases/latest" class="btn btn-primary">
+          Download for macOS (Apple Silicon)
+        </a>
+        <a href="https://github.com/ringo380/hexal/releases/latest" class="btn btn-secondary">
+          macOS (Intel)
+        </a>
+        <a href="https://github.com/ringo380/hexal/releases/latest" class="btn btn-secondary">
+          Windows
+        </a>
+      </div>
+      <div class="hero-screenshot">
+        <img src="screenshots/hex-grid-overview.png" alt="Hexal hex grid editor showing a campaign with terrain, markers, and the detail panel">
+      </div>
+    </div>
+  </section>
+
+  <!-- Feature Grid -->
+  <section id="features">
+    <div class="container">
+      <h2 class="section-title">Everything you need to run a hex crawl</h2>
+      <p class="section-subtitle">From terrain painting to encounter tracking, Hexal handles the bookkeeping so you can focus on storytelling.</p>
+
+      <div class="feature-grid">
+        <!-- Map & Grid -->
+        <div class="feature-card">
+          <div class="icon">&#x1f5fa;</div>
+          <h3>Visual Hex Grid</h3>
+          <p>Canvas-rendered hex map with 10 terrain types, LOD zoom system, and smooth pan/zoom navigation.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">&#x1f3f0;</div>
+          <h3>Tabletop Markers</h3>
+          <p>Place draggable figurine-style markers for settlements, dungeons, players, and custom tokens on the map.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">&#x1f30a;</div>
+          <h3>Rivers &amp; Roads</h3>
+          <p>Draw hex-edge connections for rivers and roads that render on the grid and affect travel costs.</p>
+        </div>
+
+        <!-- Content Management -->
+        <div class="feature-card">
+          <div class="icon">&#x2694;&#xfe0f;</div>
+          <h3>Encounter System</h3>
+          <p>Full encounter editor with creature rosters, rewards, difficulty ratings, outcomes, and reusable templates.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">&#x1f9d9;</div>
+          <h3>NPC Directory</h3>
+          <p>Track NPCs with alignment, attitude, faction membership, relationships, and cross-hex references.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">&#x1f4cd;</div>
+          <h3>Content per Hex</h3>
+          <p>Each hex holds locations, encounters, NPCs, treasures, and clues with resolve tracking.</p>
+        </div>
+
+        <!-- Campaign Tools -->
+        <div class="feature-card">
+          <div class="icon">&#x1f3b2;</div>
+          <h3>Procedural Generation</h3>
+          <p>Generate terrain, encounters, and landmarks from configurable tables with seeded PRNG for reproducibility.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">&#x1f30d;</div>
+          <h3>Region Manager</h3>
+          <p>Define named regions with color borders, hex assignments, descriptions, and discovery status.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">&#x26c5;</div>
+          <h3>Time &amp; Weather</h3>
+          <p>In-game calendar with seasonal weather simulation, travel modifiers, and time advancement controls.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">&#x1f4fa;</div>
+          <h3>Player View</h3>
+          <p>Second window showing a fog-of-war filtered map safe to share on a screen visible to players.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">&#x1f4dc;</div>
+          <h3>Session Log</h3>
+          <p>Timeline-based session logging with tags, in-game timestamps, and per-hex event tracking.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">&#x1f5bc;&#xfe0f;</div>
+          <h3>Map Export</h3>
+          <p>Export your map to PNG, JPEG, or PDF with print-ready and player handout presets.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Showcase -->
+  <section id="showcase" style="background: var(--bg-secondary);">
+    <div class="container">
+      <h2 class="section-title">See it in action</h2>
+      <p class="section-subtitle">Screenshots from a real campaign built in Hexal.</p>
+
+      <div class="showcase-item">
+        <div class="showcase-text">
+          <h3>Three-Column Layout</h3>
+          <p>The main editor puts everything at your fingertips: a filterable hex list in the sidebar, the canvas map in the center, and a detail panel on the right showing all content for the selected hex.</p>
+        </div>
+        <div class="showcase-image">
+          <img src="screenshots/hex-grid-overview.png" alt="Three-column layout with sidebar, hex grid, and detail panel">
+        </div>
+      </div>
+
+      <div class="showcase-item">
+        <div class="showcase-text">
+          <h3>Rich Encounter Editor</h3>
+          <p>Build encounters with creature rosters, difficulty ratings, linked NPCs, and detailed rewards. Track outcomes as your campaign unfolds, or create reusable templates for random encounters.</p>
+        </div>
+        <div class="showcase-image">
+          <img src="screenshots/encounter-editor.png" alt="Encounter editor showing creatures, rewards, and outcome tracking">
+        </div>
+      </div>
+
+      <div class="showcase-item">
+        <div class="showcase-text">
+          <h3>NPC Relationship Network</h3>
+          <p>Every NPC tracks race, class, alignment, attitude, faction membership, and relationships to other NPCs across the map. The NPC Directory gives you a bird's-eye view of your cast of characters.</p>
+        </div>
+        <div class="showcase-image">
+          <img src="screenshots/npc-system.png" alt="NPC Directory showing character details and relationships">
+        </div>
+      </div>
+
+      <div class="showcase-item">
+        <div class="showcase-text">
+          <h3>Procedural Generation</h3>
+          <p>Generate terrain, encounters, and landmarks across your grid using configurable density sliders and terrain tables. A seeded PRNG ensures you can reproduce the same results.</p>
+        </div>
+        <div class="showcase-image">
+          <img src="screenshots/procedural-generation.png" alt="Generator modal with terrain and encounter density controls">
+        </div>
+      </div>
+
+      <div class="showcase-item">
+        <div class="showcase-text">
+          <h3>Player View</h3>
+          <p>Open a second window that shows only discovered hexes, with fog of war hiding DM-only content. Perfect for streaming or projecting onto a second screen at the table.</p>
+        </div>
+        <div class="showcase-image">
+          <img src="screenshots/player-view.png" alt="Player view with fog of war">
+        </div>
+      </div>
+
+      <div class="showcase-item">
+        <div class="showcase-text">
+          <h3>Session Timeline</h3>
+          <p>Log events as they happen during your sessions, tagged by type and linked to specific hexes. Review the full timeline to recall what happened and when.</p>
+        </div>
+        <div class="showcase-image">
+          <img src="screenshots/session-log.png" alt="Session log modal with timeline entries">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tech Stack -->
+  <section>
+    <div class="container" style="text-align: center;">
+      <h2 class="section-title">Built with</h2>
+      <p class="section-subtitle">A modern desktop stack for performance and reliability.</p>
+      <div class="tech-badges">
+        <span class="tech-badge">Electron 35</span>
+        <span class="tech-badge">React 18</span>
+        <span class="tech-badge">TypeScript</span>
+        <span class="tech-badge">HTML5 Canvas</span>
+        <span class="tech-badge">Vite</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Getting Started -->
+  <section id="getting-started" style="background: var(--bg-secondary);">
+    <div class="container">
+      <h2 class="section-title">Get started in minutes</h2>
+      <p class="section-subtitle">Download, create a campaign, and start exploring.</p>
+      <div class="steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <h3>Download</h3>
+          <p>Grab the latest release from <a href="https://github.com/ringo380/hexal/releases/latest">GitHub Releases</a> for your platform.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <h3>Create a Campaign</h3>
+          <p>Click "New Campaign", name your world, and set your grid size. You're ready to go.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <h3>Build Your World</h3>
+          <p>Paint terrain, place markers, add encounters and NPCs, then generate content to fill in the gaps.</p>
+        </div>
+      </div>
+      <div style="text-align: center; margin-top: 48px;">
+        <a href="https://github.com/ringo380/hexal/releases/latest" class="btn btn-primary">
+          Download Hexal
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <p>
+        <a href="https://github.com/ringo380/hexal">GitHub</a> &middot;
+        <a href="https://github.com/ringo380/hexal/releases">Releases</a> &middot;
+        <a href="https://github.com/ringo380/hexal/issues">Issues</a>
+      </p>
+      <p style="margin-top: 8px;">MIT License &middot; Built by <a href="https://github.com/ringo380">Ryan Robson</a></p>
+    </div>
+  </footer>
+
+</body>
+</html>
