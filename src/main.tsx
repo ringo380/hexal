@@ -7,10 +7,15 @@ import { SelectionProvider } from './stores/SelectionContext';
 import { ViewModeProvider } from './stores/ViewModeContext';
 import type { ViewMode } from './stores/ViewModeContext';
 import PlayerApp from './components/player/PlayerApp';
+import { SettingsProvider } from './stores/SettingsContext';
+import { AuthProvider } from './stores/AuthContext';
+import { createPersistenceAdapter } from './services/persistence';
 import './styles/app.css';
+import './styles/auth.css';
 
 const isPlayerView = window.location.hash === '#player-view';
 const viewMode: ViewMode = isPlayerView ? 'player' : 'dm';
+const persistenceAdapter = createPersistenceAdapter('local');
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -18,11 +23,15 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       {isPlayerView ? (
         <PlayerApp />
       ) : (
-        <CampaignProvider>
-          <SelectionProvider>
-            <App />
-          </SelectionProvider>
-        </CampaignProvider>
+        <SettingsProvider>
+          <AuthProvider>
+            <CampaignProvider adapter={persistenceAdapter}>
+              <SelectionProvider>
+                <App />
+              </SelectionProvider>
+            </CampaignProvider>
+          </AuthProvider>
+        </SettingsProvider>
       )}
     </ViewModeProvider>
   </React.StrictMode>

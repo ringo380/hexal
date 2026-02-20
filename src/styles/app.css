@@ -202,8 +202,23 @@ label {
 }
 
 .browser-header {
-  text-align: center;
+  width: 100%;
+  max-width: 500px;
   margin-bottom: 30px;
+}
+
+.browser-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.browser-header-top > div:first-child {
+  text-align: left;
+}
+
+.browser-header-auth {
+  padding-top: 8px;
 }
 
 .browser-header h1 {
@@ -229,6 +244,9 @@ label {
 }
 
 .campaign-list-section h2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 14px;
   font-weight: 600;
   color: var(--text-secondary);
@@ -291,6 +309,47 @@ label {
 
 .delete-button:hover {
   color: var(--danger-color);
+}
+
+.campaign-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.campaign-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.campaign-badge--local {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+}
+
+.campaign-badge--synced {
+  background-color: rgba(74, 158, 255, 0.15);
+  color: #4a9eff;
+}
+
+.campaign-badge--cloud {
+  background-color: rgba(76, 175, 80, 0.15);
+  color: #4caf50;
+}
+
+.campaign-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 4px;
+}
+
+.campaign-list-section + .campaign-list-section {
+  margin-top: 32px;
 }
 
 .empty-state {
@@ -3214,6 +3273,271 @@ label {
   flex-shrink: 0;
 }
 
+/* ============ TERRAIN EDITOR MODAL ============ */
+
+.terrain-editor-modal {
+  width: 800px;
+  max-width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.terrain-editor-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 400px;
+}
+
+.terrain-list-panel {
+  width: 240px;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.terrain-list-panel .panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.terrain-list-panel .panel-header h4 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.terrain-list-items {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.terrain-list-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-primary);
+  transition: background-color 0.1s;
+}
+
+.terrain-list-item:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.terrain-list-item.selected {
+  background-color: rgba(74, 158, 255, 0.15);
+}
+
+.terrain-list-item .terrain-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.terrain-list-item .terrain-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terrain-list-item .terrain-badge {
+  font-size: 10px;
+  color: var(--text-muted);
+  background-color: var(--bg-tertiary);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.terrain-list-item .terrain-delete-btn {
+  opacity: 0;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  transition: opacity 0.1s, color 0.1s;
+}
+
+.terrain-list-item:hover .terrain-delete-btn {
+  opacity: 1;
+}
+
+.terrain-list-item .terrain-delete-btn:hover {
+  color: #f44336;
+}
+
+/* Terrain editor panel */
+.terrain-editor-panel {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.terrain-editor-panel .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  gap: 8px;
+}
+
+.terrain-color-picker {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.terrain-color-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.1s, transform 0.1s;
+}
+
+.terrain-color-swatch:hover {
+  transform: scale(1.1);
+}
+
+.terrain-color-swatch.selected {
+  border-color: #ffffff;
+}
+
+.terrain-color-custom {
+  width: 24px;
+  height: 24px;
+  border: none;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.terrain-icon-picker {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.terrain-icon-option {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 0.1s, background-color 0.1s;
+}
+
+.terrain-icon-option:hover {
+  background: var(--bg-secondary);
+}
+
+.terrain-icon-option.selected {
+  border-color: #4a9eff;
+  background: rgba(74, 158, 255, 0.15);
+  color: #4a9eff;
+}
+
+.field-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: normal;
+}
+
+.terrain-default-notice {
+  margin-top: 16px;
+  padding: 8px 12px;
+  background-color: var(--bg-tertiary);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Delete confirmation dialog */
+.terrain-delete-dialog-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: 8px;
+}
+
+.terrain-delete-dialog {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 20px;
+  min-width: 300px;
+}
+
+.terrain-delete-dialog h4 {
+  margin: 0 0 8px;
+  color: var(--text-primary);
+}
+
+.terrain-delete-dialog p {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.terrain-delete-dialog select {
+  width: 100%;
+  padding: 6px 8px;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.terrain-delete-dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.btn-danger {
+  background-color: #f44336;
+  color: #ffffff;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.btn-danger:hover {
+  background-color: #d32f2f;
+}
+
 /* ============ NPC SYSTEM ============ */
 
 /* NPC Badge styles (alignment, attitude, faction, relationship) */
@@ -4344,4 +4668,620 @@ label {
   flex-wrap: wrap;
   gap: 4px;
   margin-top: 4px;
+}
+
+/* ============ SETTINGS MODAL ============ */
+
+.settings-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 16px;
+}
+
+.settings-tab {
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.settings-tab:hover {
+  color: var(--text-primary);
+}
+
+.settings-tab.active {
+  color: var(--accent-color);
+  border-bottom-color: var(--accent-color);
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.settings-input {
+  padding: 8px 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: var(--font-family);
+}
+
+.settings-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.settings-input:disabled {
+  opacity: 0.5;
+}
+
+.settings-input option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.settings-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.settings-checkbox-label {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+/* ============ QUEST & STORY ARC SYSTEM ============ */
+
+.quest-manager-modal {
+  width: 90vw;
+  max-width: 1100px;
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.quest-manager-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.quest-list-panel {
+  width: 300px;
+  min-width: 260px;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+}
+
+.quest-list-controls {
+  padding: 8px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.quest-search-input {
+  width: 100%;
+  padding: 6px 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-color);
+  font-size: 13px;
+}
+
+.quest-filter-row {
+  display: flex;
+  gap: 4px;
+}
+
+.quest-filter-row select {
+  flex: 1;
+  font-size: 11px;
+  padding: 3px 4px;
+}
+
+.quest-list-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.quest-list-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.quest-add-btn {
+  margin: 8px;
+}
+
+.quest-detail-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+}
+
+.quest-detail-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-dim);
+  gap: 8px;
+}
+
+/* Quest Row */
+.quest-row {
+  padding: 8px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 2px;
+  transition: background-color 0.15s;
+}
+
+.quest-row:hover {
+  background: var(--hover-bg);
+}
+
+.quest-row.selected {
+  background: var(--selected-bg);
+}
+
+.quest-row-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quest-row-arc-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.quest-row-title {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quest-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.quest-row-progress {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* Quest Status Badge */
+.quest-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.quest-status-badge--small {
+  padding: 1px 6px;
+  font-size: 10px;
+  gap: 3px;
+}
+
+/* Quest Detail Panel */
+.quest-detail-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quest-title-input {
+  width: 100%;
+  font-size: 18px;
+  font-weight: 600;
+  padding: 6px 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-color);
+}
+
+.quest-status-select-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.quest-status-option {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+.quest-status-option.active {
+  border-style: solid;
+}
+
+/* Objectives */
+.quest-objectives-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.quest-objective-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.quest-objective-item input[type="checkbox"] {
+  flex-shrink: 0;
+}
+
+.quest-objective-input {
+  flex: 1;
+  padding: 3px 6px;
+  font-size: 13px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  color: var(--text-color);
+}
+
+.quest-objective-visibility {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+/* Quest Links */
+.quest-links-section .quest-link-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.quest-link-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--hover-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  font-size: 11px;
+}
+
+.chip-remove {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.chip-remove:hover {
+  color: #f44336;
+}
+
+.hex-key-input-row {
+  display: flex;
+  gap: 4px;
+}
+
+.hex-key-input-row input {
+  flex: 1;
+  font-size: 12px;
+  padding: 3px 6px;
+}
+
+/* Extra fields */
+.quest-extra-fields {
+  display: flex;
+  gap: 8px;
+}
+
+.field-group-inline {
+  flex: 1;
+}
+
+.field-group-inline input {
+  width: 100%;
+  font-size: 12px;
+  padding: 3px 6px;
+}
+
+/* Visibility label */
+.quest-visibility-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* Danger zone */
+.quest-danger-zone {
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+  margin-top: 8px;
+}
+
+.btn-danger {
+  background: #f44336;
+  color: white;
+  border: none;
+}
+
+.btn-danger:hover {
+  background: #d32f2f;
+}
+
+.quest-delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+/* Story Arc Editor */
+.story-arc-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.story-arc-color-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.story-arc-color-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.story-arc-color-swatch.selected {
+  border-color: white;
+  box-shadow: 0 0 0 1px var(--border-color);
+}
+
+.story-arc-quest-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.story-arc-quest-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  background: var(--hover-bg);
+  border-radius: 4px;
+}
+
+.story-arc-quest-order {
+  width: 20px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.story-arc-quest-title {
+  flex: 1;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.story-arc-quest-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.rotate-270 {
+  transform: rotate(-90deg);
+}
+
+/* HexDetail quest section */
+.hex-quest-section {
+  margin-top: 8px;
+}
+
+.hex-quest-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.hex-quest-item:hover {
+  color: var(--accent-color);
+}
+
+.hex-quest-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hex-quest-progress {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* Quest graph canvas */
+.quest-graph-canvas {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.quest-graph-canvas:active {
+  cursor: grabbing;
+}
+
+/* Player quest log */
+.player-quest-log {
+  padding: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.player-quest-log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.player-quest-log-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.player-quest-log-filter {
+  font-size: 12px;
+  padding: 3px 6px;
+}
+
+.player-quest-arc-group {
+  margin-bottom: 16px;
+}
+
+.player-quest-arc-title {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.player-quest-item {
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: var(--hover-bg);
+  margin-bottom: 4px;
+}
+
+.player-quest-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.player-quest-item-title {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.player-quest-item-desc {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.player-quest-objectives {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.player-quest-objective {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.player-quest-objective.complete {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.player-quest-log-toggle {
+  position: fixed;
+  top: 48px;
+  right: 16px;
+  z-index: 100;
+  padding: 6px 12px;
+  background: var(--panel-bg, #2a2a2a);
+  border: 1px solid var(--border-color, #444);
+  border-radius: 6px;
+  color: var(--text-color, #e0e0e0);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.player-quest-log-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 50vh;
+  background: var(--panel-bg, #2a2a2a);
+  border-top: 1px solid var(--border-color, #444);
+  z-index: 99;
+  overflow-y: auto;
 }

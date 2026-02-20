@@ -25,6 +25,8 @@
     "screenshots": "node e2e/capture-screenshots.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.97.0",
+    "dexie": "^4.3.0",
     "electron-store": "^8.1.0",
     "jspdf": "^4.0.0",
     "uuid": "^9.0.0"

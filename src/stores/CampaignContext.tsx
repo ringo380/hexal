@@ -2,9 +2,10 @@
 // Direct port from Swift CampaignStore using React Context + useReducer
 
 import React, { createContext, useContext, useReducer, useCallback, useMemo, useEffect, useRef } from 'react';
-import type { Campaign, Hex, HexCoordinate, HexMarker, MarkerType, Npc, EncounterTemplate, Region, Faction, Session, SessionLogEntry } from '../types';
+import type { Campaign, Hex, HexCoordinate, HexMarker, MarkerType, Npc, EncounterTemplate, Region, Faction, Session, SessionLogEntry, TerrainType, Quest, StoryArc } from '../types';
 import { createCampaign, createHex, coordinateKey, createDefaultTimeWeather, createRegion, hexKey } from '../types';
 import { migrateCampaign } from '../types/Campaign';
+import type { PersistenceAdapter } from '../services/persistence';
 import { createMarker, createCustomMarkerType, DEFAULT_MARKER_TYPES } from '../types/Markers';
 import {
   TimeWeatherState,
@@ -686,6 +687,14 @@ interface CampaignContextValue {
   sessions: Session[];
   sessionLog: SessionLogEntry[];
 
+  // Quest/Story Arc helpers
+  quests: Quest[];
+  storyArcs: StoryArc[];
+
+  // Persistence operations
+  listCampaigns: () => Promise<import('../services/persistence').CampaignListItem[]>;
+  deleteCampaignFile: (identifier: string) => Promise<import('../services/persistence').DeleteResult>;
+
   // Region operations
   regions: Region[];
   addRegion: (name: string, color?: string) => Region;
@@ -694,12 +703,19 @@ interface CampaignContextValue {
   addHexToRegion: (regionId: string, coord: HexCoordinate) => void;
   removeHexFromRegion: (regionId: string, coord: HexCoordinate) => void;
   getRegionForHex: (coord: HexCoordinate) => Region | undefined;
+
+  // Terrain type operations
+  terrainTypes: TerrainType[];
+  addTerrainType: (terrain: TerrainType) => void;
+  updateTerrainType: (id: string, updates: Partial<TerrainType>) => void;
+  deleteTerrainType: (id: string, replacementName: string) => void;
+  renameTerrainType: (id: string, newName: string) => void;
 }
 
 const CampaignContext = createContext<CampaignContextValue | null>(null);
 
 // Provider component
-export function CampaignProvider({ children }: { children: React.ReactNode }) {
+export function CampaignProvider({ children, adapter }: { children: React.ReactNode; adapter: PersistenceAdapter }) {
   const [state, dispatch] = useReducer(campaignReducer, initialState);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -716,7 +732,7 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
         if (state.campaign) {
           dispatch({ type: 'MARK_SAVING' });
           try {
-            const result = await window.electronAPI.saveCampaign(
+            const result = await adapter.save(
               state.campaign,
               state.currentFilePath ?? undefined
             );
@@ -736,7 +752,7 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [state.hasUnsavedChanges, state.campaign, state.currentFilePath]);
+  }, [state.hasUnsavedChanges, state.campaign, state.currentFilePath, adapter]);
 
   // Create new campaign
   const newCampaign = useCallback((name: string, width: number, height: number) => {
@@ -747,7 +763,7 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
   // Load campaign from file
   const loadCampaign = useCallback(async (filePath: string) => {
     try {
-      const result = await window.electronAPI.loadCampaign(filePath);
+      const result = await adapter.load(filePath);
       if (result.success && result.campaign) {
         const loaded = migrateCampaign(result.campaign as Campaign);
         dispatch({
@@ -762,7 +778,7 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
       console.error('Load failed:', error);
       throw error;
     }
-  }, []);
+  }, [adapter]);
 
   // Save campaign
   const saveCampaign = useCallback(async () => {
@@ -770,7 +786,7 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
 
     dispatch({ type: 'MARK_SAVING' });
     try {
-      const result = await window.electronAPI.saveCampaign(
+      const result = await adapter.save(
         state.campaign,
         state.currentFilePath ?? undefined
       );
@@ -784,7 +800,7 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: 'MARK_CHANGED' });
       throw error;
     }
-  }, [state.campaign, state.currentFilePath]);
+  }, [state.campaign, state.currentFilePath, adapter]);
 
   // Save As - prompt for new location
   const saveAs = useCallback(async () => {
@@ -1014,6 +1030,12 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
   // Session log (with fallback to empty)
   const sessionLog = state.campaign?.sessionLog ?? [];
 
+  // Quests (with fallback to empty)
+  const quests = state.campaign?.quests ?? [];
+
+  // Story arcs (with fallback to empty)
+  const storyArcs = state.campaign?.storyArcs ?? [];
+
   // Regions (with fallback to empty)
   const regions = state.campaign?.regions ?? [];
 
@@ -1070,6 +1092,92 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
     return (state.campaign?.regions ?? []).find(r => r.hexKeys.includes(key));
   }, [state.campaign?.regions]);
 
+  // Terrain types (with fallback to empty)
+  const terrainTypes = state.campaign?.terrainTypes ?? [];
+
+  // Add a new terrain type
+  const addTerrainType = useCallback((terrain: TerrainType) => {
+    const current = state.campaign?.terrainTypes ?? [];
+    dispatch({ type: 'UPDATE_CAMPAIGN', updates: { terrainTypes: [...current, terrain] } });
+  }, [state.campaign]);
+
+  // Update an existing terrain type
+  const updateTerrainType = useCallback((id: string, updates: Partial<TerrainType>) => {
+    const current = state.campaign?.terrainTypes ?? [];
+    const updated = current.map(t => t.id === id ? { ...t, ...updates } : t);
+    dispatch({ type: 'UPDATE_CAMPAIGN', updates: { terrainTypes: updated } });
+  }, [state.campaign]);
+
+  // Delete a terrain type and reassign all references to replacementName
+  const deleteTerrainType = useCallback((id: string, replacementName: string) => {
+    if (!state.campaign) return;
+    const terrain = state.campaign.terrainTypes.find(t => t.id === id);
+    if (!terrain) return;
+    const oldName = terrain.name;
+
+    // Remove from terrainTypes
+    const updatedTypes = state.campaign.terrainTypes.filter(t => t.id !== id);
+
+    // Reassign hexes
+    const updatedHexes: Record<string, Hex> = {};
+    for (const [key, hex] of Object.entries(state.campaign.hexes)) {
+      updatedHexes[key] = hex.terrain === oldName ? { ...hex, terrain: replacementName } : hex;
+    }
+
+    // Update encounter tables
+    const updatedEncounterTables = (state.campaign.encounterTables ?? []).map(t =>
+      t.terrain === oldName ? { ...t, terrain: replacementName } : t
+    );
+
+    // Update landmark tables
+    const updatedLandmarkTables = (state.campaign.landmarkTables ?? []).map(t =>
+      t.terrain === oldName ? { ...t, terrain: replacementName } : t
+    );
+
+    dispatch({ type: 'UPDATE_CAMPAIGN', updates: {
+      terrainTypes: updatedTypes,
+      hexes: updatedHexes,
+      encounterTables: updatedEncounterTables,
+      landmarkTables: updatedLandmarkTables
+    } });
+  }, [state.campaign]);
+
+  // Rename a terrain type and cascade to all references
+  const renameTerrainType = useCallback((id: string, newName: string) => {
+    if (!state.campaign) return;
+    const terrain = state.campaign.terrainTypes.find(t => t.id === id);
+    if (!terrain || terrain.name === newName) return;
+    const oldName = terrain.name;
+
+    // Update terrain type name
+    const updatedTypes = state.campaign.terrainTypes.map(t =>
+      t.id === id ? { ...t, name: newName } : t
+    );
+
+    // Cascade to hexes
+    const updatedHexes: Record<string, Hex> = {};
+    for (const [key, hex] of Object.entries(state.campaign.hexes)) {
+      updatedHexes[key] = hex.terrain === oldName ? { ...hex, terrain: newName } : hex;
+    }
+
+    // Cascade to encounter tables
+    const updatedEncounterTables = (state.campaign.encounterTables ?? []).map(t =>
+      t.terrain === oldName ? { ...t, terrain: newName } : t
+    );
+
+    // Cascade to landmark tables
+    const updatedLandmarkTables = (state.campaign.landmarkTables ?? []).map(t =>
+      t.terrain === oldName ? { ...t, terrain: newName } : t
+    );
+
+    dispatch({ type: 'UPDATE_CAMPAIGN', updates: {
+      terrainTypes: updatedTypes,
+      hexes: updatedHexes,
+      encounterTables: updatedEncounterTables,
+      landmarkTables: updatedLandmarkTables
+    } });
+  }, [state.campaign]);
+
   // Toggle bookmark for a hex
   const toggleBookmark = useCallback((coord: HexCoordinate) => {
     if (!state.campaign) return;
@@ -1098,6 +1206,13 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
     }
     return result;
   }, [state.campaign]);
+
+  // Persistence operations — delegates to adapter
+  const listCampaigns = useCallback(() => adapter.list(), [adapter]);
+  const deleteCampaignFile = useCallback(
+    (identifier: string) => adapter.delete(identifier),
+    [adapter]
+  );
 
   const value: CampaignContextValue = {
     state,
@@ -1152,6 +1267,10 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
     // Marker helpers
     markerTypes,
 
+    // Persistence operations
+    listCampaigns,
+    deleteCampaignFile,
+
     // Campaign-level updates
     updateCampaignData,
 
@@ -1171,6 +1290,10 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
     sessions,
     sessionLog,
 
+    // Quest/Story Arc helpers
+    quests,
+    storyArcs,
+
     // Region operations
     regions,
     addRegion,
@@ -1178,7 +1301,14 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
     deleteRegion,
     addHexToRegion,
     removeHexFromRegion,
-    getRegionForHex: getRegionForHexFn
+    getRegionForHex: getRegionForHexFn,
+
+    // Terrain type operations
+    terrainTypes,
+    addTerrainType,
+    updateTerrainType,
+    deleteTerrainType,
+    renameTerrainType
   };
 
   return (

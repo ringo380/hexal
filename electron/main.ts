@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, dialog, Menu, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
+import Store from 'electron-store';
 
 // Set app name for macOS menu bar (must be before app.whenReady)
 if (process.platform === 'darwin') {
@@ -457,4 +458,59 @@ ipcMain.on('player-view-campaign-closed', () => {
       win.webContents.send('player-view-campaign-closed');
     }
   });
+});
+
+// ============ SETTINGS IPC HANDLERS ============
+
+const settingsStore = new Store({
+  name: 'settings',
+  defaults: {
+    ai: {
+      openaiKey: '',
+      anthropicKey: '',
+      preferredProvider: 'anthropic',
+    },
+    cloud: {
+      supabaseUrl: '',
+      supabaseAnonKey: '',
+      syncEnabled: false,
+    },
+    general: {
+      userName: '',
+      autoSaveInterval: 2000,
+    },
+  },
+});
+
+// Get all settings
+ipcMain.handle('get-settings', async () => {
+  return settingsStore.store;
+});
+
+// Set all settings (merge)
+ipcMain.handle('set-settings', async (_event, settings) => {
+  try {
+    // Merge at top-level keys to avoid wiping sections
+    for (const [key, value] of Object.entries(settings)) {
+      settingsStore.set(key, value);
+    }
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
+});
+
+// Get a single setting by dot-notation path
+ipcMain.handle('get-setting', async (_event, key: string) => {
+  return settingsStore.get(key);
+});
+
+// Set a single setting by dot-notation path
+ipcMain.handle('set-setting', async (_event, { key, value }: { key: string; value: unknown }) => {
+  try {
+    settingsStore.set(key, value);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
 });

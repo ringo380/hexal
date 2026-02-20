@@ -388,6 +388,129 @@ describe('filterCampaignForPlayer', () => {
     });
   });
 
+  describe('quests and story arcs', () => {
+    it('includes visible quests and strips DM-only fields', () => {
+      const campaign = makeCampaign({}, {
+        quests: [
+          {
+            id: 'q1', title: 'Find the Gem', description: 'A quest', status: 'active',
+            dmNotes: 'Secret DM info', objectives: [
+              { id: 'o1', description: 'Visit the cave', isComplete: false, isVisibleToPlayers: true },
+              { id: 'o2', description: 'DM-only objective', isComplete: false, isVisibleToPlayers: false }
+            ],
+            linkedHexKeys: ['0,0'], linkedNpcRefs: [{ npcId: 'npc1', hexKey: '0,0' }],
+            linkedEncounterIds: ['enc1'], linkedClueIds: ['clue1'], linkedFactionIds: ['f1'],
+            prerequisiteQuestIds: ['q0'], isVisibleToPlayers: true,
+            difficulty: 'hard', estimatedSessions: 3, xpReward: 500,
+            tags: ['main'], createdAt: '2026-01-01', modifiedAt: '2026-01-01'
+          },
+          {
+            id: 'q2', title: 'Hidden Quest', description: 'Not for players', status: 'unknown',
+            dmNotes: '', objectives: [], linkedHexKeys: [], linkedNpcRefs: [],
+            linkedEncounterIds: [], linkedClueIds: [], linkedFactionIds: [],
+            prerequisiteQuestIds: [], isVisibleToPlayers: false,
+            tags: [], createdAt: '2026-01-01', modifiedAt: '2026-01-01'
+          }
+        ] as any[]
+      });
+
+      const result = filterCampaignForPlayer(campaign);
+
+      // Only visible quest included
+      expect(result.quests).toHaveLength(1);
+      expect(result.quests[0].id).toBe('q1');
+      expect(result.quests[0].title).toBe('Find the Gem');
+      expect(result.quests[0].status).toBe('active');
+      expect(result.quests[0].difficulty).toBe('hard');
+
+      // DM-only fields stripped
+      expect(result.quests[0]).not.toHaveProperty('dmNotes');
+      expect(result.quests[0]).not.toHaveProperty('linkedHexKeys');
+      expect(result.quests[0]).not.toHaveProperty('linkedNpcRefs');
+      expect(result.quests[0]).not.toHaveProperty('linkedEncounterIds');
+      expect(result.quests[0]).not.toHaveProperty('linkedClueIds');
+      expect(result.quests[0]).not.toHaveProperty('linkedFactionIds');
+      expect(result.quests[0]).not.toHaveProperty('prerequisiteQuestIds');
+      expect(result.quests[0]).not.toHaveProperty('tags');
+      expect(result.quests[0]).not.toHaveProperty('estimatedSessions');
+      expect(result.quests[0]).not.toHaveProperty('xpReward');
+      expect(result.quests[0]).not.toHaveProperty('createdAt');
+      expect(result.quests[0]).not.toHaveProperty('modifiedAt');
+
+      // Only visible objectives included, stripped of hex/npc refs
+      expect(result.quests[0].objectives).toHaveLength(1);
+      expect(result.quests[0].objectives[0].description).toBe('Visit the cave');
+      expect(result.quests[0].objectives[0]).not.toHaveProperty('isVisibleToPlayers');
+      expect(result.quests[0].objectives[0]).not.toHaveProperty('hexKey');
+      expect(result.quests[0].objectives[0]).not.toHaveProperty('npcRef');
+    });
+
+    it('includes visible story arcs and strips DM-only fields', () => {
+      const campaign = makeCampaign({}, {
+        quests: [
+          {
+            id: 'q1', title: 'Quest 1', description: '', status: 'active',
+            dmNotes: '', objectives: [], linkedHexKeys: [], linkedNpcRefs: [],
+            linkedEncounterIds: [], linkedClueIds: [], linkedFactionIds: [],
+            prerequisiteQuestIds: [], isVisibleToPlayers: true,
+            tags: [], createdAt: '2026-01-01', modifiedAt: '2026-01-01'
+          },
+          {
+            id: 'q2', title: 'Hidden Quest', description: '', status: 'active',
+            dmNotes: '', objectives: [], linkedHexKeys: [], linkedNpcRefs: [],
+            linkedEncounterIds: [], linkedClueIds: [], linkedFactionIds: [],
+            prerequisiteQuestIds: [], isVisibleToPlayers: false,
+            tags: [], createdAt: '2026-01-01', modifiedAt: '2026-01-01'
+          }
+        ] as any[],
+        storyArcs: [
+          {
+            id: 'a1', title: 'Main Arc', description: 'The main story',
+            dmNotes: 'DM secret arc notes', questIds: ['q1', 'q2'],
+            status: 'active', isVisibleToPlayers: true, color: '#ff6b6b'
+          },
+          {
+            id: 'a2', title: 'Hidden Arc', description: 'Secret',
+            dmNotes: '', questIds: [], status: 'planned',
+            isVisibleToPlayers: false, color: '#4ecdc4'
+          }
+        ] as any[]
+      });
+
+      const result = filterCampaignForPlayer(campaign);
+
+      // Only visible arc included
+      expect(result.storyArcs).toHaveLength(1);
+      expect(result.storyArcs[0].id).toBe('a1');
+      expect(result.storyArcs[0].title).toBe('Main Arc');
+      expect(result.storyArcs[0].color).toBe('#ff6b6b');
+      expect(result.storyArcs[0].status).toBe('active');
+
+      // DM-only fields stripped
+      expect(result.storyArcs[0]).not.toHaveProperty('dmNotes');
+      expect(result.storyArcs[0]).not.toHaveProperty('isVisibleToPlayers');
+
+      // questIds filtered to only visible quests
+      expect(result.storyArcs[0].questIds).toEqual(['q1']);
+    });
+
+    it('handles campaigns with no quests or story arcs', () => {
+      const campaign = makeCampaign({});
+      const result = filterCampaignForPlayer(campaign);
+
+      expect(result.quests).toEqual([]);
+      expect(result.storyArcs).toEqual([]);
+    });
+
+    it('handles campaigns with undefined quests/storyArcs', () => {
+      const campaign = makeCampaign({}, { quests: undefined, storyArcs: undefined } as any);
+      const result = filterCampaignForPlayer(campaign);
+
+      expect(result.quests).toEqual([]);
+      expect(result.storyArcs).toEqual([]);
+    });
+  });
+
   describe('multiple hexes', () => {
     it('filters all hexes independently', () => {
       const hexes: Record<string, Hex> = {

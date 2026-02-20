@@ -5,7 +5,8 @@ import {
   createCampaign,
   createHex,
   migrateCampaign,
-  hasUnresolvedContent
+  hasUnresolvedContent,
+  CAMPAIGN_SCHEMA_VERSION
 } from '../types/Campaign';
 import type { Campaign, Hex, Encounter, ContentItem, Npc } from '../types/Campaign';
 
@@ -62,6 +63,12 @@ describe('createCampaign', () => {
     expect(campaign.gridHeight).toBe(6);
     expect(campaign.hexes).toEqual({});
     expect(campaign.terrainTypes.length).toBeGreaterThan(0);
+  });
+
+  it('includes schemaVersion and version', () => {
+    const campaign = createCampaign('Test', 10, 10);
+    expect(campaign.schemaVersion).toBe(CAMPAIGN_SCHEMA_VERSION);
+    expect(campaign.version).toBe(1);
   });
 });
 
@@ -146,6 +153,8 @@ describe('migrateCampaign', () => {
 
   it('returns same reference when no migration needed', () => {
     const campaign = makeLegacyCampaign({
+      schemaVersion: 2,
+      version: 1,
       bookmarkedHexes: [],
       encounterTemplates: [],
       regions: [],
@@ -154,6 +163,8 @@ describe('migrateCampaign', () => {
       factions: [],
       sessions: [],
       sessionLog: [],
+      quests: [],
+      storyArcs: [],
     });
     const migrated = migrateCampaign(campaign);
     // No encounter migration needed, fields exist => same reference
@@ -297,6 +308,36 @@ describe('migrateCampaign', () => {
     expect(migrated.sessionLog).toEqual([]);
   });
 
+  it('adds schemaVersion and version when missing', () => {
+    const legacy = makeLegacyCampaign();
+    expect(legacy.schemaVersion).toBeUndefined();
+    expect(legacy.version).toBeUndefined();
+
+    const migrated = migrateCampaign(legacy);
+    expect(migrated.schemaVersion).toBe(CAMPAIGN_SCHEMA_VERSION);
+    expect(migrated.version).toBe(1);
+  });
+
+  it('updates schemaVersion to current when outdated', () => {
+    const campaign = makeLegacyCampaign({
+      schemaVersion: 1,
+      version: 5,
+      bookmarkedHexes: [],
+      encounterTemplates: [],
+      regions: [],
+      generationConfig: { seed: '', biomeClusteringStrength: 0.6, encounterDensity: 0.4, landmarkDensity: 0.2, terrainVariety: 0.5 },
+      landmarkTables: [],
+      factions: [],
+      sessions: [],
+      sessionLog: [],
+      quests: [],
+      storyArcs: [],
+    });
+    const migrated = migrateCampaign(campaign);
+    expect(migrated.schemaVersion).toBe(CAMPAIGN_SCHEMA_VERSION);
+    expect(migrated.version).toBe(5); // preserved, not reset
+  });
+
   it('preserves existing sessions and sessionLog', () => {
     const sessions = [{ id: 's1', number: 1, title: 'Session 1', summary: '', realWorldDate: '2026-01-01', hexesVisited: [], isVisibleToPlayers: true }];
     const sessionLog = [{ id: 'e1', sessionId: 's1', title: 'Event', description: '', inGameTime: { year: 1, month: 0, day: 1, hour: 8, minute: 0 }, hexKeys: [], tags: [] as any[], isVisibleToPlayers: true }];
@@ -304,5 +345,24 @@ describe('migrateCampaign', () => {
     const migrated = migrateCampaign(campaign);
     expect(migrated.sessions).toEqual(sessions);
     expect(migrated.sessionLog).toEqual(sessionLog);
+  });
+
+  it('adds quests: [] and storyArcs: [] when missing', () => {
+    const legacy = makeLegacyCampaign();
+    expect(legacy.quests).toBeUndefined();
+    expect(legacy.storyArcs).toBeUndefined();
+
+    const migrated = migrateCampaign(legacy);
+    expect(migrated.quests).toEqual([]);
+    expect(migrated.storyArcs).toEqual([]);
+  });
+
+  it('preserves existing quests and storyArcs', () => {
+    const quests = [{ id: 'q1', title: 'Find the Gem', description: '', status: 'active', dmNotes: '', objectives: [], linkedHexKeys: [], linkedNpcRefs: [], linkedEncounterIds: [], linkedClueIds: [], linkedFactionIds: [], prerequisiteQuestIds: [], isVisibleToPlayers: true, tags: [], createdAt: '2026-01-01', modifiedAt: '2026-01-01' }];
+    const storyArcs = [{ id: 'a1', title: 'Main Arc', description: '', dmNotes: '', questIds: ['q1'], status: 'active', isVisibleToPlayers: true, color: '#ff0000' }];
+    const campaign = makeLegacyCampaign({ quests, storyArcs } as any);
+    const migrated = migrateCampaign(campaign);
+    expect(migrated.quests).toEqual(quests);
+    expect(migrated.storyArcs).toEqual(storyArcs);
   });
 });

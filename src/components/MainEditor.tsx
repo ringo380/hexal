@@ -18,9 +18,15 @@ import EncounterTableEditorModal from './modals/EncounterTableEditorModal';
 import LandmarkTableEditorModal from './modals/LandmarkTableEditorModal';
 import EncounterTemplateLibrary from './modals/EncounterTemplateLibrary';
 import RegionManagerModal from './modals/RegionManagerModal';
+import TerrainEditorModal from './modals/TerrainEditorModal';
 import NpcDirectoryModal from './modals/NpcDirectoryModal';
 import RelationshipWebModal from './modals/RelationshipWebModal';
 import SessionLogModal from './modals/SessionLogModal';
+import QuestManagerModal from './modals/QuestManagerModal';
+import SettingsModal from './modals/SettingsModal';
+import LoginModal from './auth/LoginModal';
+import ProfileMenu from './auth/ProfileMenu';
+import ConnectionStatus from './ui/ConnectionStatus';
 import CommandPalette from './CommandPalette';
 import Icon from './icons/Icon';
 import { CATEGORY_INFO, type ContentCategory, parseHexKey } from '../types/Campaign';
@@ -58,6 +64,10 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
   const [showNpcDirectory, setShowNpcDirectory] = useState(false);
   const [showRelationshipWeb, setShowRelationshipWeb] = useState(false);
   const [showSessionLog, setShowSessionLog] = useState(false);
+  const [showTerrainEditor, setShowTerrainEditor] = useState(false);
+  const [showQuestManager, setShowQuestManager] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
 
   // Register export handler for menu command
   useEffect(() => {
@@ -121,6 +131,11 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
       if ((e.metaKey || e.ctrlKey) && e.key === 'l') {
         e.preventDefault();
         setShowSessionLog(true);
+      }
+      // Cmd+J to open quest manager
+      if ((e.metaKey || e.ctrlKey) && e.key === 'j') {
+        e.preventDefault();
+        setShowQuestManager(true);
       }
       // Cmd+? (Cmd+Shift+/) to show keyboard shortcuts
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '/') {
@@ -322,8 +337,14 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
           <button className="btn btn-secondary" onClick={() => setShowRegionManager(true)}>
             <Icon name="map" size={16} /> Regions
           </button>
+          <button className="btn btn-secondary" onClick={() => setShowTerrainEditor(true)}>
+            <Icon name="hexagon" size={16} /> Terrain
+          </button>
           <button className="btn btn-secondary" onClick={() => setShowSessionLog(true)}>
             <Icon name="calendar" size={16} /> Sessions
+          </button>
+          <button className="btn btn-secondary" onClick={() => setShowQuestManager(true)}>
+            <Icon name="star" size={16} /> Quests
           </button>
           <button className="btn btn-secondary" onClick={() => setShowGenerator(true)}>
             <Icon name="dice" size={16} /> Generate
@@ -333,6 +354,11 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
           </button>
           <button className="btn btn-secondary" onClick={() => setShowExport(true)}>
             <Icon name="export" size={16} /> Export Data
+          </button>
+          <ConnectionStatus />
+          <ProfileMenu onOpenLogin={() => setShowLogin(true)} />
+          <button className="btn btn-icon" onClick={() => setShowSettings(true)} title="Settings" aria-label="Settings">
+            <Icon name="settings" size={18} />
           </button>
         </div>
       </div>
@@ -399,6 +425,9 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
       {showRegionManager && (
         <RegionManagerModal onClose={() => setShowRegionManager(false)} />
       )}
+      {showTerrainEditor && (
+        <TerrainEditorModal onClose={() => setShowTerrainEditor(false)} />
+      )}
       {showNpcDirectory && (
         <NpcDirectoryModal
           onClose={() => setShowNpcDirectory(false)}
@@ -422,6 +451,15 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
             }
           }}
         />
+      )}
+      {showQuestManager && (
+        <QuestManagerModal onClose={() => setShowQuestManager(false)} />
+      )}
+      {showSettings && (
+        <SettingsModal onClose={() => setShowSettings(false)} />
+      )}
+      {showLogin && (
+        <LoginModal onClose={() => setShowLogin(false)} />
       )}
       {isCommandPaletteOpen && (
         <CommandPalette onClose={closeCommandPalette} />

@@ -62,6 +62,11 @@ interface ElectronAPI {
   notifyPlayerViewCampaignClosed: () => void;
   onPlayerViewUpdate: (callback: (data: unknown) => void) => () => void;
   onPlayerViewCampaignClosed: (callback: () => void) => () => void;
+  // Settings
+  getSettings: () => Promise<Record<string, unknown>>;
+  setSettings: (settings: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
+  getSetting: (key: string) => Promise<unknown>;
+  setSetting: (key: string, value: unknown) => Promise<{ success: boolean; error?: string }>;
 }
 
 declare global {

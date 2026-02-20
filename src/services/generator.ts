@@ -33,7 +33,11 @@ const TERRAIN_ELEVATION: Record<string, number> = {
   Coast: 0
 };
 
-export function getTerrainElevation(terrain: string): number {
+export function getTerrainElevation(terrain: string, terrainTypes?: TerrainType[]): number {
+  if (terrainTypes) {
+    const t = terrainTypes.find(tt => tt.name === terrain);
+    if (t?.elevation !== undefined) return t.elevation;
+  }
   return TERRAIN_ELEVATION[terrain] ?? 1;
 }
 
@@ -73,7 +77,11 @@ const TERRAIN_MOVE_COST: Record<string, number> = {
   Coast: 5 // Discourage roads through coast
 };
 
-function getMoveCost(terrain: string): number {
+function getMoveCost(terrain: string, terrainTypes?: TerrainType[]): number {
+  if (terrainTypes) {
+    const t = terrainTypes.find(tt => tt.name === terrain);
+    if (t?.moveCost !== undefined) return t.moveCost;
+  }
   return TERRAIN_MOVE_COST[terrain] ?? 1;
 }
 
@@ -425,7 +433,8 @@ export function generateRivers(
   gridWidth: number,
   gridHeight: number,
   rng: SeededRNG,
-  count?: number
+  count?: number,
+  terrainTypes?: TerrainType[]
 ): Record<string, Hex> {
   const result: Record<string, Hex> = {};
   // Deep-copy only the hexes that exist, preserving connections
@@ -443,7 +452,7 @@ export function generateRivers(
   // Find potential source hexes (high elevation)
   const sources: string[] = [];
   for (const [key, hex] of Object.entries(result)) {
-    if (hex.terrain && getTerrainElevation(hex.terrain) >= 3) {
+    if (hex.terrain && getTerrainElevation(hex.terrain, terrainTypes) >= 3) {
       sources.push(key);
     }
   }
@@ -469,7 +478,7 @@ export function generateRivers(
 
       const currentHex = result[currentKey];
       if (!currentHex) break;
-      const currentElev = getTerrainElevation(currentHex.terrain);
+      const currentElev = getTerrainElevation(currentHex.terrain, terrainTypes);
 
       // Check termination: Coast or Swamp
       if (currentHex.terrain === 'Coast' || currentHex.terrain === 'Swamp') break;
@@ -480,7 +489,7 @@ export function generateRivers(
         .map((nCoord, idx) => {
           const nKey = hexKey(nCoord);
           const nHex = result[nKey];
-          const elev = nHex ? getTerrainElevation(nHex.terrain) : 1;
+          const elev = nHex ? getTerrainElevation(nHex.terrain, terrainTypes) : 1;
           return { coord: nCoord, key: nKey, elev, neighborIdx: idx };
         })
         .filter(n => !visited.has(n.key) && n.elev <= currentElev)
@@ -545,7 +554,8 @@ export function generateRoads(
   gridWidth: number,
   gridHeight: number,
   rng: SeededRNG,
-  count?: number
+  count?: number,
+  terrainTypes?: TerrainType[]
 ): Record<string, Hex> {
   const result: Record<string, Hex> = {};
   for (const [key, hex] of Object.entries(hexes)) {
@@ -575,7 +585,7 @@ export function generateRoads(
     const endKey = endpoints[i + 1];
 
     const path = aStarPath(
-      startKey, endKey, result, gridWidth, gridHeight, rng
+      startKey, endKey, result, gridWidth, gridHeight, rng, terrainTypes
     );
 
     if (path && path.length >= 2) {
@@ -625,7 +635,8 @@ function aStarPath(
   hexes: Record<string, Hex>,
   gridWidth: number,
   gridHeight: number,
-  rng: SeededRNG
+  rng: SeededRNG,
+  terrainTypes?: TerrainType[]
 ): string[] | null {
   const endCoord = parseHexKey(endKey);
   if (!endCoord) return null;
@@ -677,7 +688,7 @@ function aStarPath(
       const nHex = hexes[nKey];
       if (!nHex) continue;
 
-      const cost = getMoveCost(nHex.terrain) + rng.next() * 0.5; // Small perturbation
+      const cost = getMoveCost(nHex.terrain, terrainTypes) + rng.next() * 0.5; // Small perturbation
       const tentativeG = (gScore[current] ?? Infinity) + cost;
 
       if (tentativeG < (gScore[nKey] ?? Infinity)) {
