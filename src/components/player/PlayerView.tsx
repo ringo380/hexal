@@ -5,6 +5,7 @@ import type { PlayerCampaign } from '../../services/playerViewFilter';
 import PlayerHexGrid from './PlayerHexGrid';
 import PlayerHexInfo from './PlayerHexInfo';
 import PlayerSidebar from './PlayerSidebar';
+import PlayerQuestLog from './PlayerQuestLog';
 import type { HexCoordinate } from '../../types';
 import { WEATHER_CONDITION_LABELS, TEMPERATURE_LABELS } from '../../types/Weather';
 
@@ -17,6 +18,7 @@ interface PlayerViewProps {
 function PlayerView({ campaign }: PlayerViewProps) {
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('presentation');
   const [selectedHexKey, setSelectedHexKey] = useState<string | null>(null);
+  const [showQuestLog, setShowQuestLog] = useState(false);
 
   const selectedHex = selectedHexKey ? campaign.hexes[selectedHexKey] ?? null : null;
 
@@ -68,6 +70,16 @@ function PlayerView({ campaign }: PlayerViewProps) {
         {layoutMode === 'presentation' ? 'Explorer' : 'Presentation'}
       </button>
 
+      {/* Quest log toggle */}
+      {campaign.quests.length > 0 && (
+        <button
+          className="player-quest-log-toggle"
+          onClick={() => setShowQuestLog(!showQuestLog)}
+        >
+          {showQuestLog ? 'Hide Quests' : 'Quest Log'}
+        </button>
+      )}
+
       {/* Campaign name overlay (presentation mode) */}
       {layoutMode === 'presentation' && (
         <div className="player-campaign-name">{campaign.name}</div>
@@ -102,6 +114,13 @@ function PlayerView({ campaign }: PlayerViewProps) {
             terrainName={getTerrainName(selectedHex.terrain)}
             onClose={() => setSelectedHexKey(null)}
           />
+        </div>
+      )}
+
+      {/* Quest log panel */}
+      {showQuestLog && campaign.quests.length > 0 && (
+        <div className="player-quest-log-panel">
+          <PlayerQuestLog campaign={campaign} />
         </div>
       )}
     </div>

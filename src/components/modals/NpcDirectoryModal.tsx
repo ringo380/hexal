@@ -3,6 +3,7 @@ import { useCampaign } from '../../stores/CampaignContext';
 import type { Npc, NpcAttitude, Faction } from '../../types/Campaign';
 import { ATTITUDE_INFO, parseHexKey } from '../../types/Campaign';
 import { moveNpc } from '../../services/npcService';
+import { updateQuestNpcHexKey } from '../../services/questService';
 import AlignmentBadge from '../npcs/AlignmentBadge';
 import AttitudeBadge from '../npcs/AttitudeBadge';
 import FactionBadge from '../npcs/FactionBadge';
@@ -75,6 +76,8 @@ function NpcDirectoryModal({ onClose, onOpenRelationshipWeb }: NpcDirectoryModal
 
     const result = moveNpc(campaign, selectedEntry.npc.id, selectedEntry.hexKey, trimmed);
     updateCampaignData(result);
+    const questUpdate = updateQuestNpcHexKey(campaign, selectedEntry.npc.id, selectedEntry.hexKey, trimmed);
+    updateCampaignData(questUpdate);
     setMoveTargetHex('');
     setMoveError('');
     setSelectedNpcId(null);

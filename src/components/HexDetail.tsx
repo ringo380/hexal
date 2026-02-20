@@ -7,6 +7,7 @@ import { createContentItem, createNpc, createHex } from '../types';
 import type { Encounter, EncounterTemplate } from '../types/Campaign';
 import { createEncounter, instantiateFromTemplate } from '../types/Campaign';
 import { deleteNpcCleanup } from '../services/npcService';
+import { getQuestsForHex, removeNpcFromQuests, removeEncounterFromQuests, removeClueFromQuests } from '../services/questService';
 import { getEntriesForHex } from '../services/sessionLog';
 import ConfirmDialog from './modals/ConfirmDialog';
 import { getMarkerType, getMarkerColor, getMarkerIcon } from '../types/Markers';
@@ -28,6 +29,7 @@ import {
 import { getWeatherSummary } from '../services/weather';
 import { formatTravelModifier, formatVisibilityModifier, formatEncounterModifier } from '../data/weatherEffects';
 import SessionTagBadge from './sessions/SessionTagBadge';
+import QuestStatusBadge from './quests/QuestStatusBadge';
 import Icon from './icons/Icon';
 
 import type { IconName } from './icons/Icon';
@@ -207,6 +209,8 @@ function HexDetail() {
     const hexKey = `${selectedCoordinate.q},${selectedCoordinate.r}`;
     const cleanup = deleteNpcCleanup(campaign, npcToDelete.id, hexKey);
     updateCampaignData(cleanup);
+    const questCleanup = removeNpcFromQuests(campaign, npcToDelete.id);
+    updateCampaignData(questCleanup);
     setNpcToDelete(null);
   };
 
@@ -231,6 +235,13 @@ function HexDetail() {
       [category]: currentHex[category].filter(item => item.id !== itemId)
     };
     saveHex(updated);
+    if (campaign) {
+      if (category === 'encounters') {
+        updateCampaignData(removeEncounterFromQuests(campaign, itemId));
+      } else if (category === 'clues') {
+        updateCampaignData(removeClueFromQuests(campaign, itemId));
+      }
+    }
   };
 
   const toggleResolved = (category: ContentCategory, itemId: string) => {
@@ -442,6 +453,16 @@ function HexDetail() {
           if (hexEntries.length === 0) return null;
           return (
             <HexSessionHistory entries={hexEntries} sessions={sessions} />
+          );
+        })()}
+
+        {/* Quests */}
+        {selectedCoordinate && campaign && (() => {
+          const hexKey = `${selectedCoordinate.q},${selectedCoordinate.r}`;
+          const hexQuests = getQuestsForHex(campaign, hexKey);
+          if (hexQuests.length === 0) return null;
+          return (
+            <HexQuestSection quests={hexQuests} />
           );
         })()}
       </div>
@@ -1031,6 +1052,43 @@ function MarkerSection({
             );
           })}
           <p className="marker-hint">Click to select • Double-click name to edit • Delete key to remove</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Hex quest section
+interface HexQuestSectionProps {
+  quests: import('../types/Quest').Quest[];
+}
+
+function HexQuestSection({ quests }: HexQuestSectionProps) {
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  return (
+    <div className="content-section hex-quest-section">
+      <div className="section-header" onClick={() => setIsExpanded(!isExpanded)}>
+        <span className="section-icon"><Icon name="star" size={14} /></span>
+        <span className="section-title">Quests</span>
+        <span className="section-count">{quests.length}</span>
+        <span className="section-toggle"><Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} size={12} /></span>
+      </div>
+      {isExpanded && (
+        <div className="section-content">
+          {quests.map(quest => {
+            const completed = quest.objectives.filter(o => o.isComplete).length;
+            const total = quest.objectives.length;
+            return (
+              <div key={quest.id} className="hex-quest-item">
+                <QuestStatusBadge status={quest.status} size="small" />
+                <span className="hex-quest-title">{quest.title || 'Untitled'}</span>
+                {total > 0 && (
+                  <span className="hex-quest-progress">{completed}/{total}</span>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

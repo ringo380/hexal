@@ -123,7 +123,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const handler = () => callback();
     ipcRenderer.on('player-view-campaign-closed', handler);
     return () => ipcRenderer.removeListener('player-view-campaign-closed', handler);
-  }
+  },
+
+  // Settings operations
+  getSettings: (): Promise<Record<string, unknown>> =>
+    ipcRenderer.invoke('get-settings'),
+
+  setSettings: (settings: Record<string, unknown>): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('set-settings', settings),
+
+  getSetting: (key: string): Promise<unknown> =>
+    ipcRenderer.invoke('get-setting', key),
+
+  setSetting: (key: string, value: unknown): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('set-setting', { key, value })
 });
 
 // Type declaration for window.electronAPI
@@ -148,6 +161,11 @@ declare global {
       notifyPlayerViewCampaignClosed: () => void;
       onPlayerViewUpdate: (callback: (data: unknown) => void) => () => void;
       onPlayerViewCampaignClosed: (callback: () => void) => () => void;
+      // Settings
+      getSettings: () => Promise<Record<string, unknown>>;
+      setSettings: (settings: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
+      getSetting: (key: string) => Promise<unknown>;
+      setSetting: (key: string, value: unknown) => Promise<{ success: boolean; error?: string }>;
     };
   }
 }

@@ -206,12 +206,12 @@ function GeneratorModal({ onClose }: GeneratorModalProps) {
 
       // Step 3: Generate rivers
       if (generateRiversEnabled) {
-        hexes = generateRivers(hexes, campaign.gridWidth, campaign.gridHeight, rng.fork('rivers'));
+        hexes = generateRivers(hexes, campaign.gridWidth, campaign.gridHeight, rng.fork('rivers'), undefined, campaign.terrainTypes);
       }
 
       // Step 4: Generate roads
       if (generateRoadsEnabled) {
-        hexes = generateRoads(hexes, campaign.gridWidth, campaign.gridHeight, rng.fork('roads'));
+        hexes = generateRoads(hexes, campaign.gridWidth, campaign.gridHeight, rng.fork('roads'), undefined, campaign.terrainTypes);
       }
 
       // Single batch update — one undo state, one autosave

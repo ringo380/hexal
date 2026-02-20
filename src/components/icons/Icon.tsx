@@ -61,6 +61,12 @@ export type IconName =
   // Search & Navigation Icons
   | 'search'
   | 'star'
+  // Terrain Icons
+  | 'tree'
+  | 'triangle'
+  | 'mountain'
+  | 'drop'
+  | 'water'
   // NPC & Faction Icons
   | 'shield'
   | 'users'
@@ -1157,6 +1163,128 @@ const icons: Record<IconName, JSX.Element> = {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
+        fill="none"
+      />
+    </>
+  ),
+
+  // ============ Terrain Icons ============
+
+  'tree': (
+    <>
+      {/* Secondary - foliage fill */}
+      <path
+        d="M12 2L5 12h3l-2 5h12l-2-5h3L12 2z"
+        fill="var(--icon-secondary)"
+      />
+      {/* Primary - tree outline */}
+      <path
+        d="M12 2L5 12h3l-2 5h12l-2-5h3L12 2z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      {/* Trunk */}
+      <path
+        d="M12 17v5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </>
+  ),
+  'triangle': (
+    <>
+      {/* Secondary - triangle fill */}
+      <path
+        d="M12 3L2 21h20L12 3z"
+        fill="var(--icon-secondary)"
+      />
+      {/* Primary - triangle outline */}
+      <path
+        d="M12 3L2 21h20L12 3z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </>
+  ),
+  'mountain': (
+    <>
+      {/* Secondary - mountain fill */}
+      <path
+        d="M2 20L8 8l4 5 3-4 5 11H2z"
+        fill="var(--icon-secondary)"
+      />
+      {/* Primary - mountain outline */}
+      <path
+        d="M2 20L8 8l4 5 3-4 5 11H2z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      {/* Snow cap */}
+      <path
+        d="M8 8l2 3 1-1"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </>
+  ),
+  'drop': (
+    <>
+      {/* Secondary - drop fill */}
+      <path
+        d="M12 2C8 8 4 12 4 16a8 8 0 0 0 16 0c0-4-4-8-8-14z"
+        fill="var(--icon-secondary)"
+      />
+      {/* Primary - drop outline */}
+      <path
+        d="M12 2C8 8 4 12 4 16a8 8 0 0 0 16 0c0-4-4-8-8-14z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </>
+  ),
+  'water': (
+    <>
+      {/* Secondary - wave fill */}
+      <path
+        d="M2 12c2-2 4-2 6 0s4 2 6 0 4-2 6 0v6H2v-6z"
+        fill="var(--icon-secondary)"
+      />
+      {/* Primary - wave lines */}
+      <path
+        d="M2 8c2-2 4-2 6 0s4 2 6 0 4-2 6 0"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <path
+        d="M2 14c2-2 4-2 6 0s4 2 6 0 4-2 6 0"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <path
+        d="M2 20c2-2 4-2 6 0s4 2 6 0 4-2 6 0"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
         fill="none"
       />
     </>

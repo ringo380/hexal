@@ -3,6 +3,7 @@
 import type { Campaign, Hex, TerrainType, HexCoordinate, DiscoveryStatus, HexConnections, Faction, NpcAttitude } from '../types';
 import type { TimeWeatherState } from '../types/Weather';
 import type { MarkerType, HexMarker } from '../types/Markers';
+import type { QuestStatus, StoryArcStatus } from '../types/Quest';
 
 // Player-safe NPC data (name + optional faction/attitude)
 export interface PlayerNpc {
@@ -53,6 +54,34 @@ export interface PlayerSessionLogEntry {
   hexKeys: string[];
 }
 
+// Player-safe quest objective (visible objectives only)
+export interface PlayerQuestObjective {
+  id: string;
+  description: string;
+  isComplete: boolean;
+}
+
+// Player-safe quest data (stripped of DM info)
+export interface PlayerQuest {
+  id: string;
+  title: string;
+  description: string;
+  status: QuestStatus;
+  objectives: PlayerQuestObjective[];
+  storyArcId?: string;
+  difficulty?: string;
+}
+
+// Player-safe story arc
+export interface PlayerStoryArc {
+  id: string;
+  title: string;
+  description: string;
+  questIds: string[];
+  status: StoryArcStatus;
+  color: string;
+}
+
 // Player-safe campaign data
 export interface PlayerCampaign {
   id: string;
@@ -66,6 +95,8 @@ export interface PlayerCampaign {
   regions: PlayerRegion[];
   sessions: PlayerSession[];
   sessionLog: PlayerSessionLogEntry[];
+  quests: PlayerQuest[];
+  storyArcs: PlayerStoryArc[];
 }
 
 /**
@@ -114,6 +145,40 @@ export function filterCampaignForPlayer(campaign: Campaign): PlayerCampaign {
       hexKeys: e.hexKeys
     }));
 
+  // Filter quests to only player-visible ones, strip DM-only fields
+  const quests: PlayerQuest[] = (campaign.quests ?? [])
+    .filter(q => q.isVisibleToPlayers)
+    .map(q => ({
+      id: q.id,
+      title: q.title,
+      description: q.description,
+      status: q.status,
+      objectives: q.objectives
+        .filter(o => o.isVisibleToPlayers)
+        .map(o => ({
+          id: o.id,
+          description: o.description,
+          isComplete: o.isComplete
+        })),
+      storyArcId: q.storyArcId,
+      difficulty: q.difficulty
+    }));
+
+  // Build set of visible quest IDs for filtering story arc questIds
+  const visibleQuestIds = new Set(quests.map(q => q.id));
+
+  // Filter story arcs to only player-visible ones, strip DM-only fields
+  const storyArcs: PlayerStoryArc[] = (campaign.storyArcs ?? [])
+    .filter(a => a.isVisibleToPlayers)
+    .map(a => ({
+      id: a.id,
+      title: a.title,
+      description: a.description,
+      questIds: a.questIds.filter(qId => visibleQuestIds.has(qId)),
+      status: a.status,
+      color: a.color
+    }));
+
   return {
     id: campaign.id,
     name: campaign.name,
@@ -125,7 +190,9 @@ export function filterCampaignForPlayer(campaign: Campaign): PlayerCampaign {
     markerTypes: campaign.markerTypes,
     regions,
     sessions,
-    sessionLog
+    sessionLog,
+    quests,
+    storyArcs
   };
 }
 

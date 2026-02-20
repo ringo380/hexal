@@ -13,7 +13,8 @@ export type SearchMatchType =
   | 'reward'
   | 'outcome'
   | 'region'
-  | 'session-log';
+  | 'session-log'
+  | 'quest';
 
 export interface SearchMatch {
   hexKey: string;
@@ -68,6 +69,32 @@ export function searchCampaign(campaign: Campaign, query: string): SearchResult[
             matchType: 'session-log',
             itemTitle: entry.title,
             matchText: entry.title.toLowerCase().includes(q) ? entry.title : entry.description
+          };
+          const existing = resultMap.get(hexKey);
+          if (existing) {
+            existing.matches.push(match);
+          } else {
+            const result = { hexKey, hex, matches: [match] };
+            results.push(result);
+            resultMap.set(hexKey, result);
+          }
+        }
+      }
+    }
+  }
+
+  // Search quests
+  if (campaign.quests) {
+    for (const quest of campaign.quests) {
+      if (quest.title.toLowerCase().includes(q) || quest.description.toLowerCase().includes(q)) {
+        for (const hexKey of quest.linkedHexKeys) {
+          const hex = campaign.hexes[hexKey];
+          if (!hex) continue;
+          const match: SearchMatch = {
+            hexKey,
+            matchType: 'quest',
+            itemTitle: quest.title,
+            matchText: quest.title.toLowerCase().includes(q) ? quest.title : quest.description
           };
           const existing = resultMap.get(hexKey);
           if (existing) {
@@ -207,6 +234,7 @@ export function getMatchHint(matches: SearchMatch[]): string {
     case 'content-description': return `${m.category}: ${m.itemTitle}`;
     case 'region': return `region: ${m.matchText}`;
     case 'session-log': return `session log: ${m.itemTitle || m.matchText}`;
+    case 'quest': return `quest: ${m.itemTitle || m.matchText}`;
     default: return '';
   }
 }

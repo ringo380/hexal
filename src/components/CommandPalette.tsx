@@ -89,6 +89,22 @@ function CommandPalette({ onClose }: CommandPaletteProps) {
         });
       }
 
+      // Active Quests (top 5)
+      const activeQuests = (campaign.quests ?? []).filter(q => q.status === 'active').slice(0, 5);
+      for (const quest of activeQuests) {
+        const firstKey = quest.linkedHexKeys[0];
+        if (!firstKey) continue;
+        const parsed = parseHexKey(firstKey);
+        const coord = parsed || { q: 0, r: 0 };
+        result.push({
+          id: `quest-${quest.id}`,
+          label: quest.title || 'Untitled Quest',
+          sublabel: `Active \u2022 ${quest.objectives.filter(o => o.isComplete).length}/${quest.objectives.length} objectives`,
+          section: 'Active Quests',
+          coord
+        });
+      }
+
       return result;
     }
 

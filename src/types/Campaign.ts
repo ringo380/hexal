@@ -4,6 +4,10 @@ import { TimeWeatherState, DEFAULT_WEATHER, DEFAULT_TIME, CalendarSystem, Curren
 import { CALENDAR_PRESETS } from '../data/calendars';
 import { HexMarker, MarkerType, DEFAULT_MARKER_TYPES } from './Markers';
 import { DEFAULT_EXPANDED_ENCOUNTER_TABLES, DEFAULT_LANDMARK_TABLES } from '../data/generatorTables';
+import type { Quest, StoryArc } from './Quest';
+
+/** Current campaign schema version. Increment when making breaking data model changes. */
+export const CAMPAIGN_SCHEMA_VERSION = 2;
 
 export interface Campaign {
   id: string;
@@ -15,6 +19,24 @@ export interface Campaign {
   encounterTables: EncounterTable[];
   createdAt: string; // ISO date string
   modifiedAt: string;
+
+  /**
+   * Schema version for migration support.
+   * Optional for backward compatibility with legacy campaign files.
+   */
+  schemaVersion?: number;
+
+  /**
+   * Monotonic counter for sync conflict detection.
+   * Incremented on each save. Optional for backward compat.
+   */
+  version?: number;
+
+  /**
+   * User attribution for collaboration (user ID or display name).
+   * Optional for backward compatibility with legacy campaign files.
+   */
+  lastModifiedBy?: string;
 
   /**
    * Weather & Time System state.
@@ -77,6 +99,18 @@ export interface Campaign {
    * Optional for backward compatibility with legacy campaign files.
    */
   sessionLog?: SessionLogEntry[];
+
+  /**
+   * Quests for this campaign.
+   * Optional for backward compatibility with legacy campaign files.
+   */
+  quests?: Quest[];
+
+  /**
+   * Story arcs grouping quests into narrative threads.
+   * Optional for backward compatibility with legacy campaign files.
+   */
+  storyArcs?: StoryArc[];
 }
 
 export interface Hex {
@@ -120,6 +154,9 @@ export interface TerrainType {
   colorHex: string;
   icon: string;
   weight: number;
+  moveCost?: number;    // 1-5, default 1 (used by road pathfinding)
+  elevation?: number;   // 0-5, default 1 (used by river generation)
+  isDefault?: boolean;  // true for built-in terrains
 }
 
 export interface EncounterTable {
@@ -243,6 +280,8 @@ export function createCampaign(name: string, gridWidth: number, gridHeight: numb
     encounterTables: DEFAULT_EXPANDED_ENCOUNTER_TABLES,
     createdAt: new Date().toISOString(),
     modifiedAt: new Date().toISOString(),
+    schemaVersion: CAMPAIGN_SCHEMA_VERSION,
+    version: 1,
     timeWeather: createDefaultTimeWeather(),
     markerTypes: DEFAULT_MARKER_TYPES,
     encounterTemplates: [],
@@ -252,7 +291,9 @@ export function createCampaign(name: string, gridWidth: number, gridHeight: numb
     landmarkTables: DEFAULT_LANDMARK_TABLES,
     factions: [],
     sessions: [],
-    sessionLog: []
+    sessionLog: [],
+    quests: [],
+    storyArcs: []
   };
 }
 
@@ -285,16 +326,16 @@ export function createContentItem(title: string = ''): ContentItem {
 
 // Default data (ported from Swift)
 export const DEFAULT_TERRAIN_TYPES: TerrainType[] = [
-  { id: crypto.randomUUID(), name: 'Plains', colorHex: '#90EE90', icon: 'leaf', weight: 3 },
-  { id: crypto.randomUUID(), name: 'Forest', colorHex: '#228B22', icon: 'tree', weight: 2 },
-  { id: crypto.randomUUID(), name: 'Hills', colorHex: '#DEB887', icon: 'triangle', weight: 2 },
-  { id: crypto.randomUUID(), name: 'Mountains', colorHex: '#A0A0A0', icon: 'mountain', weight: 1 },
-  { id: crypto.randomUUID(), name: 'Swamp', colorHex: '#556B2F', icon: 'drop', weight: 1 },
-  { id: crypto.randomUUID(), name: 'Desert', colorHex: '#F4A460', icon: 'sun', weight: 1 },
-  { id: crypto.randomUUID(), name: 'Coast', colorHex: '#87CEEB', icon: 'water', weight: 1 },
-  { id: crypto.randomUUID(), name: 'Jungle', colorHex: '#006400', icon: 'leaf', weight: 1 },
-  { id: crypto.randomUUID(), name: 'Tundra', colorHex: '#E0FFFF', icon: 'snowflake', weight: 1 },
-  { id: crypto.randomUUID(), name: 'Grassland', colorHex: '#7CFC00', icon: 'wind', weight: 2 }
+  { id: crypto.randomUUID(), name: 'Plains', colorHex: '#90EE90', icon: 'leaf', weight: 3, moveCost: 1, elevation: 1, isDefault: true },
+  { id: crypto.randomUUID(), name: 'Forest', colorHex: '#228B22', icon: 'tree', weight: 2, moveCost: 2, elevation: 2, isDefault: true },
+  { id: crypto.randomUUID(), name: 'Hills', colorHex: '#DEB887', icon: 'triangle', weight: 2, moveCost: 2, elevation: 3, isDefault: true },
+  { id: crypto.randomUUID(), name: 'Mountains', colorHex: '#A0A0A0', icon: 'mountain', weight: 1, moveCost: 4, elevation: 5, isDefault: true },
+  { id: crypto.randomUUID(), name: 'Swamp', colorHex: '#556B2F', icon: 'drop', weight: 1, moveCost: 3, elevation: 0, isDefault: true },
+  { id: crypto.randomUUID(), name: 'Desert', colorHex: '#F4A460', icon: 'sun', weight: 1, moveCost: 1, elevation: 1, isDefault: true },
+  { id: crypto.randomUUID(), name: 'Coast', colorHex: '#87CEEB', icon: 'water', weight: 1, moveCost: 5, elevation: 0, isDefault: true },
+  { id: crypto.randomUUID(), name: 'Jungle', colorHex: '#006400', icon: 'leaf', weight: 1, moveCost: 3, elevation: 2, isDefault: true },
+  { id: crypto.randomUUID(), name: 'Tundra', colorHex: '#E0FFFF', icon: 'snowflake', weight: 1, moveCost: 2, elevation: 2, isDefault: true },
+  { id: crypto.randomUUID(), name: 'Grassland', colorHex: '#7CFC00', icon: 'wind', weight: 2, moveCost: 1, elevation: 1, isDefault: true }
 ];
 
 export const DEFAULT_ENCOUNTER_TABLES: EncounterTable[] = [
@@ -737,7 +778,37 @@ function inferEncounterType(difficulty?: string): EncounterType {
   return 'combat';
 }
 
-/** Migrate an entire campaign's encounter and NPC data (non-destructive) */
+// Lookup tables for backfilling terrain type fields during migration
+const DEFAULT_TERRAIN_ELEVATION: Record<string, number> = {
+  Mountains: 5, Hills: 3, Forest: 2, Jungle: 2, Tundra: 2,
+  Plains: 1, Grassland: 1, Desert: 1, Swamp: 0, Coast: 0
+};
+const DEFAULT_TERRAIN_MOVE_COST: Record<string, number> = {
+  Mountains: 4, Swamp: 3, Jungle: 3, Hills: 2, Forest: 2, Tundra: 2,
+  Plains: 1, Grassland: 1, Desert: 1, Coast: 5
+};
+const DEFAULT_TERRAIN_NAMES = new Set(Object.keys(DEFAULT_TERRAIN_ELEVATION));
+
+/** Migrate terrain types: backfill isDefault, moveCost, elevation */
+function migrateTerrainTypes(terrainTypes: TerrainType[]): { types: TerrainType[]; changed: boolean } {
+  let changed = false;
+  const types = terrainTypes.map(t => {
+    const needsIsDefault = t.isDefault === undefined && DEFAULT_TERRAIN_NAMES.has(t.name);
+    const needsMoveCost = t.moveCost === undefined && DEFAULT_TERRAIN_MOVE_COST[t.name] !== undefined;
+    const needsElevation = t.elevation === undefined && DEFAULT_TERRAIN_ELEVATION[t.name] !== undefined;
+    if (!needsIsDefault && !needsMoveCost && !needsElevation) return t;
+    changed = true;
+    return {
+      ...t,
+      ...(needsIsDefault ? { isDefault: true } : {}),
+      ...(needsMoveCost ? { moveCost: DEFAULT_TERRAIN_MOVE_COST[t.name] } : {}),
+      ...(needsElevation ? { elevation: DEFAULT_TERRAIN_ELEVATION[t.name] } : {})
+    };
+  });
+  return { types, changed };
+}
+
+/** Migrate an entire campaign's encounter, NPC, and terrain data (non-destructive) */
 export function migrateCampaign(campaign: Campaign): Campaign {
   let changed = false;
   const hexes: Record<string, Hex> = {};
@@ -754,6 +825,15 @@ export function migrateCampaign(campaign: Campaign): Campaign {
     });
     hexes[key] = { ...hex, encounters: migratedEncounters, npcs: migratedNpcs };
   }
+
+  // Migrate terrain types
+  const terrainMigration = migrateTerrainTypes(campaign.terrainTypes);
+  if (terrainMigration.changed) changed = true;
+
+  // Check if versioning fields need migration
+  if (campaign.schemaVersion !== CAMPAIGN_SCHEMA_VERSION) changed = true;
+  if (campaign.version === undefined) changed = true;
+
   if (!changed
     && campaign.encounterTemplates !== undefined
     && campaign.bookmarkedHexes !== undefined
@@ -763,10 +843,15 @@ export function migrateCampaign(campaign: Campaign): Campaign {
     && campaign.factions !== undefined
     && campaign.sessions !== undefined
     && campaign.sessionLog !== undefined
+    && campaign.quests !== undefined
+    && campaign.storyArcs !== undefined
   ) return campaign;
   return {
     ...campaign,
     hexes,
+    terrainTypes: terrainMigration.types,
+    schemaVersion: CAMPAIGN_SCHEMA_VERSION,
+    version: campaign.version ?? 1,
     encounterTemplates: campaign.encounterTemplates ?? [],
     bookmarkedHexes: campaign.bookmarkedHexes ?? [],
     regions: campaign.regions ?? [],
@@ -774,7 +859,9 @@ export function migrateCampaign(campaign: Campaign): Campaign {
     landmarkTables: campaign.landmarkTables ?? [],
     factions: campaign.factions ?? [],
     sessions: campaign.sessions ?? [],
-    sessionLog: campaign.sessionLog ?? []
+    sessionLog: campaign.sessionLog ?? [],
+    quests: campaign.quests ?? [],
+    storyArcs: campaign.storyArcs ?? []
   };
 }
 
