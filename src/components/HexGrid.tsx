@@ -881,7 +881,10 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
           }
         }
       } else {
-        // Normal click - select hex
+        // Normal click - select hex and clear any multi-selection
+        if (multiSelectedKeys.size > 0) {
+          clearMultiSelection();
+        }
         selectHexAtPosition(e);
       }
     }
@@ -891,7 +894,7 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
     }
     setIsPotentialDrag(false);
     setIsDraggingMap(false);
-  }, [isPotentialDrag, isDraggingMap, selectHexAtPosition, panOffset, campaign, zoomLevel, markerDrag, selectMarker, regionPaintMode, toggleMultiSelectHex, selectHex]);
+  }, [isPotentialDrag, isDraggingMap, selectHexAtPosition, panOffset, campaign, zoomLevel, markerDrag, selectMarker, regionPaintMode, toggleMultiSelectHex, selectHex, multiSelectedKeys, clearMultiSelection]);
 
   // Handle mouse move for drag panning and tooltips
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1147,14 +1150,6 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [campaign, clearSelection, selectedMarker, removeMarker, selectMarker, regionPaintMode, setRegionPaintMode, multiSelectedKeys, clearMultiSelection]);
-
-  // Close context menu on outside click
-  useEffect(() => {
-    if (!contextMenu) return;
-    const handleOutsideClick = () => setContextMenu(null);
-    window.addEventListener('mousedown', handleOutsideClick);
-    return () => window.removeEventListener('mousedown', handleOutsideClick);
-  }, [contextMenu]);
 
   // Smooth zoom and pan animation loop - animates both in sync
   useEffect(() => {
