@@ -31,6 +31,7 @@ import { formatTravelModifier, formatVisibilityModifier, formatEncounterModifier
 import SessionTagBadge from './sessions/SessionTagBadge';
 import QuestStatusBadge from './quests/QuestStatusBadge';
 import Icon from './icons/Icon';
+import { onActivate } from '../utils/keyboard';
 
 import type { IconName } from './icons/Icon';
 
@@ -540,7 +541,7 @@ function EncounterSection({
 
   return (
     <div className="content-section">
-      <div className="section-header" onClick={() => setIsExpanded(!isExpanded)}>
+      <div className="section-header" role="button" tabIndex={0} aria-expanded={isExpanded} onClick={() => setIsExpanded(!isExpanded)} onKeyDown={onActivate(() => setIsExpanded(!isExpanded))}>
         <span className="section-icon"><Icon name="sword" size={14} /></span>
         <span className="section-title">Encounters</span>
         <span className="section-count">{encounters.length}</span>
@@ -609,7 +610,7 @@ function NpcSection({ npcs, factions, onAdd, onToggleResolved, onEdit, onDelete 
 
   return (
     <div className="content-section">
-      <div className="section-header" onClick={() => setIsExpanded(!isExpanded)}>
+      <div className="section-header" role="button" tabIndex={0} aria-expanded={isExpanded} onClick={() => setIsExpanded(!isExpanded)} onKeyDown={onActivate(() => setIsExpanded(!isExpanded))}>
         <span className="section-icon"><Icon name="user" size={14} /></span>
         <span className="section-title">NPCs</span>
         <span className="section-count">{npcs.length}</span>
@@ -652,7 +653,7 @@ function ContentSection({ category, items, onAdd, onToggleResolved, onEdit, onDe
 
   return (
     <div className="content-section">
-      <div className="section-header" onClick={() => setIsExpanded(!isExpanded)}>
+      <div className="section-header" role="button" tabIndex={0} aria-expanded={isExpanded} onClick={() => setIsExpanded(!isExpanded)} onKeyDown={onActivate(() => setIsExpanded(!isExpanded))}>
         <span className="section-icon"><Icon name={config.icon} size={14} /></span>
         <span className="section-title">{config.title}</span>
         <span className="section-count">{items.length}</span>
@@ -807,7 +808,7 @@ function HexWeatherSection({
 
   return (
     <div className="hex-weather-section">
-      <div className="section-header" onClick={() => setIsExpanded(!isExpanded)}>
+      <div className="section-header" role="button" tabIndex={0} aria-expanded={isExpanded} onClick={() => setIsExpanded(!isExpanded)} onKeyDown={onActivate(() => setIsExpanded(!isExpanded))}>
         <span className="section-icon"><Icon name="cloud-sun" size={14} /></span>
         <span className="section-title">Weather</span>
         {hasOverride && <span className="override-badge">Override</span>}
@@ -964,7 +965,7 @@ function MarkerSection({
 
   return (
     <div className="marker-section">
-      <div className="section-header" onClick={() => setIsExpanded(!isExpanded)}>
+      <div className="section-header" role="button" tabIndex={0} aria-expanded={isExpanded} onClick={() => setIsExpanded(!isExpanded)} onKeyDown={onActivate(() => setIsExpanded(!isExpanded))}>
         <span className="section-icon"><Icon name="pin" size={14} /></span>
         <span className="section-title">Markers</span>
         <span className="section-count">{markers.length}</span>
@@ -983,7 +984,10 @@ function MarkerSection({
               <div
                 key={marker.id}
                 className={`marker-item ${isSelected ? 'selected' : ''} ${!marker.isVisible ? 'hidden-marker' : ''}`}
+                role="button"
+                tabIndex={0}
                 onClick={() => onSelectMarker(isSelected ? null : marker.id)}
+                onKeyDown={onActivate(() => onSelectMarker(isSelected ? null : marker.id))}
               >
                 <span className="marker-item-icon" style={{ color }}>
                   {icon}
@@ -1073,7 +1077,7 @@ function HexQuestSection({ quests, onOpenQuestManager }: HexQuestSectionProps) {
 
   return (
     <div className="content-section hex-quest-section">
-      <div className="section-header" onClick={() => setIsExpanded(!isExpanded)}>
+      <div className="section-header" role="button" tabIndex={0} aria-expanded={isExpanded} onClick={() => setIsExpanded(!isExpanded)} onKeyDown={onActivate(() => setIsExpanded(!isExpanded))}>
         <span className="section-icon"><Icon name="star" size={14} /></span>
         <span className="section-title">Quests</span>
         <span className="section-count">{quests.length}</span>
@@ -1122,7 +1126,7 @@ function HexSessionHistory({ entries, sessions }: HexSessionHistoryProps) {
 
   return (
     <div className="content-section hex-session-history">
-      <div className="section-header" onClick={() => setIsExpanded(!isExpanded)}>
+      <div className="section-header" role="button" tabIndex={0} aria-expanded={isExpanded} onClick={() => setIsExpanded(!isExpanded)} onKeyDown={onActivate(() => setIsExpanded(!isExpanded))}>
         <span className="section-icon"><Icon name="calendar" size={14} /></span>
         <span className="section-title">Session History</span>
         <span className="section-count">{entries.length}</span>

@@ -6,6 +6,7 @@ import { groupMarkersByCategory, MARKER_CATEGORY_INFO } from '../types/Markers';
 import { generateFigurineSVG, getGlyphIdForMarker, FIGURINE_SIZES } from '../services/markerFigurines';
 import type { MarkerType, MarkerCategory } from '../types';
 import Icon from './icons/Icon';
+import { onActivate } from '../utils/keyboard';
 
 interface MarkerPaletteProps {
   onMarkerSelected?: (markerType: MarkerType | null) => void;
@@ -99,7 +100,11 @@ function MarkerPalette({ onMarkerSelected, selectedMarkerType }: MarkerPalettePr
     <div className="marker-palette">
       <div
         className="marker-palette-header"
+        role="button"
+        tabIndex={0}
+        aria-expanded={isExpanded}
         onClick={() => setIsExpanded(!isExpanded)}
+        onKeyDown={onActivate(() => setIsExpanded(!isExpanded))}
       >
         <span className="palette-icon"><Icon name="pin" size={14} /></span>
         <span className="palette-title">Markers</span>
@@ -133,7 +138,11 @@ function MarkerPalette({ onMarkerSelected, selectedMarkerType }: MarkerPalettePr
               <div key={category} className="marker-category">
                 <div
                   className="category-header"
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={isCategoryExpanded}
                   onClick={() => toggleCategory(category)}
+                  onKeyDown={onActivate(() => toggleCategory(category))}
                 >
                   <span className="category-icon"><Icon name={categoryInfo.icon} size={14} /></span>
                   <span className="category-label">{categoryInfo.label}</span>

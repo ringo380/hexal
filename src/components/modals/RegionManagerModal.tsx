@@ -4,6 +4,7 @@ import { useSelection } from '../../stores/SelectionContext';
 import type { Region } from '../../types/Campaign';
 import { REGION_COLORS } from '../../types/Campaign';
 import Icon from '../icons/Icon';
+import { onActivate } from '../../utils/keyboard';
 
 interface RegionManagerModalProps {
   onClose: () => void;
@@ -58,7 +59,7 @@ function RegionManagerModal({ onClose }: RegionManagerModalProps) {
                 + Add
               </button>
             </div>
-            <div className="region-list-items">
+            <div className="region-list-items" role="listbox" aria-label="Regions">
               {regions.length === 0 ? (
                 <div style={{ padding: '16px', color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center' }}>
                   No regions yet
@@ -67,8 +68,12 @@ function RegionManagerModal({ onClose }: RegionManagerModalProps) {
                 regions.map(region => (
                   <div
                     key={region.id}
+                    role="option"
+                    tabIndex={0}
+                    aria-selected={region.id === selectedRegionId}
                     className={`region-list-item ${region.id === selectedRegionId ? 'selected' : ''}`}
                     onClick={() => setSelectedRegionId(region.id)}
+                    onKeyDown={onActivate(() => setSelectedRegionId(region.id))}
                   >
                     <span className="region-swatch" style={{ backgroundColor: region.color }} />
                     <span className="region-name">{region.name || 'Unnamed'}</span>

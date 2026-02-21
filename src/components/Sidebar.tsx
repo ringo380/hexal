@@ -7,6 +7,7 @@ import { hexHasUnresolvedContent, hexKey } from '../types';
 import { searchHex, getMatchHint } from '../services/search';
 import { createHexRegionMap } from '../services/regions';
 import Icon from './icons/Icon';
+import { onActivate } from '../utils/keyboard';
 
 function Sidebar() {
   const { campaign, bookmarkedHexes, regions } = useCampaign();
@@ -125,7 +126,11 @@ function Sidebar() {
               <li
                 key={key}
                 className={`hex-item ${isSelected(hex) ? 'selected' : ''}`}
+                role="button"
+                tabIndex={0}
+                aria-label={`Hex ${hex.coordinate.q}, ${hex.coordinate.r} — ${hex.terrain}`}
                 onClick={() => selectHex(hex.coordinate)}
+                onKeyDown={onActivate(() => selectHex(hex.coordinate))}
               >
                 <span
                   className="terrain-indicator"

@@ -11,6 +11,7 @@ import RelationshipBadge from '../npcs/RelationshipBadge';
 import FactionManager from '../npcs/FactionManager';
 import NpcEditorModal from '../npcs/NpcEditorModal';
 import Icon from '../icons/Icon';
+import { onActivate } from '../../utils/keyboard';
 
 interface NpcDirectoryModalProps {
   onClose: () => void;
@@ -181,7 +182,7 @@ function NpcDirectoryModal({ onClose, onOpenRelationshipWeb }: NpcDirectoryModal
                   </select>
                 </div>
               </div>
-              <div className="npc-list-items">
+              <div className="npc-list-items" role="listbox" aria-label="NPCs">
                 {filteredNpcs.length === 0 ? (
                   <div style={{ padding: '16px', color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center' }}>
                     No NPCs found
@@ -190,8 +191,12 @@ function NpcDirectoryModal({ onClose, onOpenRelationshipWeb }: NpcDirectoryModal
                   filteredNpcs.map(({ npc, hexKey }) => (
                     <div
                       key={npc.id}
+                      role="option"
+                      tabIndex={0}
+                      aria-selected={npc.id === selectedNpcId}
                       className={`npc-directory-item ${npc.id === selectedNpcId ? 'selected' : ''} ${!npc.isAlive ? 'npc-dead' : ''}`}
                       onClick={() => setSelectedNpcId(npc.id)}
+                      onKeyDown={onActivate(() => setSelectedNpcId(npc.id))}
                     >
                       <div className="npc-directory-item-header">
                         {!npc.isAlive && <Icon name="skull" size={12} />}

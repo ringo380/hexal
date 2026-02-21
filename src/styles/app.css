@@ -144,6 +144,26 @@ select:focus {
   border-color: var(--accent-color);
 }
 
+/* Keyboard focus indicators for interactive elements */
+.section-header:focus-visible,
+.marker-palette-header:focus-visible,
+.category-header:focus-visible,
+.session-list-item:focus-visible,
+.encounter-table-item:focus-visible,
+.region-list-item:focus-visible,
+.npc-directory-item:focus-visible,
+.quest-row:focus-visible,
+.hex-item:focus-visible,
+.item-content:focus-visible,
+.encounter-row-content:focus-visible,
+.npc-row-content:focus-visible,
+.marker-item:focus-visible,
+.hex-link-chip:focus-visible,
+.palette-result:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
+}
+
 textarea {
   resize: vertical;
   min-height: 60px;

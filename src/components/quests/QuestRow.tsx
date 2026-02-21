@@ -1,5 +1,6 @@
 import type { Quest, StoryArc } from '../../types/Quest';
 import QuestStatusBadge from './QuestStatusBadge';
+import { onActivate } from '../../utils/keyboard';
 
 interface QuestRowProps {
   quest: Quest;
@@ -15,7 +16,11 @@ function QuestRow({ quest, arc, isSelected, onClick }: QuestRowProps) {
   return (
     <div
       className={`quest-row ${isSelected ? 'selected' : ''}`}
+      role="button"
+      tabIndex={0}
+      aria-label={quest.title || 'Untitled Quest'}
       onClick={onClick}
+      onKeyDown={onActivate(onClick)}
     >
       <div className="quest-row-header">
         {arc && (

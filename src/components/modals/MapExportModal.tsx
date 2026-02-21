@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
 import Icon from '../icons/Icon';
+import { onActivate } from '../../utils/keyboard';
 import {
   DEFAULT_EXPORT_OPTIONS,
   EXPORT_PRESETS,
@@ -171,7 +172,7 @@ function MapExportModal({ onClose }: MapExportModalProps) {
 
           {/* Format & Resolution Section */}
           <div className={`export-section ${expandedSections.has('format') ? 'expanded' : ''}`}>
-            <div className="section-header" onClick={() => toggleSection('format')}>
+            <div className="section-header" role="button" tabIndex={0} aria-expanded={expandedSections.has('format')} onClick={() => toggleSection('format')} onKeyDown={onActivate(() => toggleSection('format'))}>
               <span className="section-icon"><Icon name={expandedSections.has('format') ? 'chevron-down' : 'chevron-right'} size={12} /></span>
               <span className="section-title">Format & Resolution</span>
             </div>
@@ -231,7 +232,7 @@ function MapExportModal({ onClose }: MapExportModalProps) {
 
           {/* View Mode Section */}
           <div className={`export-section ${expandedSections.has('view') ? 'expanded' : ''}`}>
-            <div className="section-header" onClick={() => toggleSection('view')}>
+            <div className="section-header" role="button" tabIndex={0} aria-expanded={expandedSections.has('view')} onClick={() => toggleSection('view')} onKeyDown={onActivate(() => toggleSection('view'))}>
               <span className="section-icon"><Icon name={expandedSections.has('view') ? 'chevron-down' : 'chevron-right'} size={12} /></span>
               <span className="section-title">View Mode</span>
             </div>
@@ -280,7 +281,7 @@ function MapExportModal({ onClose }: MapExportModalProps) {
 
           {/* Appearance Section */}
           <div className={`export-section ${expandedSections.has('appearance') ? 'expanded' : ''}`}>
-            <div className="section-header" onClick={() => toggleSection('appearance')}>
+            <div className="section-header" role="button" tabIndex={0} aria-expanded={expandedSections.has('appearance')} onClick={() => toggleSection('appearance')} onKeyDown={onActivate(() => toggleSection('appearance'))}>
               <span className="section-icon"><Icon name={expandedSections.has('appearance') ? 'chevron-down' : 'chevron-right'} size={12} /></span>
               <span className="section-title">Appearance</span>
             </div>
@@ -365,7 +366,7 @@ function MapExportModal({ onClose }: MapExportModalProps) {
 
           {/* Legend & Metadata Section */}
           <div className={`export-section ${expandedSections.has('metadata') ? 'expanded' : ''}`}>
-            <div className="section-header" onClick={() => toggleSection('metadata')}>
+            <div className="section-header" role="button" tabIndex={0} aria-expanded={expandedSections.has('metadata')} onClick={() => toggleSection('metadata')} onKeyDown={onActivate(() => toggleSection('metadata'))}>
               <span className="section-icon"><Icon name={expandedSections.has('metadata') ? 'chevron-down' : 'chevron-right'} size={12} /></span>
               <span className="section-title">Legend & Metadata</span>
             </div>
@@ -428,7 +429,7 @@ function MapExportModal({ onClose }: MapExportModalProps) {
           {/* PDF Settings Section (only for PDF format) */}
           {options.format === 'pdf' && (
             <div className={`export-section ${expandedSections.has('pdf') ? 'expanded' : ''}`}>
-              <div className="section-header" onClick={() => toggleSection('pdf')}>
+              <div className="section-header" role="button" tabIndex={0} aria-expanded={expandedSections.has('pdf')} onClick={() => toggleSection('pdf')} onKeyDown={onActivate(() => toggleSection('pdf'))}>
                 <span className="section-icon"><Icon name={expandedSections.has('pdf') ? 'chevron-down' : 'chevron-right'} size={12} /></span>
                 <span className="section-title">PDF Settings</span>
               </div>
