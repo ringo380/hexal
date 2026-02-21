@@ -24,6 +24,11 @@ interface SelectionContextValue extends SelectionState {
   selectHex: (coord: HexCoordinate | null) => void;
   selectMarker: (markerId: string | null, hexCoord?: HexCoordinate) => void;
   clearSelection: () => void;
+  // Multi-selection (shift+click, flood-fill)
+  multiSelectedKeys: Set<string>;
+  toggleMultiSelectHex: (coord: HexCoordinate) => void;
+  setMultiSelection: (keys: Set<string>) => void;
+  clearMultiSelection: () => void;
   // Filter operations
   setSearchQuery: (query: string) => void;
   setFilterTerrain: (terrain: string | null) => void;
@@ -69,6 +74,7 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [regionPaintMode, setRegionPaintModeState] = useState<string | null>(null);
   const [filterRegion, setFilterRegionState] = useState<string | null>(null);
+  const [multiSelectedKeys, setMultiSelectedKeys] = useState<Set<string>>(new Set());
 
   const selectHex = useCallback((coord: HexCoordinate | null) => {
     setSelectedCoordinate(coord);
@@ -121,6 +127,27 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
 
   const setFilterRegion = useCallback((regionId: string | null) => {
     setFilterRegionState(regionId);
+  }, []);
+
+  const toggleMultiSelectHex = useCallback((coord: HexCoordinate) => {
+    const key = hexKey(coord);
+    setMultiSelectedKeys(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }, []);
+
+  const setMultiSelection = useCallback((keys: Set<string>) => {
+    setMultiSelectedKeys(keys);
+  }, []);
+
+  const clearMultiSelection = useCallback(() => {
+    setMultiSelectedKeys(new Set());
   }, []);
 
   const clearFilters = useCallback(() => {
@@ -219,7 +246,11 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
     regionPaintMode,
     setRegionPaintMode,
     filterRegion,
-    setFilterRegion
+    setFilterRegion,
+    multiSelectedKeys,
+    toggleMultiSelectHex,
+    setMultiSelection,
+    clearMultiSelection
   };
 
   return (

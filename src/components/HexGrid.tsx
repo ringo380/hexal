@@ -8,7 +8,8 @@ import {
   canvasSize,
   drawHexPath,
   hexPoints,
-  coordinateAt
+  coordinateAt,
+  floodFillSameTerrain
 } from '../services/hexGeometry';
 import { hexKey } from '../types/Campaign';
 import {
@@ -25,6 +26,7 @@ import { markerAudio } from '../services/audioService';
 import { useMarkerDrag } from '../hooks/useMarkerDrag';
 import type { HexCoordinate, ContentCategory, MarkerPosition } from '../types';
 import { DEFAULT_MARKER_TYPES } from '../types/Markers';
+import HexContextMenu from './HexContextMenu';
 import Icon from './icons/Icon';
 
 // Zoom configuration
@@ -179,14 +181,24 @@ interface IndicatorPosition {
   category: ContentCategory;
 }
 
-function HexGrid() {
+interface HexGridProps {
+  onCreateRegionFromSelection?: () => void;
+}
+
+function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { campaign, getHex, removeMarker, moveMarker, moveMarkerToPosition, addMarkerAtPosition, regions, addHexToRegion, removeHexFromRegion } = useCampaign();
-  const { selectedCoordinate, selectedMarker, selectHex, selectMarker, clearSelection, regionPaintMode, setRegionPaintMode } = useSelection();
+  const { selectedCoordinate, selectedMarker, selectHex, selectMarker, clearSelection, regionPaintMode, setRegionPaintMode, multiSelectedKeys, toggleMultiSelectHex, setMultiSelection, clearMultiSelection } = useSelection();
 
   // Tooltip state
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+
+  // Track shift key at mouseDown time (read in mouseUp to decide multi-select vs normal)
+  const clickWasShiftRef = useRef(false);
 
   // Zoom state - both current and target for smooth animation
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -468,6 +480,24 @@ function HexGrid() {
     }
 
     // ========================================================================
+    // MULTI-SELECTION OVERLAY PASS
+    // ========================================================================
+    if (multiSelectedKeys.size > 0) {
+      for (const key of multiSelectedKeys) {
+        const parts = key.split(',');
+        const msq = parseInt(parts[0], 10);
+        const msr = parseInt(parts[1], 10);
+        const msCenter = hexCenter({ q: msq, r: msr });
+        drawHexPath(ctx, msCenter, HEX_SIZE);
+        ctx.fillStyle = 'rgba(74, 158, 255, 0.22)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(74, 158, 255, 0.6)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    }
+
+    // ========================================================================
     // CONNECTION PASS: Draw rivers and roads
     // ========================================================================
     if (zoomLevel >= 0.25) {
@@ -642,7 +672,7 @@ function HexGrid() {
         tilt
       );
     }
-  }, [campaign, getHex, selectedCoordinate, getTerrainColor, zoomLevel, panOffset, markerDrag.isDragging, markerDrag.state, regions]);
+  }, [campaign, getHex, selectedCoordinate, getTerrainColor, zoomLevel, panOffset, markerDrag.isDragging, markerDrag.state, regions, multiSelectedKeys]);
 
   // Update canvas size and redraw on campaign change
   useEffect(() => {
@@ -733,6 +763,12 @@ function HexGrid() {
   // Handle mouse down - start potential drag (map or marker)
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (e.button !== 0 || !campaign) return; // Left click only
+
+    // Capture shift state for multi-select handling in mouseUp
+    clickWasShiftRef.current = e.shiftKey;
+
+    // Close context menu on any click
+    setContextMenu(null);
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -827,8 +863,27 @@ function HexGrid() {
     }
 
     if (isPotentialDrag && !isDraggingMap) {
-      // Was a click, not a drag - select hex
-      selectHexAtPosition(e);
+      if (clickWasShiftRef.current && !regionPaintMode) {
+        // Shift+click: toggle hex in multi-selection
+        const canvas = canvasRef.current;
+        if (canvas && campaign) {
+          const rect = canvas.getBoundingClientRect();
+          const scaleX = canvas.width / rect.width;
+          const scaleY = canvas.height / rect.height;
+          const canvasX = (e.clientX - rect.left) * scaleX;
+          const canvasY = (e.clientY - rect.top) * scaleY;
+          const worldX = (canvasX - panOffset.x) / zoomLevel;
+          const worldY = (canvasY - panOffset.y) / zoomLevel;
+          const coord = coordinateAt({ x: worldX, y: worldY }, campaign.gridWidth, campaign.gridHeight);
+          if (coord) {
+            toggleMultiSelectHex(coord);
+            selectHex(coord);
+          }
+        }
+      } else {
+        // Normal click - select hex
+        selectHexAtPosition(e);
+      }
     }
     // Sync targetPan with current panOffset after drag ends
     if (isDraggingMap) {
@@ -836,7 +891,7 @@ function HexGrid() {
     }
     setIsPotentialDrag(false);
     setIsDraggingMap(false);
-  }, [isPotentialDrag, isDraggingMap, selectHexAtPosition, panOffset, campaign, zoomLevel, markerDrag, selectMarker]);
+  }, [isPotentialDrag, isDraggingMap, selectHexAtPosition, panOffset, campaign, zoomLevel, markerDrag, selectMarker, regionPaintMode, toggleMultiSelectHex, selectHex]);
 
   // Handle mouse move for drag panning and tooltips
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -943,6 +998,46 @@ function HexGrid() {
     }
   }, [isPotentialDrag, isDraggingMap, markerDrag]);
 
+  // Handle double-click for flood-fill terrain selection
+  const handleDoubleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (regionPaintMode || !campaign) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const canvasX = (e.clientX - rect.left) * scaleX;
+    const canvasY = (e.clientY - rect.top) * scaleY;
+    const worldX = (canvasX - panOffset.x) / zoomLevel;
+    const worldY = (canvasY - panOffset.y) / zoomLevel;
+
+    const coord = coordinateAt({ x: worldX, y: worldY }, campaign.gridWidth, campaign.gridHeight);
+    if (!coord) return;
+
+    const hex = getHex(coord);
+    if (!hex?.terrain) return;
+
+    const filled = floodFillSameTerrain(coord, campaign.hexes, campaign.gridWidth, campaign.gridHeight);
+    setMultiSelection(filled);
+  }, [campaign, getHex, regionPaintMode, zoomLevel, panOffset, setMultiSelection]);
+
+  // Handle context menu (right-click)
+  const handleContextMenu = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    if (multiSelectedKeys.size === 0) return;
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    const containerRect = container.getBoundingClientRect();
+    // Clamp to container bounds
+    const x = Math.min(e.clientX - containerRect.left, containerRect.width - 200);
+    const y = Math.min(e.clientY - containerRect.top, containerRect.height - 50);
+    setContextMenu({ x, y });
+  }, [multiSelectedKeys.size]);
+
   // Handle drag over for palette-to-canvas drop
   const handleDragOver = useCallback((e: React.DragEvent<HTMLCanvasElement>) => {
     if (e.dataTransfer.types.includes('application/hexal-marker')) {
@@ -1019,9 +1114,12 @@ function HexGrid() {
             e.preventDefault();
             if (regionPaintMode) {
               setRegionPaintMode(null);
+            } else if (multiSelectedKeys.size > 0) {
+              clearMultiSelection();
             } else {
               clearSelection();
             }
+            setContextMenu(null);
             return;
           case 'delete':
           case 'backspace':
@@ -1048,7 +1146,15 @@ function HexGrid() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [campaign, clearSelection, selectedMarker, removeMarker, selectMarker, regionPaintMode, setRegionPaintMode]);
+  }, [campaign, clearSelection, selectedMarker, removeMarker, selectMarker, regionPaintMode, setRegionPaintMode, multiSelectedKeys, clearMultiSelection]);
+
+  // Close context menu on outside click
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handleOutsideClick = () => setContextMenu(null);
+    window.addEventListener('mousedown', handleOutsideClick);
+    return () => window.removeEventListener('mousedown', handleOutsideClick);
+  }, [contextMenu]);
 
   // Smooth zoom and pan animation loop - animates both in sync
   useEffect(() => {
@@ -1237,6 +1343,8 @@ function HexGrid() {
         onMouseUp={handleMouseUp}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
+        onDoubleClick={handleDoubleClick}
+        onContextMenu={handleContextMenu}
         onWheel={handleWheel}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
@@ -1255,6 +1363,19 @@ function HexGrid() {
           </div>
         ) : null;
       })()}
+      {/* Context menu */}
+      {contextMenu && multiSelectedKeys.size > 0 && (
+        <HexContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          selectionCount={multiSelectedKeys.size}
+          onCreateRegion={() => {
+            setContextMenu(null);
+            onCreateRegionFromSelection?.();
+          }}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
       {/* Zoom controls - fixed position */}
       <div className="zoom-controls">
         <button className="zoom-btn" onClick={zoomOut} title="Zoom out (Cmd/Ctrl -)">−</button>
