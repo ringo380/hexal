@@ -11,6 +11,7 @@ import {
   removeNpcFromQuests,
   removeEncounterFromQuests,
   removeClueFromQuests,
+  removeFactionFromQuests,
   updateQuestNpcHexKey,
   deleteStoryArcCleanup
 } from '../services/questService';
@@ -174,20 +175,13 @@ describe('deleteQuestCleanup', () => {
     expect(result.quests![0].id).toBe('q2');
   });
 
-  it('removes questId from session log entries', () => {
-    const entry = {
-      id: 'e1', sessionId: 's1', title: '', description: '',
-      inGameTime: { year: 1, month: 0, day: 1, hour: 8, minute: 0 },
-      hexKeys: [], tags: [] as any[], isVisibleToPlayers: true,
-      questIds: ['q1', 'q2']
-    };
+  it('does not return sessionLog in result', () => {
     const campaign = makeCampaign({
-      quests: [makeQuest({ id: 'q1' })],
-      sessionLog: [entry as any]
+      quests: [makeQuest({ id: 'q1' })]
     });
 
     const result = deleteQuestCleanup(campaign, 'q1');
-    expect((result.sessionLog![0] as any).questIds).toEqual(['q2']);
+    expect(result).not.toHaveProperty('sessionLog');
   });
 });
 
@@ -250,6 +244,32 @@ describe('removeClueFromQuests', () => {
 
     const result = removeClueFromQuests(campaign, 'clue1');
     expect(result.quests[0].linkedClueIds).toEqual(['clue2']);
+  });
+});
+
+describe('removeFactionFromQuests', () => {
+  it('removes faction ID from linkedFactionIds', () => {
+    const q = makeQuest({ id: 'q1', linkedFactionIds: ['f1', 'f2'] });
+    const campaign = makeCampaign({ quests: [q] });
+
+    const result = removeFactionFromQuests(campaign, 'f1');
+    expect(result.quests[0].linkedFactionIds).toEqual(['f2']);
+  });
+
+  it('preserves quest unchanged when faction not linked', () => {
+    const q = makeQuest({ id: 'q1', linkedFactionIds: ['f1'] });
+    const campaign = makeCampaign({ quests: [q] });
+
+    const result = removeFactionFromQuests(campaign, 'f-other');
+    expect(result.quests[0]).toBe(q); // same reference
+  });
+
+  it('handles quests with no linkedFactionIds', () => {
+    const q = makeQuest({ id: 'q1' });
+    const campaign = makeCampaign({ quests: [q] });
+
+    const result = removeFactionFromQuests(campaign, 'f1');
+    expect(result.quests[0]).toBe(q);
   });
 });
 

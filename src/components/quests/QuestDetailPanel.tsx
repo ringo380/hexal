@@ -172,6 +172,9 @@ function QuestDetailPanel({
               </button>
             </div>
           ))}
+          {quest.objectives.length === 0 && (
+            <div className="empty-hint">No objectives yet</div>
+          )}
           <button className="add-item-btn" onClick={addObjective}>+ Add Objective</button>
         </div>
       </div>
@@ -186,6 +189,9 @@ function QuestDetailPanel({
               <button className="chip-remove" onClick={() => removeHexLink(hk)}>&times;</button>
             </span>
           ))}
+          {quest.linkedHexKeys.length === 0 && (
+            <span className="empty-hint">No linked hexes</span>
+          )}
         </div>
         <HexKeyInput onAdd={addHexLink} />
       </div>
@@ -203,6 +209,9 @@ function QuestDetailPanel({
               </span>
             );
           })}
+          {quest.linkedNpcRefs.length === 0 && (
+            <span className="empty-hint">No linked NPCs</span>
+          )}
         </div>
         {allNpcs.length > 0 && (
           <select
@@ -273,6 +282,9 @@ function QuestDetailPanel({
                 </span>
               );
             })}
+            {quest.prerequisiteQuestIds.length === 0 && (
+              <span className="empty-hint">No prerequisites</span>
+            )}
           </div>
           <select value="" onChange={(e) => { if (e.target.value) togglePrerequisite(e.target.value); }}>
             <option value="">Add prerequisite...</option>

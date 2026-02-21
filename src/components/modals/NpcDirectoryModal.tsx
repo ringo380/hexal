@@ -3,7 +3,7 @@ import { useCampaign } from '../../stores/CampaignContext';
 import type { Npc, NpcAttitude, Faction } from '../../types/Campaign';
 import { ATTITUDE_INFO, parseHexKey } from '../../types/Campaign';
 import { moveNpc } from '../../services/npcService';
-import { updateQuestNpcHexKey } from '../../services/questService';
+import { updateQuestNpcHexKey, removeFactionFromQuests } from '../../services/questService';
 import AlignmentBadge from '../npcs/AlignmentBadge';
 import AttitudeBadge from '../npcs/AttitudeBadge';
 import FactionBadge from '../npcs/FactionBadge';
@@ -98,6 +98,25 @@ function NpcDirectoryModal({ onClose, onOpenRelationshipWeb }: NpcDirectoryModal
   };
 
   const handleUpdateFactions = (updatedFactions: Faction[]) => {
+    // Detect deleted factions and clean up quest references
+    if (campaign) {
+      const deletedIds = factions
+        .filter(f => !updatedFactions.some(uf => uf.id === f.id))
+        .map(f => f.id);
+      if (deletedIds.length > 0) {
+        let questUpdates: { quests: import('../../types/Quest').Quest[] } | null = null;
+        for (const factionId of deletedIds) {
+          questUpdates = removeFactionFromQuests(
+            questUpdates ? { ...campaign, quests: questUpdates.quests } : campaign,
+            factionId
+          );
+        }
+        if (questUpdates) {
+          updateCampaignData({ factions: updatedFactions, ...questUpdates });
+          return;
+        }
+      }
+    }
     updateCampaignData({ factions: updatedFactions });
   };
 

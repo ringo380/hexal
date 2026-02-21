@@ -3,6 +3,7 @@
 import { useRef, useEffect, useMemo, useState, useCallback } from 'react';
 import type { Quest, StoryArc } from '../../types/Quest';
 import { QUEST_STATUS_INFO } from '../../types/Quest';
+import Icon from '../icons/Icon';
 
 interface QuestGraphProps {
   quests: Quest[];
@@ -304,29 +305,49 @@ function QuestGraph({ quests, storyArcs, selectedQuestId, onSelectQuest }: Quest
     setScale((s) => Math.min(3, Math.max(0.3, s * factor)));
   };
 
+  // Help text visibility — hide after first interaction
+  const [showHelp, setShowHelp] = useState(true);
+  const hideHelp = useCallback(() => setShowHelp(false), []);
+
+  // Auto-hide after 3 seconds
+  useEffect(() => {
+    if (!showHelp) return;
+    const timer = setTimeout(() => setShowHelp(false), 3000);
+    return () => clearTimeout(timer);
+  }, [showHelp]);
+
+  const handleMouseDownWrapped = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    hideHelp();
+    handleMouseDown(e);
+  };
+
+  const handleWheelWrapped = (e: React.WheelEvent<HTMLCanvasElement>) => {
+    hideHelp();
+    handleWheel(e);
+  };
+
   return (
-    <div
-      ref={containerRef}
-      style={{ width: '100%', height: '100%', minHeight: 300, position: 'relative' }}
-    >
+    <div ref={containerRef} className="quest-graph-container">
       {quests.length === 0 ? (
-        <div style={{ padding: 32, color: '#888', textAlign: 'center' }}>
-          No quests to display. Create some quests first.
+        <div className="quest-graph-empty">
+          <Icon name="star" size={32} />
+          <p>No quests to display. Create some quests first.</p>
         </div>
       ) : (
-        <canvas
-          ref={canvasRef}
-          style={{
-            width: '100%',
-            height: '100%',
-            cursor: dragging ? 'grabbing' : hoveredQuestId ? 'pointer' : 'grab',
-          }}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onWheel={handleWheel}
-        />
+        <>
+          <canvas
+            ref={canvasRef}
+            className={`quest-graph-canvas ${dragging ? 'dragging' : ''} ${hoveredQuestId ? 'hovering' : ''}`}
+            onMouseDown={handleMouseDownWrapped}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onWheel={handleWheelWrapped}
+          />
+          {showHelp && (
+            <div className="quest-graph-help">Drag to pan, scroll to zoom</div>
+          )}
+        </>
       )}
     </div>
   );

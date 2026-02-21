@@ -153,21 +153,21 @@ function QuestManagerModal({ onClose }: QuestManagerModalProps) {
         </div>
 
         {/* Tabs */}
-        <div className="modal-tabs">
+        <div className="quest-manager-tabs">
           <button
-            className={`modal-tab ${activeTab === 'quests' ? 'active' : ''}`}
+            className={`tab-btn ${activeTab === 'quests' ? 'active' : ''}`}
             onClick={() => setActiveTab('quests')}
           >
             <Icon name="star" size={14} /> Quests ({quests.length})
           </button>
           <button
-            className={`modal-tab ${activeTab === 'arcs' ? 'active' : ''}`}
+            className={`tab-btn ${activeTab === 'arcs' ? 'active' : ''}`}
             onClick={() => setActiveTab('arcs')}
           >
             <Icon name="link" size={14} /> Story Arcs ({storyArcs.length})
           </button>
           <button
-            className={`modal-tab ${activeTab === 'graph' ? 'active' : ''}`}
+            className={`tab-btn ${activeTab === 'graph' ? 'active' : ''}`}
             onClick={() => setActiveTab('graph')}
           >
             <Icon name="map" size={14} /> Graph

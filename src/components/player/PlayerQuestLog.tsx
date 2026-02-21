@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { PlayerCampaign, PlayerQuest, PlayerStoryArc } from '../../services/playerViewFilter';
 import QuestStatusBadge from '../quests/QuestStatusBadge';
+import Icon from '../icons/Icon';
 
 interface PlayerQuestLogProps {
   campaign: PlayerCampaign;
@@ -61,15 +62,7 @@ function PlayerQuestLog({ campaign }: PlayerQuestLogProps) {
       {Array.from(arcGroups.values()).map(({ arc, quests }) => (
         <div key={arc.id} className="player-quest-arc-group">
           <div className="player-quest-arc-title">
-            <span
-              style={{
-                display: 'inline-block',
-                width: 10,
-                height: 10,
-                borderRadius: '50%',
-                backgroundColor: arc.color
-              }}
-            />
+            <span className="quest-row-arc-dot" style={{ backgroundColor: arc.color }} />
             {arc.title}
           </div>
           {quests.map(quest => (
@@ -84,9 +77,7 @@ function PlayerQuestLog({ campaign }: PlayerQuestLogProps) {
       ))}
 
       {filteredQuests.length === 0 && (
-        <div style={{ color: 'var(--text-secondary)', fontSize: 13, padding: '8px 0' }}>
-          No quests match the current filter.
-        </div>
+        <div className="empty-hint">No quests match the current filter.</div>
       )}
     </div>
   );
@@ -109,7 +100,10 @@ function QuestItem({ quest }: { quest: PlayerQuest }) {
               key={obj.id}
               className={`player-quest-objective${obj.isComplete ? ' complete' : ''}`}
             >
-              <span>{obj.isComplete ? '\u2611' : '\u2610'}</span>
+              {obj.isComplete
+                ? <Icon name="check" size={12} />
+                : <Icon name="circle" size={12} />
+              }
               {obj.description}
             </div>
           ))}

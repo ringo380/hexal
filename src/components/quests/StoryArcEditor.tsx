@@ -144,6 +144,9 @@ function StoryArcEditor({ arc, quests, onUpdate, onDelete }: StoryArcEditorProps
               </div>
             </div>
           ))}
+          {arcQuests.length === 0 && (
+            <div className="empty-hint">No quests in this arc</div>
+          )}
         </div>
         {availableQuests.length > 0 && (
           <select value="" onChange={(e) => { if (e.target.value) addQuest(e.target.value); }}>
