@@ -1,7 +1,7 @@
 // Direct port from Swift HexGeometry
 // Offset coordinates using odd-q vertical layout
 
-import type { HexCoordinate } from '../types';
+import type { HexCoordinate, Hex } from '../types';
 
 export const HEX_SIZE = 30; // Size of hex (center to corner)
 export const HORIZONTAL_SPACING = HEX_SIZE * 1.5;
@@ -146,4 +146,40 @@ export function coordinateAt(
   }
 
   return { q, r };
+}
+
+/**
+ * Flood-fill from origin hex, collecting all connected hexes with the same terrain type.
+ * Uses BFS via getValidNeighbors.
+ */
+export function floodFillSameTerrain(
+  origin: HexCoordinate,
+  hexes: Record<string, Hex>,
+  gridWidth: number,
+  gridHeight: number
+): Set<string> {
+  const originKey = `${origin.q},${origin.r}`;
+  const originHex = hexes[originKey];
+  if (!originHex?.terrain) return new Set([originKey]);
+
+  const targetTerrain = originHex.terrain;
+  const visited = new Set<string>();
+  const queue: HexCoordinate[] = [origin];
+  visited.add(originKey);
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const neighbors = getValidNeighbors(current, gridWidth, gridHeight);
+    for (const neighbor of neighbors) {
+      const key = `${neighbor.q},${neighbor.r}`;
+      if (visited.has(key)) continue;
+      const hex = hexes[key];
+      if (hex?.terrain === targetTerrain) {
+        visited.add(key);
+        queue.push(neighbor);
+      }
+    }
+  }
+
+  return visited;
 }

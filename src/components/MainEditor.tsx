@@ -27,6 +27,7 @@ import SettingsModal from './modals/SettingsModal';
 import LoginModal from './auth/LoginModal';
 import ProfileMenu from './auth/ProfileMenu';
 import ConnectionStatus from './ui/ConnectionStatus';
+import CreateRegionFromSelectionModal from './modals/CreateRegionFromSelectionModal';
 import CommandPalette from './CommandPalette';
 import Icon from './icons/Icon';
 import { CATEGORY_INFO, type ContentCategory, parseHexKey } from '../types/Campaign';
@@ -47,7 +48,8 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
     filterRegion, setFilterRegion,
     activeFilterCount,
     isCommandPaletteOpen, openCommandPalette, closeCommandPalette,
-    selectHex
+    selectHex,
+    multiSelectedKeys, clearMultiSelection
   } = useSelection();
   const [showGenerator, setShowGenerator] = useState(false);
   const [showExport, setShowExport] = useState(false);
@@ -68,6 +70,12 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
   const [showQuestManager, setShowQuestManager] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  const [showCreateRegion, setShowCreateRegion] = useState(false);
+
+  // Clear multi-selection when campaign changes (prevents stale keys across campaigns)
+  useEffect(() => {
+    clearMultiSelection();
+  }, [campaign?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Register export handler for menu command
   useEffect(() => {
@@ -211,6 +219,15 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
               <Icon name="redo" size={16} />
             </button>
           </div>
+          {multiSelectedKeys.size > 0 && (
+            <button
+              className="btn btn-primary btn-small"
+              onClick={() => setShowCreateRegion(true)}
+              title="Create region from selected hexes"
+            >
+              <Icon name="map" size={14} /> Create Region ({multiSelectedKeys.size})
+            </button>
+          )}
         </div>
 
         <div className="toolbar-center">
@@ -376,7 +393,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
           <Sidebar />
         </div>
         <div className="grid-panel">
-          <HexGrid />
+          <HexGrid onCreateRegionFromSelection={() => setShowCreateRegion(true)} />
         </div>
         <div className="detail-panel">
           <HexDetail onOpenQuestManager={() => setShowQuestManager(true)} />
@@ -460,6 +477,16 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
       )}
       {showLogin && (
         <LoginModal onClose={() => setShowLogin(false)} />
+      )}
+      {showCreateRegion && multiSelectedKeys.size > 0 && (
+        <CreateRegionFromSelectionModal
+          hexKeys={Array.from(multiSelectedKeys)}
+          onClose={() => setShowCreateRegion(false)}
+          onCreated={() => {
+            setShowCreateRegion(false);
+            clearMultiSelection();
+          }}
+        />
       )}
       {isCommandPaletteOpen && (
         <CommandPalette onClose={closeCommandPalette} />
