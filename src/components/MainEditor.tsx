@@ -379,7 +379,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
           <HexGrid />
         </div>
         <div className="detail-panel">
-          <HexDetail />
+          <HexDetail onOpenQuestManager={() => setShowQuestManager(true)} />
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 // Quest Service - Cross-cutting quest/story-arc operations (lookup, delete cleanup, ref management)
 
-import type { Campaign, SessionLogEntry } from '../types/Campaign';
+import type { Campaign } from '../types/Campaign';
 import type { Quest, StoryArc } from '../types/Quest';
 
 /**
@@ -96,8 +96,7 @@ export function getDependentQuests(
  * Cascade cleanup when deleting a quest.
  * - Removes questId from all story arcs' questIds arrays
  * - Removes questId from all other quests' prerequisiteQuestIds
- * - Removes questId from all session log entries' questIds (if present)
- * Returns partial campaign update: { storyArcs, quests, sessionLog }
+ * Returns partial campaign update: { storyArcs, quests }
  */
 export function deleteQuestCleanup(
   campaign: Campaign,
@@ -121,16 +120,7 @@ export function deleteQuestCleanup(
         : q;
     });
 
-  // Clean questIds from session log entries
-  const sessionLog = (campaign.sessionLog ?? []).map(entry => {
-    const entryQuestIds = (entry as SessionLogEntry & { questIds?: string[] }).questIds;
-    if (!entryQuestIds) return entry;
-    const filtered = entryQuestIds.filter(id => id !== questId);
-    if (filtered.length === entryQuestIds.length) return entry;
-    return { ...entry, questIds: filtered };
-  });
-
-  return { storyArcs, quests, sessionLog };
+  return { storyArcs, quests };
 }
 
 /**
@@ -191,6 +181,23 @@ export function removeClueFromQuests(
     const filtered = q.linkedClueIds.filter(id => id !== clueId);
     return filtered.length !== q.linkedClueIds.length
       ? { ...q, linkedClueIds: filtered }
+      : q;
+  });
+
+  return { quests };
+}
+
+/**
+ * Remove a faction reference from all quests' linkedFactionIds.
+ */
+export function removeFactionFromQuests(
+  campaign: Campaign,
+  factionId: string
+): { quests: Quest[] } {
+  const quests = (campaign.quests ?? []).map(q => {
+    const filtered = q.linkedFactionIds.filter(id => id !== factionId);
+    return filtered.length !== q.linkedFactionIds.length
+      ? { ...q, linkedFactionIds: filtered }
       : q;
   });
 

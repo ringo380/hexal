@@ -44,7 +44,11 @@ const categoryConfig: Record<ContentCategory, { title: string; icon: IconName }>
   clues: { title: 'Clues & Hooks', icon: 'lightbulb' }
 };
 
-function HexDetail() {
+interface HexDetailProps {
+  onOpenQuestManager?: () => void;
+}
+
+function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
   const {
     campaign,
     getHex,
@@ -462,7 +466,7 @@ function HexDetail() {
           const hexQuests = getQuestsForHex(campaign, hexKey);
           if (hexQuests.length === 0) return null;
           return (
-            <HexQuestSection quests={hexQuests} />
+            <HexQuestSection quests={hexQuests} onOpenQuestManager={onOpenQuestManager} />
           );
         })()}
       </div>
@@ -1061,9 +1065,10 @@ function MarkerSection({
 // Hex quest section
 interface HexQuestSectionProps {
   quests: import('../types/Quest').Quest[];
+  onOpenQuestManager?: () => void;
 }
 
-function HexQuestSection({ quests }: HexQuestSectionProps) {
+function HexQuestSection({ quests, onOpenQuestManager }: HexQuestSectionProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
   return (
@@ -1085,6 +1090,15 @@ function HexQuestSection({ quests }: HexQuestSectionProps) {
                 <span className="hex-quest-title">{quest.title || 'Untitled'}</span>
                 {total > 0 && (
                   <span className="hex-quest-progress">{completed}/{total}</span>
+                )}
+                {onOpenQuestManager && (
+                  <button
+                    className="btn-icon-small"
+                    onClick={(e) => { e.stopPropagation(); onOpenQuestManager(); }}
+                    title="View in Quest Manager"
+                  >
+                    <Icon name="export" size={12} />
+                  </button>
                 )}
               </div>
             );
