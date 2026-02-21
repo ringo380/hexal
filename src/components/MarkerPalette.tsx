@@ -103,6 +103,7 @@ function MarkerPalette({ onMarkerSelected, selectedMarkerType }: MarkerPalettePr
         role="button"
         tabIndex={0}
         aria-expanded={isExpanded}
+        aria-controls="marker-palette-content"
         onClick={() => setIsExpanded(!isExpanded)}
         onKeyDown={onActivate(() => setIsExpanded(!isExpanded))}
       >
@@ -114,7 +115,7 @@ function MarkerPalette({ onMarkerSelected, selectedMarkerType }: MarkerPalettePr
       </div>
 
       {isExpanded && (
-        <div className="marker-palette-content">
+        <div id="marker-palette-content" className="marker-palette-content">
           {selectedMarkerType && (
             <div className="placement-mode-indicator">
               Click on a hex to place: {selectedMarkerType.name}
@@ -141,6 +142,7 @@ function MarkerPalette({ onMarkerSelected, selectedMarkerType }: MarkerPalettePr
                   role="button"
                   tabIndex={0}
                   aria-expanded={isCategoryExpanded}
+                  aria-controls={`marker-category-${category}`}
                   onClick={() => toggleCategory(category)}
                   onKeyDown={onActivate(() => toggleCategory(category))}
                 >
@@ -152,7 +154,7 @@ function MarkerPalette({ onMarkerSelected, selectedMarkerType }: MarkerPalettePr
                 </div>
 
                 {isCategoryExpanded && (
-                  <div className="marker-grid">
+                  <div id={`marker-category-${category}`} className="marker-grid">
                     {markers.map(markerType => (
                       <button
                         key={markerType.id}

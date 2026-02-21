@@ -541,14 +541,14 @@ function EncounterSection({
 
   return (
     <div className="content-section">
-      <div className="section-header" role="button" tabIndex={0} aria-expanded={isExpanded} onClick={() => setIsExpanded(!isExpanded)} onKeyDown={onActivate(() => setIsExpanded(!isExpanded))}>
+      <div className="section-header" role="button" tabIndex={0} aria-expanded={isExpanded} aria-controls="hex-encounters-content" onClick={() => setIsExpanded(!isExpanded)} onKeyDown={onActivate(() => setIsExpanded(!isExpanded))}>
         <span className="section-icon"><Icon name="sword" size={14} /></span>
         <span className="section-title">Encounters</span>
         <span className="section-count">{encounters.length}</span>
         <span className="section-toggle"><Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} size={12} /></span>
       </div>
       {isExpanded && (
-        <div className="section-content">
+        <div id="hex-encounters-content" className="section-content">
           {encounters.map((encounter) => (
             <EncounterRow
               key={encounter.id}
@@ -610,14 +610,14 @@ function NpcSection({ npcs, factions, onAdd, onToggleResolved, onEdit, onDelete 
 
   return (
     <div className="content-section">
-      <div className="section-header" role="button" tabIndex={0} aria-expanded={isExpanded} onClick={() => setIsExpanded(!isExpanded)} onKeyDown={onActivate(() => setIsExpanded(!isExpanded))}>
+      <div className="section-header" role="button" tabIndex={0} aria-expanded={isExpanded} aria-controls="hex-npcs-content" onClick={() => setIsExpanded(!isExpanded)} onKeyDown={onActivate(() => setIsExpanded(!isExpanded))}>
         <span className="section-icon"><Icon name="user" size={14} /></span>
         <span className="section-title">NPCs</span>
         <span className="section-count">{npcs.length}</span>
         <span className="section-toggle"><Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} size={12} /></span>
       </div>
       {isExpanded && (
-        <div className="section-content">
+        <div id="hex-npcs-content" className="section-content">
           {npcs.map((npc) => (
             <NpcRow
               key={npc.id}
@@ -653,14 +653,14 @@ function ContentSection({ category, items, onAdd, onToggleResolved, onEdit, onDe
 
   return (
     <div className="content-section">
-      <div className="section-header" role="button" tabIndex={0} aria-expanded={isExpanded} onClick={() => setIsExpanded(!isExpanded)} onKeyDown={onActivate(() => setIsExpanded(!isExpanded))}>
+      <div className="section-header" role="button" tabIndex={0} aria-expanded={isExpanded} aria-controls={`hex-${category}-content`} onClick={() => setIsExpanded(!isExpanded)} onKeyDown={onActivate(() => setIsExpanded(!isExpanded))}>
         <span className="section-icon"><Icon name={config.icon} size={14} /></span>
         <span className="section-title">{config.title}</span>
         <span className="section-count">{items.length}</span>
         <span className="section-toggle"><Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} size={12} /></span>
       </div>
       {isExpanded && (
-        <div className="section-content">
+        <div id={`hex-${category}-content`} className="section-content">
           {items.map((item) => (
             <ContentItemRow
               key={item.id}
@@ -808,14 +808,14 @@ function HexWeatherSection({
 
   return (
     <div className="hex-weather-section">
-      <div className="section-header" role="button" tabIndex={0} aria-expanded={isExpanded} onClick={() => setIsExpanded(!isExpanded)} onKeyDown={onActivate(() => setIsExpanded(!isExpanded))}>
+      <div className="section-header" role="button" tabIndex={0} aria-expanded={isExpanded} aria-controls="hex-weather-content" onClick={() => setIsExpanded(!isExpanded)} onKeyDown={onActivate(() => setIsExpanded(!isExpanded))}>
         <span className="section-icon"><Icon name="cloud-sun" size={14} /></span>
         <span className="section-title">Weather</span>
         {hasOverride && <span className="override-badge">Override</span>}
         <span className="section-toggle"><Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} size={12} /></span>
       </div>
       {isExpanded && (
-        <div className="section-content">
+        <div id="hex-weather-content" className="section-content">
           {!isEditing ? (
             <>
               <div className="weather-current">
@@ -965,14 +965,14 @@ function MarkerSection({
 
   return (
     <div className="marker-section">
-      <div className="section-header" role="button" tabIndex={0} aria-expanded={isExpanded} onClick={() => setIsExpanded(!isExpanded)} onKeyDown={onActivate(() => setIsExpanded(!isExpanded))}>
+      <div className="section-header" role="button" tabIndex={0} aria-expanded={isExpanded} aria-controls="hex-markers-content" onClick={() => setIsExpanded(!isExpanded)} onKeyDown={onActivate(() => setIsExpanded(!isExpanded))}>
         <span className="section-icon"><Icon name="pin" size={14} /></span>
         <span className="section-title">Markers</span>
         <span className="section-count">{markers.length}</span>
         <span className="section-toggle"><Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} size={12} /></span>
       </div>
       {isExpanded && (
-        <div className="section-content">
+        <div id="hex-markers-content" className="section-content">
           {markers.map((marker) => {
             const markerType = getMarkerType(marker.typeId, markerTypes);
             const icon = getMarkerIcon(marker, markerTypes);
@@ -1077,14 +1077,14 @@ function HexQuestSection({ quests, onOpenQuestManager }: HexQuestSectionProps) {
 
   return (
     <div className="content-section hex-quest-section">
-      <div className="section-header" role="button" tabIndex={0} aria-expanded={isExpanded} onClick={() => setIsExpanded(!isExpanded)} onKeyDown={onActivate(() => setIsExpanded(!isExpanded))}>
+      <div className="section-header" role="button" tabIndex={0} aria-expanded={isExpanded} aria-controls="hex-quests-content" onClick={() => setIsExpanded(!isExpanded)} onKeyDown={onActivate(() => setIsExpanded(!isExpanded))}>
         <span className="section-icon"><Icon name="star" size={14} /></span>
         <span className="section-title">Quests</span>
         <span className="section-count">{quests.length}</span>
         <span className="section-toggle"><Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} size={12} /></span>
       </div>
       {isExpanded && (
-        <div className="section-content">
+        <div id="hex-quests-content" className="section-content">
           {quests.map(quest => {
             const completed = quest.objectives.filter(o => o.isComplete).length;
             const total = quest.objectives.length;
@@ -1126,14 +1126,14 @@ function HexSessionHistory({ entries, sessions }: HexSessionHistoryProps) {
 
   return (
     <div className="content-section hex-session-history">
-      <div className="section-header" role="button" tabIndex={0} aria-expanded={isExpanded} onClick={() => setIsExpanded(!isExpanded)} onKeyDown={onActivate(() => setIsExpanded(!isExpanded))}>
+      <div className="section-header" role="button" tabIndex={0} aria-expanded={isExpanded} aria-controls="hex-session-history-content" onClick={() => setIsExpanded(!isExpanded)} onKeyDown={onActivate(() => setIsExpanded(!isExpanded))}>
         <span className="section-icon"><Icon name="calendar" size={14} /></span>
         <span className="section-title">Session History</span>
         <span className="section-count">{entries.length}</span>
         <span className="section-toggle"><Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} size={12} /></span>
       </div>
       {isExpanded && (
-        <div className="section-content">
+        <div id="hex-session-history-content" className="section-content">
           {entries.map(entry => {
             const session = getSession(entry.sessionId);
             return (
