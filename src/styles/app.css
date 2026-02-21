@@ -164,6 +164,17 @@ select:focus {
   outline-offset: -2px;
 }
 
+.close-btn:focus-visible,
+.btn:focus-visible,
+.btn-icon:focus-visible,
+.btn-icon-small:focus-visible,
+.tab-btn:focus-visible,
+.tag-filter-chip:focus-visible,
+.quest-link-chip:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
+}
+
 textarea {
   resize: vertical;
   min-height: 60px;
