@@ -72,6 +72,11 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
   const [showLogin, setShowLogin] = useState(false);
   const [showCreateRegion, setShowCreateRegion] = useState(false);
 
+  // Clear multi-selection when campaign changes (prevents stale keys across campaigns)
+  useEffect(() => {
+    clearMultiSelection();
+  }, [campaign?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Register export handler for menu command
   useEffect(() => {
     if (onRegisterExport) {
