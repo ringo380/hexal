@@ -1,6 +1,7 @@
 // ContentItemRow - Single content item display
 import type { ContentItem } from '../../types';
 import Icon from '../icons/Icon';
+import { onActivate } from '../../utils/keyboard';
 
 interface ContentItemRowProps {
   item: ContentItem;
@@ -20,7 +21,7 @@ function ContentItemRow({ item, onToggleResolved, onEdit, onDelete }: ContentIte
       >
         <Icon name={item.isResolved ? 'check' : 'circle'} size={14} />
       </button>
-      <div className="item-content" onClick={onEdit}>
+      <div className="item-content" role="button" tabIndex={0} aria-label={`Edit ${item.title}`} onClick={onEdit} onKeyDown={onActivate(onEdit)}>
         <span className="item-title">{item.title}</span>
         {item.difficulty && (
           <span className="item-difficulty">({item.difficulty})</span>

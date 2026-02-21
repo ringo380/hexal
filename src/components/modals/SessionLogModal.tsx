@@ -13,6 +13,7 @@ import {
 } from '../../services/sessionLog';
 import { formatDate, formatTime12 } from '../../services/time';
 import SessionEntryEditor from '../sessions/SessionEntryEditor';
+import { onActivate } from '../../utils/keyboard';
 import SessionTagBadge from '../sessions/SessionTagBadge';
 import Icon from '../icons/Icon';
 
@@ -217,12 +218,16 @@ function SessionLogModal({ onClose, onNavigateToHex }: SessionLogModalProps) {
               <button className="btn btn-primary btn-small" onClick={addSession} style={{ margin: '8px' }}>
                 + New Session
               </button>
-              <div className="session-list-items">
+              <div className="session-list-items" role="listbox" aria-label="Sessions">
                 {sortedSessions.map(session => (
                   <div
                     key={session.id}
+                    role="option"
+                    tabIndex={0}
+                    aria-selected={session.id === selectedSessionId}
                     className={`session-list-item ${session.id === selectedSessionId ? 'selected' : ''}`}
                     onClick={() => setSelectedSessionId(session.id)}
+                    onKeyDown={onActivate(() => setSelectedSessionId(session.id))}
                   >
                     <div className="session-list-item-header">
                       <span className="session-list-item-number">#{session.number}</span>
@@ -328,7 +333,10 @@ function SessionLogModal({ onClose, onNavigateToHex }: SessionLogModalProps) {
                                 <span
                                   key={key}
                                   className="hex-link-chip"
+                                  role="link"
+                                  tabIndex={0}
                                   onClick={() => onNavigateToHex?.(key)}
+                                  onKeyDown={onActivate(() => onNavigateToHex?.(key))}
                                 >
                                   ({key})
                                 </span>
@@ -456,7 +464,7 @@ function SessionEditor({
         <label>Hexes Visited</label>
         <div className="session-entry-hex-chips">
           {session.hexesVisited.map(key => (
-            <span key={key} className="hex-link-chip" onClick={() => onNavigateToHex?.(key)}>
+            <span key={key} className="hex-link-chip" role="link" tabIndex={0} onClick={() => onNavigateToHex?.(key)} onKeyDown={onActivate(() => onNavigateToHex?.(key))}>
               ({key})
               <button
                 className="hex-link-chip-remove"

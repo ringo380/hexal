@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
 import type { EncounterTable, EncounterEntry } from '../../types/Campaign';
 import Icon from '../icons/Icon';
+import { onActivate } from '../../utils/keyboard';
 
 interface EncounterTableEditorModalProps {
   onClose: () => void;
@@ -88,12 +89,16 @@ function EncounterTableEditorModal({ onClose }: EncounterTableEditorModalProps) 
         </div>
         <div className="modal-body encounter-table-layout">
           {/* Left panel - table list */}
-          <div className="encounter-table-list">
+          <div className="encounter-table-list" role="listbox" aria-label="Encounter tables">
             {tables.map(table => (
               <div
                 key={table.id}
+                role="option"
+                tabIndex={0}
+                aria-selected={table.id === selectedTableId}
                 className={`encounter-table-item ${table.id === selectedTableId ? 'selected' : ''}`}
                 onClick={() => { setSelectedTableId(table.id); setEditingTable(null); }}
+                onKeyDown={onActivate(() => { setSelectedTableId(table.id); setEditingTable(null); })}
               >
                 <span className="encounter-table-name">{table.name}</span>
                 <span className="encounter-table-terrain">{table.terrain || 'Any'}</span>

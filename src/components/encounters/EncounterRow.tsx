@@ -3,6 +3,7 @@ import Icon from '../icons/Icon';
 import EncounterTypeBadge from './EncounterTypeBadge';
 import DifficultyBadge from './DifficultyBadge';
 import OutcomeBadge from './OutcomeBadge';
+import { onActivate } from '../../utils/keyboard';
 
 interface EncounterRowProps {
   encounter: Encounter;
@@ -22,7 +23,7 @@ function EncounterRow({ encounter, onToggleResolved, onEdit, onDelete }: Encount
       >
         <Icon name={encounter.isResolved ? 'check' : 'circle'} size={14} />
       </button>
-      <div className="encounter-row-content" onClick={onEdit}>
+      <div className="encounter-row-content" role="button" tabIndex={0} aria-label={`Edit ${encounter.title}`} onClick={onEdit} onKeyDown={onActivate(onEdit)}>
         <div className="encounter-row-header">
           <span className="item-title">{encounter.title}</span>
           <div className="encounter-row-badges">

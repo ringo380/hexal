@@ -3,6 +3,7 @@ import Icon from '../icons/Icon';
 import AlignmentBadge from './AlignmentBadge';
 import AttitudeBadge from './AttitudeBadge';
 import FactionBadge from './FactionBadge';
+import { onActivate } from '../../utils/keyboard';
 
 interface NpcRowProps {
   npc: Npc;
@@ -25,7 +26,7 @@ function NpcRow({ npc, faction, onToggleResolved, onEdit, onDelete }: NpcRowProp
       >
         <Icon name={npc.isResolved ? 'check' : 'circle'} size={14} />
       </button>
-      <div className="npc-row-content" onClick={onEdit}>
+      <div className="npc-row-content" role="button" tabIndex={0} aria-label={`Edit ${npc.title}`} onClick={onEdit} onKeyDown={onActivate(onEdit)}>
         <div className="npc-row-header">
           <span className="item-title">
             {!npc.isAlive && <Icon name="skull" size={12} />}
