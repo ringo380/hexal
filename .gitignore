@@ -4,6 +4,8 @@ node_modules/
 # Claude Code
 CLAUDE.md
 .claude/
+.claude-dev-helper/
+.plugin-config/
 
 # Build output
 dist/
