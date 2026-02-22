@@ -12,6 +12,7 @@ import {
   exportAllSessionsMarkdown
 } from '../../services/sessionLog';
 import { formatDate, formatTime12 } from '../../services/time';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import SessionEntryEditor from '../sessions/SessionEntryEditor';
 import { onActivate } from '../../utils/keyboard';
 import SessionTagBadge from '../sessions/SessionTagBadge';
@@ -25,6 +26,7 @@ interface SessionLogModalProps {
 type Tab = 'sessions' | 'timeline' | 'export';
 
 function SessionLogModal({ onClose, onNavigateToHex }: SessionLogModalProps) {
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
   const { campaign, updateCampaignData, sessions, sessionLog, timeWeather } = useCampaign();
   const [activeTab, setActiveTab] = useState<Tab>('sessions');
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
@@ -184,10 +186,10 @@ function SessionLogModal({ onClose, onNavigateToHex }: SessionLogModalProps) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal modal-xl session-log-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="session-log-modal-title" onClick={onClose}>
+      <div ref={focusTrapRef} className="modal modal-xl session-log-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3><Icon name="calendar" size={18} /> Session Log</h3>
+          <h3 id="session-log-modal-title"><Icon name="calendar" size={18} /> Session Log</h3>
           <div className="session-log-tabs">
             <button
               className={`tab-btn ${activeTab === 'sessions' ? 'active' : ''}`}

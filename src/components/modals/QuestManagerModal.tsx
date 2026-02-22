@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import type { Quest, QuestStatus, StoryArc } from '../../types/Quest';
 import { createQuest, createStoryArc, QUEST_STATUS_INFO, STORY_ARC_STATUS_INFO, STORY_ARC_COLORS } from '../../types/Quest';
 import { deleteQuestCleanup, deleteStoryArcCleanup } from '../../services/questService';
@@ -27,6 +28,7 @@ const STATUS_ORDER: Record<QuestStatus, number> = {
 
 function QuestManagerModal({ onClose }: QuestManagerModalProps) {
   const { campaign, quests, storyArcs, factions, allNpcs, updateCampaignData } = useCampaign();
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
   const [activeTab, setActiveTab] = useState<Tab>('quests');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<QuestStatus | ''>('');
@@ -145,10 +147,10 @@ function QuestManagerModal({ onClose }: QuestManagerModalProps) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal quest-manager-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="quest-manager-modal-title" onClick={onClose}>
+      <div className="modal quest-manager-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3><Icon name="star" size={18} /> Quests & Story Arcs</h3>
+          <h3 id="quest-manager-modal-title"><Icon name="star" size={18} /> Quests & Story Arcs</h3>
           <button className="close-btn" onClick={onClose}>&times;</button>
         </div>
 

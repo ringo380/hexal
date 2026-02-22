@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import type { EncounterTemplate, EncounterType } from '../../types/Campaign';
 import { createEncounterTemplate, ENCOUNTER_TYPE_INFO } from '../../types/Campaign';
 import EncounterTypeBadge from '../encounters/EncounterTypeBadge';
@@ -16,6 +17,7 @@ const ENCOUNTER_TYPES: EncounterType[] = ['combat', 'social', 'exploration', 'pu
 
 function EncounterTemplateLibrary({ onClose }: EncounterTemplateLibraryProps) {
   const { encounterTemplates, updateCampaignData } = useCampaign();
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
   const [searchQuery, setSearchQuery] = useState('');
   const [editingTemplate, setEditingTemplate] = useState<EncounterTemplate | null>(null);
 
@@ -48,10 +50,10 @@ function EncounterTemplateLibrary({ onClose }: EncounterTemplateLibraryProps) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal encounter-template-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="encounter-templates-modal-title">
+      <div className="modal encounter-template-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Encounter Templates</h3>
+          <h3 id="encounter-templates-modal-title">Encounter Templates</h3>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
         <div className="modal-body">

@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
 import { useSelection } from '../../stores/SelectionContext';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useAnnounce } from '../../stores/AnnouncerContext';
 import {
   populateHex,
   generateBiomeTerrain,
@@ -23,6 +25,8 @@ interface GeneratorModalProps {
 function GeneratorModal({ onClose }: GeneratorModalProps) {
   const { campaign, getHex, updateHex, updateCampaignData } = useCampaign();
   const { selectedCoordinate } = useSelection();
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
+  const announce = useAnnounce();
 
   const [target, setTarget] = useState<GeneratorTarget>('selected');
   const [generateTerrainEnabled, setGenerateTerrainEnabled] = useState(true);
@@ -218,6 +222,7 @@ function GeneratorModal({ onClose }: GeneratorModalProps) {
       updateCampaignData({ hexes });
     }
 
+    announce('Content generation complete', 'assertive');
     onClose();
   };
 
@@ -231,7 +236,7 @@ function GeneratorModal({ onClose }: GeneratorModalProps) {
       aria-modal="true"
       aria-labelledby="generator-modal-title"
     >
-      <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
+      <div ref={focusTrapRef} className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3 id="generator-modal-title">Generate Content</h3>
           <button className="close-btn" onClick={onClose} aria-label="Close">×</button>

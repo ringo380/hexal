@@ -1,4 +1,5 @@
 // KeyboardShortcutsModal - Shows all keyboard shortcuts
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface KeyboardShortcutsModalProps {
   onClose: () => void;
@@ -63,6 +64,8 @@ const sections: ShortcutSection[] = [
 ];
 
 function KeyboardShortcutsModal({ onClose }: KeyboardShortcutsModalProps) {
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
+
   return (
     <div
       className="modal-overlay"
@@ -72,6 +75,7 @@ function KeyboardShortcutsModal({ onClose }: KeyboardShortcutsModalProps) {
       aria-labelledby="shortcuts-modal-title"
     >
       <div
+        ref={focusTrapRef}
         className="modal keyboard-shortcuts-modal"
         onClick={(e) => e.stopPropagation()}
       >

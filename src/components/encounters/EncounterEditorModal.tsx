@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Encounter, EncounterType, EncounterOutcome, Npc, EncounterTemplate } from '../../types/Campaign';
 import { ENCOUNTER_TYPE_INFO, OUTCOME_INFO, createEncounterTemplate } from '../../types/Campaign';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import CreatureList from './CreatureList';
 import RewardList from './RewardList';
 import NpcLinker from './NpcLinker';
@@ -17,6 +18,7 @@ const ENCOUNTER_TYPES: EncounterType[] = ['combat', 'social', 'exploration', 'pu
 const OUTCOMES: EncounterOutcome[] = ['pending', 'victory', 'defeat', 'fled', 'negotiated', 'bypassed'];
 
 function EncounterEditorModal({ encounter, allNpcs, onSave, onSaveAsTemplate, onClose }: EncounterEditorModalProps) {
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
   const [title, setTitle] = useState(encounter.title);
   const [description, setDescription] = useState(encounter.description);
   const [difficulty, setDifficulty] = useState(encounter.difficulty ?? '');
@@ -54,10 +56,10 @@ function EncounterEditorModal({ encounter, allNpcs, onSave, onSaveAsTemplate, on
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal modal-lg encounter-editor-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="encounter-editor-modal-title" onClick={onClose}>
+      <div ref={focusTrapRef} className="modal modal-lg encounter-editor-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Edit Encounter</h3>
+          <h3 id="encounter-editor-modal-title">Edit Encounter</h3>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
         <div className="modal-body">

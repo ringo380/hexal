@@ -1,6 +1,7 @@
 // ShareCampaignModal — Campaign sharing and invite link management (placeholder)
 
 import { useState } from 'react';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import Icon from '../icons/Icon';
 
 interface ShareCampaignModalProps {
@@ -12,17 +13,19 @@ interface ShareCampaignModalProps {
 type InviteRole = 'dm' | 'player' | 'viewer';
 
 function ShareCampaignModal({ campaignId: _campaignId, campaignName, onClose }: ShareCampaignModalProps) {
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
   const [inviteRole, setInviteRole] = useState<InviteRole>('player');
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="share-campaign-modal-title">
       <div
         className="modal share-campaign-modal"
+        ref={focusTrapRef}
         onClick={(e) => e.stopPropagation()}
         style={{ width: 480 }}
       >
         <div className="modal-header">
-          <h3>
+          <h3 id="share-campaign-modal-title">
             <Icon name="users" size={18} /> Share "{campaignName}"
           </h3>
           <button className="modal-close" onClick={onClose} aria-label="Close">x</button>
