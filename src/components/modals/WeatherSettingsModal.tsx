@@ -162,8 +162,9 @@ function WeatherSettingsModal({ onClose }: WeatherSettingsModalProps) {
             <h4>Set Custom Weather</h4>
 
             <div className="form-group">
-              <label>Condition</label>
+              <label htmlFor="weather-condition">Condition</label>
               <select
+                id="weather-condition"
                 value={weatherToEdit.condition}
                 onChange={(e) => handleConditionChange(e.target.value as WeatherCondition)}
               >
@@ -177,8 +178,9 @@ function WeatherSettingsModal({ onClose }: WeatherSettingsModalProps) {
 
             <div className="form-row">
               <div className="form-group">
-                <label>Temperature</label>
+                <label htmlFor="weather-temperature">Temperature</label>
                 <select
+                  id="weather-temperature"
                   value={weatherToEdit.temperature}
                   onChange={(e) => handleTemperatureChange(e.target.value as Temperature)}
                 >
@@ -191,8 +193,9 @@ function WeatherSettingsModal({ onClose }: WeatherSettingsModalProps) {
               </div>
 
               <div className="form-group">
-                <label>Wind</label>
+                <label htmlFor="weather-wind">Wind</label>
                 <select
+                  id="weather-wind"
                   value={weatherToEdit.wind}
                   onChange={(e) => handleWindChange(e.target.value as WindStrength)}
                 >
@@ -205,8 +208,9 @@ function WeatherSettingsModal({ onClose }: WeatherSettingsModalProps) {
               </div>
 
               <div className="form-group">
-                <label>Precipitation</label>
+                <label htmlFor="weather-precipitation">Precipitation</label>
                 <select
+                  id="weather-precipitation"
                   value={weatherToEdit.precipitation}
                   onChange={(e) => handlePrecipitationChange(e.target.value as PrecipitationLevel)}
                 >
@@ -267,8 +271,9 @@ function WeatherSettingsModal({ onClose }: WeatherSettingsModalProps) {
             <h4>Automatic Weather</h4>
 
             <div className="form-group form-checkbox">
-              <label>
+              <label htmlFor="weather-dynamic">
                 <input
+                  id="weather-dynamic"
                   type="checkbox"
                   checked={timeWeather.dynamicWeather}
                   onChange={(e) => handleDynamicToggle(e.target.checked)}
@@ -279,8 +284,9 @@ function WeatherSettingsModal({ onClose }: WeatherSettingsModalProps) {
             </div>
 
             <div className="form-group form-checkbox">
-              <label>
+              <label htmlFor="weather-seasonal">
                 <input
+                  id="weather-seasonal"
                   type="checkbox"
                   checked={timeWeather.seasonalEffects}
                   onChange={(e) => handleSeasonalToggle(e.target.checked)}
@@ -291,8 +297,9 @@ function WeatherSettingsModal({ onClose }: WeatherSettingsModalProps) {
             </div>
 
             <div className="form-group">
-              <label>Weather change interval (hours)</label>
+              <label htmlFor="weather-change-interval">Weather change interval (hours)</label>
               <input
+                id="weather-change-interval"
                 type="number"
                 min={1}
                 max={168}

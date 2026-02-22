@@ -706,7 +706,7 @@ function ContentItemEditor({ item, category, onSave, onClose }: ContentItemEdito
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>Edit {categoryConfig[category].title.slice(0, -1)}</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="modal-body">
           <div className="field-group">
@@ -1100,6 +1100,7 @@ function HexQuestSection({ quests, onOpenQuestManager }: HexQuestSectionProps) {
                     className="btn-icon-small"
                     onClick={(e) => { e.stopPropagation(); onOpenQuestManager(); }}
                     title="View in Quest Manager"
+                    aria-label="View in Quest Manager"
                   >
                     <Icon name="export" size={12} />
                   </button>

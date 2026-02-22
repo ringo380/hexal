@@ -41,8 +41,9 @@ function NewCampaignModal({ onClose }: NewCampaignModalProps) {
         </div>
         <div className="modal-body">
           <div className="field-group">
-            <label>Campaign Name</label>
+            <label htmlFor="new-campaign-name">Campaign Name</label>
             <input
+              id="new-campaign-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -51,19 +52,19 @@ function NewCampaignModal({ onClose }: NewCampaignModalProps) {
           </div>
           <div className="field-row">
             <div className="field-group">
-              <label>Width</label>
-              <div className="stepper">
-                <button onClick={() => setWidth(Math.max(5, width - 1))}>−</button>
+              <label id="new-campaign-width">Width</label>
+              <div className="stepper" role="group" aria-labelledby="new-campaign-width">
+                <button aria-label="Decrease width" onClick={() => setWidth(Math.max(5, width - 1))}>−</button>
                 <span>{width}</span>
-                <button onClick={() => setWidth(Math.min(50, width + 1))}>+</button>
+                <button aria-label="Increase width" onClick={() => setWidth(Math.min(50, width + 1))}>+</button>
               </div>
             </div>
             <div className="field-group">
-              <label>Height</label>
-              <div className="stepper">
-                <button onClick={() => setHeight(Math.max(5, height - 1))}>−</button>
+              <label id="new-campaign-height">Height</label>
+              <div className="stepper" role="group" aria-labelledby="new-campaign-height">
+                <button aria-label="Decrease height" onClick={() => setHeight(Math.max(5, height - 1))}>−</button>
                 <span>{height}</span>
-                <button onClick={() => setHeight(Math.min(50, height + 1))}>+</button>
+                <button aria-label="Increase height" onClick={() => setHeight(Math.min(50, height + 1))}>+</button>
               </div>
             </div>
           </div>

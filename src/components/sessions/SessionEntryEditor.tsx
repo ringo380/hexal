@@ -50,7 +50,7 @@ function SessionEntryEditor({ entry, calendar, onChange, onDelete, onNavigateToH
         <span className="session-entry-time">
           <Icon name="clock" size={12} /> {timeDisplay}
         </span>
-        <button className="btn-icon-small danger" onClick={onDelete} title="Delete entry">
+        <button className="btn-icon-small danger" onClick={onDelete} title="Delete entry" aria-label="Delete entry">
           <Icon name="trash" size={14} />
         </button>
       </div>
@@ -107,6 +107,7 @@ function SessionEntryEditor({ entry, calendar, onChange, onDelete, onNavigateToH
               <button
                 className="hex-link-chip-remove"
                 onClick={(e) => { e.stopPropagation(); removeHexKey(key); }}
+                aria-label={`Remove hex ${key}`}
               >
                 &times;
               </button>

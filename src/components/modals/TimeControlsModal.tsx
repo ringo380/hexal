@@ -129,8 +129,9 @@ function TimeControlsModal({ onClose }: TimeControlsModalProps) {
         <div className="modal-body">
           {/* Calendar Selection */}
           <div className="form-group">
-            <label>Calendar System</label>
+            <label htmlFor="time-calendar">Calendar System</label>
             <select
+              id="time-calendar"
               value={calendar.preset}
               onChange={(e) => handleCalendarChange(e.target.value as CalendarPreset)}
             >
@@ -163,8 +164,9 @@ function TimeControlsModal({ onClose }: TimeControlsModalProps) {
           <div className="time-controls-inputs">
             <div className="form-row">
               <div className="form-group">
-                <label>Year</label>
+                <label htmlFor="time-year">Year</label>
                 <input
+                  id="time-year"
                   type="number"
                   min={1}
                   value={time.year}
@@ -172,8 +174,9 @@ function TimeControlsModal({ onClose }: TimeControlsModalProps) {
                 />
               </div>
               <div className="form-group">
-                <label>Month</label>
+                <label htmlFor="time-month">Month</label>
                 <select
+                  id="time-month"
                   value={time.month}
                   onChange={(e) => handleMonthChange(parseInt(e.target.value))}
                 >
@@ -187,8 +190,9 @@ function TimeControlsModal({ onClose }: TimeControlsModalProps) {
             </div>
             <div className="form-row">
               <div className="form-group">
-                <label>Day</label>
+                <label htmlFor="time-day">Day</label>
                 <input
+                  id="time-day"
                   type="number"
                   min={1}
                   max={calendar.months[time.month]?.days || 30}
@@ -197,8 +201,9 @@ function TimeControlsModal({ onClose }: TimeControlsModalProps) {
                 />
               </div>
               <div className="form-group">
-                <label>Hour</label>
+                <label htmlFor="time-hour">Hour</label>
                 <input
+                  id="time-hour"
                   type="number"
                   min={0}
                   max={calendar.hoursPerDay - 1}
@@ -207,8 +212,9 @@ function TimeControlsModal({ onClose }: TimeControlsModalProps) {
                 />
               </div>
               <div className="form-group">
-                <label>Minute</label>
+                <label htmlFor="time-minute">Minute</label>
                 <input
+                  id="time-minute"
                   type="number"
                   min={0}
                   max={59}
@@ -251,6 +257,7 @@ function TimeControlsModal({ onClose }: TimeControlsModalProps) {
                   min={0}
                   value={customDays}
                   onChange={(e) => setCustomDays(parseInt(e.target.value) || 0)}
+                  aria-label="Custom advance days"
                 />
                 <span>days</span>
               </div>
@@ -260,6 +267,7 @@ function TimeControlsModal({ onClose }: TimeControlsModalProps) {
                   min={0}
                   value={customHours}
                   onChange={(e) => setCustomHours(parseInt(e.target.value) || 0)}
+                  aria-label="Custom advance hours"
                 />
                 <span>hours</span>
               </div>

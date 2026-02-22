@@ -244,8 +244,8 @@ function GeneratorModal({ onClose }: GeneratorModalProps) {
         <div className="modal-body">
           {/* Target selection */}
           <div className="field-group">
-            <label>Target</label>
-            <select value={target} onChange={(e) => setTarget(e.target.value as GeneratorTarget)}>
+            <label htmlFor="gen-target">Target</label>
+            <select id="gen-target" value={target} onChange={(e) => setTarget(e.target.value as GeneratorTarget)}>
               <option value="selected">Selected Hex</option>
               <option value="allEmpty">All Empty Hexes</option>
             </select>
@@ -256,9 +256,10 @@ function GeneratorModal({ onClose }: GeneratorModalProps) {
 
           {/* Seed input */}
           <div className="field-group">
-            <label>Seed</label>
+            <label htmlFor="gen-seed">Seed</label>
             <div style={{ display: 'flex', gap: '8px' }}>
               <input
+                id="gen-seed"
                 type="text"
                 value={seed}
                 onChange={(e) => setSeed(e.target.value)}
@@ -287,10 +288,11 @@ function GeneratorModal({ onClose }: GeneratorModalProps) {
           {generateTerrainEnabled && target === 'allEmpty' && (
             <>
               <div className="field-group" style={{ paddingLeft: '20px' }}>
-                <label>
+                <label htmlFor="gen-clustering">
                   Clustering Strength: {Math.round(clusterStrength * 100)}%
                 </label>
                 <input
+                  id="gen-clustering"
                   type="range"
                   min={0}
                   max={1}
@@ -302,10 +304,11 @@ function GeneratorModal({ onClose }: GeneratorModalProps) {
               </div>
 
               <div className="field-group" style={{ paddingLeft: '20px' }}>
-                <label>
+                <label htmlFor="gen-variety">
                   Terrain Variety: {Math.round(terrainVariety * 100)}%
                 </label>
                 <input
+                  id="gen-variety"
                   type="range"
                   min={0}
                   max={1}
@@ -331,10 +334,11 @@ function GeneratorModal({ onClose }: GeneratorModalProps) {
 
           {generateEncounterEnabled && (
             <div className="field-group" style={{ paddingLeft: '20px' }}>
-              <label>
+              <label htmlFor="gen-encounter-density">
                 Encounter Density: {Math.round(encounterDensity * 100)}%
               </label>
               <input
+                id="gen-encounter-density"
                 type="range"
                 min={0}
                 max={1}
@@ -358,10 +362,11 @@ function GeneratorModal({ onClose }: GeneratorModalProps) {
 
           {generateLandmarkEnabled && (
             <div className="field-group" style={{ paddingLeft: '20px' }}>
-              <label>
+              <label htmlFor="gen-landmark-density">
                 Landmark Density: {Math.round(landmarkDensity * 100)}%
               </label>
               <input
+                id="gen-landmark-density"
                 type="range"
                 min={0}
                 max={1}

@@ -73,6 +73,7 @@ function RelationshipEditor({ relationships, allNpcs, currentNpcId, onChange }: 
             className="btn-icon-small danger"
             onClick={() => removeRelationship(rel.targetNpcId)}
             title="Remove relationship"
+            aria-label="Remove relationship"
           >
             <Icon name="close" size={14} />
           </button>

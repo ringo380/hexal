@@ -60,13 +60,14 @@ function EncounterEditorModal({ encounter, allNpcs, onSave, onSaveAsTemplate, on
       <div ref={focusTrapRef} className="modal modal-lg encounter-editor-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3 id="encounter-editor-modal-title">Edit Encounter</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="modal-body">
           {/* Basic Info */}
           <div className="field-group">
-            <label>Title</label>
+            <label htmlFor="enc-editor-title">Title</label>
             <input
+              id="enc-editor-title"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -76,16 +77,17 @@ function EncounterEditorModal({ encounter, allNpcs, onSave, onSaveAsTemplate, on
 
           <div className="field-row">
             <div className="field-group">
-              <label>Encounter Type</label>
-              <select value={encounterType} onChange={(e) => setEncounterType(e.target.value as EncounterType)}>
+              <label htmlFor="enc-editor-type">Encounter Type</label>
+              <select id="enc-editor-type" value={encounterType} onChange={(e) => setEncounterType(e.target.value as EncounterType)}>
                 {ENCOUNTER_TYPES.map(t => (
                   <option key={t} value={t}>{ENCOUNTER_TYPE_INFO[t].label}</option>
                 ))}
               </select>
             </div>
             <div className="field-group">
-              <label>Difficulty / CR</label>
+              <label htmlFor="enc-editor-difficulty">Difficulty / CR</label>
               <input
+                id="enc-editor-difficulty"
                 type="text"
                 value={difficulty}
                 onChange={(e) => setDifficulty(e.target.value)}
@@ -95,8 +97,9 @@ function EncounterEditorModal({ encounter, allNpcs, onSave, onSaveAsTemplate, on
           </div>
 
           <div className="field-group">
-            <label>Description</label>
+            <label htmlFor="enc-editor-description">Description</label>
             <textarea
+              id="enc-editor-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
@@ -115,8 +118,8 @@ function EncounterEditorModal({ encounter, allNpcs, onSave, onSaveAsTemplate, on
           {/* Outcome */}
           <div className="field-row">
             <div className="field-group">
-              <label>Outcome</label>
-              <select value={outcome} onChange={(e) => setOutcome(e.target.value as EncounterOutcome)}>
+              <label htmlFor="enc-editor-outcome">Outcome</label>
+              <select id="enc-editor-outcome" value={outcome} onChange={(e) => setOutcome(e.target.value as EncounterOutcome)}>
                 {OUTCOMES.map(o => (
                   <option key={o} value={o}>{OUTCOME_INFO[o].label}</option>
                 ))}
@@ -126,8 +129,9 @@ function EncounterEditorModal({ encounter, allNpcs, onSave, onSaveAsTemplate, on
 
           {outcome !== 'pending' && (
             <div className="field-group">
-              <label>Outcome Notes</label>
+              <label htmlFor="enc-editor-outcome-notes">Outcome Notes</label>
               <textarea
+                id="enc-editor-outcome-notes"
                 value={outcomeNotes}
                 onChange={(e) => setOutcomeNotes(e.target.value)}
                 rows={2}
