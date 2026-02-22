@@ -21,11 +21,17 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
 ) {
   const containerRef = useRef<T>(null);
   const previousFocusRef = useRef<Element | null>(null);
+  const onEscapeRef = useRef(options.onEscape);
+
+  // Keep the ref current without triggering re-renders
+  useEffect(() => {
+    onEscapeRef.current = options.onEscape;
+  });
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        options.onEscape?.();
+        onEscapeRef.current?.();
         return;
       }
 
@@ -54,7 +60,7 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
         }
       }
     },
-    [options]
+    []
   );
 
   useEffect(() => {

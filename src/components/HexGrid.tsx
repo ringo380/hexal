@@ -194,14 +194,14 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
   const announce = useAnnounce();
 
   // Announce hex selection changes to screen readers
+  // Derive terrain outside effect so we depend on the value, not the campaign object
+  const selectedTerrain = selectedCoordinate
+    ? campaign?.hexes[hexKey(selectedCoordinate)]?.terrain
+    : undefined;
   useEffect(() => {
-    if (!selectedCoordinate || !campaign) return;
-    const key = hexKey(selectedCoordinate);
-    const hex = campaign.hexes[key];
-    if (hex) {
-      announce(`Selected hex ${selectedCoordinate.q}, ${selectedCoordinate.r}: ${hex.terrain || 'empty'}`);
-    }
-  }, [selectedCoordinate, campaign, announce]);
+    if (!selectedCoordinate) return;
+    announce(`Selected hex ${selectedCoordinate.q}, ${selectedCoordinate.r}: ${selectedTerrain || 'empty'}`);
+  }, [selectedCoordinate, selectedTerrain, announce]);
 
   // Tooltip state
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
