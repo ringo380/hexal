@@ -23,7 +23,7 @@ function CreatureList({ creatures, onChange }: CreatureListProps) {
   return (
     <div className="creature-list">
       <label>Creatures</label>
-      {creatures.map((creature) => (
+      {creatures.map((creature, idx) => (
         <div key={creature.id} className="creature-row">
           <input
             type="text"
@@ -31,7 +31,7 @@ function CreatureList({ creatures, onChange }: CreatureListProps) {
             value={creature.name}
             onChange={(e) => updateCreature(creature.id, { name: e.target.value })}
             placeholder="Creature name"
-            aria-label="Creature name"
+            aria-label={`Creature ${idx + 1} name`}
           />
           <input
             type="number"
@@ -39,7 +39,7 @@ function CreatureList({ creatures, onChange }: CreatureListProps) {
             value={creature.count}
             onChange={(e) => updateCreature(creature.id, { count: Math.max(1, parseInt(e.target.value) || 1) })}
             min={1}
-            aria-label="Creature count"
+            aria-label={`Creature ${idx + 1} count`}
           />
           <input
             type="text"
@@ -47,7 +47,7 @@ function CreatureList({ creatures, onChange }: CreatureListProps) {
             value={creature.cr || ''}
             onChange={(e) => updateCreature(creature.id, { cr: e.target.value || undefined })}
             placeholder="CR"
-            aria-label="Creature CR"
+            aria-label={`Creature ${idx + 1} CR`}
           />
           <input
             type="text"
@@ -55,13 +55,13 @@ function CreatureList({ creatures, onChange }: CreatureListProps) {
             value={creature.notes || ''}
             onChange={(e) => updateCreature(creature.id, { notes: e.target.value || undefined })}
             placeholder="Notes"
-            aria-label="Creature notes"
+            aria-label={`Creature ${idx + 1} notes`}
           />
           <button
             className="btn-icon-small danger"
             onClick={() => removeCreature(creature.id)}
             title="Remove creature"
-            aria-label="Remove creature"
+            aria-label={`Remove creature ${idx + 1}`}
           >
             <Icon name="close" size={14} />
           </button>
