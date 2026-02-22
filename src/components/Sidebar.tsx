@@ -1,7 +1,8 @@
 // Sidebar - List of hexes with filtering
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { useCampaign } from '../stores/CampaignContext';
 import { useSelection } from '../stores/SelectionContext';
+import { useAnnounce } from '../stores/AnnouncerContext';
 import type { Hex, ContentCategory } from '../types';
 import { hexHasUnresolvedContent, hexKey } from '../types';
 import { searchHex, getMatchHint } from '../services/search';
@@ -10,6 +11,7 @@ import Icon from './icons/Icon';
 import { onActivate } from '../utils/keyboard';
 
 function Sidebar() {
+  const announce = useAnnounce();
   const { campaign, bookmarkedHexes, regions } = useCampaign();
   const {
     selectedCoordinate,
@@ -95,6 +97,16 @@ function Sidebar() {
         return a.coordinate.q - b.coordinate.q;
       });
   }, [campaign, searchQuery, searchMatchMap, filterTerrain, filterStatus, filterHasUnresolvedHooks, filterContentTypes, filterBookmarked, bookmarkedHexes, filterRegion, hexRegionMap]);
+
+  // Announce filtered hex count to screen readers (debounced)
+  const announceTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => {
+    clearTimeout(announceTimerRef.current);
+    announceTimerRef.current = setTimeout(() => {
+      announce(`${filteredHexes.length} hex${filteredHexes.length === 1 ? '' : 'es'} shown`);
+    }, 300);
+    return () => clearTimeout(announceTimerRef.current);
+  }, [filteredHexes.length, announce]);
 
   const getTerrainColor = (terrain: string): string => {
     const terrainType = campaign?.terrainTypes.find(t => t.name === terrain);

@@ -1,4 +1,5 @@
 // UnsavedChangesDialog - Shown when user tries to close/switch with unsaved changes
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface UnsavedChangesDialogProps {
   onSave: () => void;
@@ -13,6 +14,8 @@ function UnsavedChangesDialog({
   onOpenNewWindow,
   onCancel
 }: UnsavedChangesDialogProps) {
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onCancel });
+
   return (
     <div
       className="modal-overlay"
@@ -22,7 +25,7 @@ function UnsavedChangesDialog({
       aria-labelledby="unsaved-changes-title"
       aria-describedby="unsaved-changes-description"
     >
-      <div className="modal unsaved-dialog" onClick={(e) => e.stopPropagation()}>
+      <div ref={focusTrapRef} className="modal unsaved-dialog" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3 id="unsaved-changes-title">Unsaved Changes</h3>
         </div>

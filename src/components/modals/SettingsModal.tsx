@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useSettings } from '../../stores/SettingsContext';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import type { AISettings, CloudSettings, GeneralSettings } from '../../stores/SettingsContext';
 
 interface SettingsModalProps {
@@ -12,6 +13,7 @@ type SettingsTab = 'general' | 'ai' | 'cloud';
 
 function SettingsModal({ onClose }: SettingsModalProps) {
   const { settings, updateSettings } = useSettings();
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
 
   // Local state for editing (commit on blur/save)
@@ -41,14 +43,15 @@ function SettingsModal({ onClose }: SettingsModalProps) {
   ];
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
       <div
         className="modal settings-modal"
+        ref={focusTrapRef}
         onClick={(e) => e.stopPropagation()}
         style={{ width: 520, maxHeight: '80vh' }}
       >
         <div className="modal-header">
-          <h3>Settings</h3>
+          <h3 id="settings-modal-title">Settings</h3>
           <button className="modal-close" onClick={onClose} aria-label="Close">×</button>
         </div>
 

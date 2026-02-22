@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../stores/AuthContext';
 import { useSettings } from '../../stores/SettingsContext';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import Icon from '../icons/Icon';
 
 interface LoginModalProps {
@@ -12,6 +13,7 @@ interface LoginModalProps {
 type AuthTab = 'signin' | 'signup';
 
 function LoginModal({ onClose }: LoginModalProps) {
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
   const { signIn, signUp, signInWithOAuth, loading } = useAuth();
   const { settings } = useSettings();
   const [activeTab, setActiveTab] = useState<AuthTab>('signin');
@@ -102,8 +104,6 @@ function LoginModal({ onClose }: LoginModalProps) {
       } else {
         handleSignUp();
       }
-    } else if (e.key === 'Escape') {
-      onClose();
     }
   };
 
@@ -113,15 +113,16 @@ function LoginModal({ onClose }: LoginModalProps) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="login-modal-title" onClick={onClose}>
       <div
+        ref={focusTrapRef}
         className="modal login-modal"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
         style={{ width: 400 }}
       >
         <div className="modal-header">
-          <h3>
+          <h3 id="login-modal-title">
             <Icon name="user" size={18} /> Account
           </h3>
           <button className="modal-close" onClick={onClose} aria-label="Close">x</button>

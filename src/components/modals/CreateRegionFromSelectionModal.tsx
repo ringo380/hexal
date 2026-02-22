@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { createRegion, REGION_COLORS } from '../../types/Campaign';
 import Icon from '../icons/Icon';
 
@@ -11,6 +12,7 @@ interface CreateRegionFromSelectionModalProps {
 
 function CreateRegionFromSelectionModal({ hexKeys, onClose, onCreated }: CreateRegionFromSelectionModalProps) {
   const { regions, updateCampaignData } = useCampaign();
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
 
   // Pick first unused color
   const usedColors = new Set(regions.map(r => r.color));
@@ -35,10 +37,10 @@ function CreateRegionFromSelectionModal({ hexKeys, onClose, onCreated }: CreateR
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="create-region-modal-title" onClick={onClose}>
+      <div className="modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3><Icon name="map" size={18} /> Create Region from {hexKeys.length} Hex{hexKeys.length !== 1 ? 'es' : ''}</h3>
+          <h3 id="create-region-modal-title"><Icon name="map" size={18} /> Create Region from {hexKeys.length} Hex{hexKeys.length !== 1 ? 'es' : ''}</h3>
           <button className="close-btn" onClick={onClose}>&times;</button>
         </div>
         <div className="modal-body" style={{ padding: '16px 20px' }}>

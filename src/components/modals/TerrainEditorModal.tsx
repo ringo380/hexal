@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import type { TerrainType } from '../../types/Campaign';
 import { REGION_COLORS } from '../../types/Campaign';
 import Icon from '../icons/Icon';
@@ -31,6 +32,7 @@ function TerrainEditorModal({ onClose }: TerrainEditorModalProps) {
     deleteTerrainType,
     renameTerrainType
   } = useCampaign();
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
   const [selectedId, setSelectedId] = useState<string | null>(terrainTypes[0]?.id ?? null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [replacementId, setReplacementId] = useState<string>('');
@@ -73,10 +75,10 @@ function TerrainEditorModal({ onClose }: TerrainEditorModalProps) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal terrain-editor-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="terrain-editor-modal-title">
+      <div className="modal terrain-editor-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3><Icon name="hexagon" size={18} /> Terrain Types</h3>
+          <h3 id="terrain-editor-modal-title"><Icon name="hexagon" size={18} /> Terrain Types</h3>
           <button className="close-btn" onClick={onClose}>&times;</button>
         </div>
         <div className="terrain-editor-body">

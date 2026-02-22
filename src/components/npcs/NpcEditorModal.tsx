@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Npc, NpcAlignment, NpcAttitude, Faction } from '../../types/Campaign';
 import { ALIGNMENT_LABELS, ATTITUDE_INFO } from '../../types/Campaign';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import RelationshipEditor from './RelationshipEditor';
 
 const ALIGNMENTS: NpcAlignment[] = [
@@ -21,6 +22,7 @@ interface NpcEditorModalProps {
 }
 
 function NpcEditorModal({ npc, factions, allNpcs, onSave, onClose }: NpcEditorModalProps) {
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
   const [title, setTitle] = useState(npc.title);
   const [race, setRace] = useState(npc.race ?? '');
   const [npcClass, setNpcClass] = useState(npc.class ?? '');
@@ -57,10 +59,10 @@ function NpcEditorModal({ npc, factions, allNpcs, onSave, onClose }: NpcEditorMo
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal modal-lg npc-editor-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="npc-editor-modal-title" onClick={onClose}>
+      <div ref={focusTrapRef} className="modal modal-lg npc-editor-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Edit NPC</h3>
+          <h3 id="npc-editor-modal-title">Edit NPC</h3>
           <button className="close-btn" onClick={onClose}>&times;</button>
         </div>
         <div className="modal-body">

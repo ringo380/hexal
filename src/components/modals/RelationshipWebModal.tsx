@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import type { Npc, Faction } from '../../types/Campaign';
 import { RELATIONSHIP_TYPE_INFO } from '../../types/Campaign';
 import Icon from '../icons/Icon';
@@ -17,6 +18,7 @@ interface NodePosition {
 
 function RelationshipWebModal({ onClose }: RelationshipWebModalProps) {
   const { allNpcs, factions } = useCampaign();
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [filterFactionId, setFilterFactionId] = useState<string>('');
@@ -169,10 +171,10 @@ function RelationshipWebModal({ onClose }: RelationshipWebModalProps) {
     : null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal modal-xl relationship-web-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="relationship-web-modal-title">
+      <div className="modal modal-xl relationship-web-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3><Icon name="link" size={18} /> Relationship Web</h3>
+          <h3 id="relationship-web-modal-title"><Icon name="link" size={18} /> Relationship Web</h3>
           <button className="close-btn" onClick={onClose}>&times;</button>
         </div>
         <div className="relationship-web-body">

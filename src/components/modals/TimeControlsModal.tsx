@@ -1,6 +1,7 @@
 // TimeControlsModal - Modal for time/calendar controls
 import { useState } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { CALENDAR_PRESETS, getTotalDaysInYear } from '../../data/calendars';
 import { getTimeOfDayLabel, getTimeOfDayIcon } from '../../services/time';
 import { CalendarPreset, SEASON_ICONS } from '../../types/Weather';
@@ -22,6 +23,7 @@ function TimeControlsModal({ onClose }: TimeControlsModalProps) {
     advanceTimeBy,
     initTimeWeather
   } = useCampaign();
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
 
   // Custom advance inputs
   const [customHours, setCustomHours] = useState<number>(1);
@@ -37,7 +39,7 @@ function TimeControlsModal({ onClose }: TimeControlsModalProps) {
         aria-modal="true"
         aria-labelledby="time-setup-modal-title"
       >
-        <div className="modal time-controls-modal" onClick={(e) => e.stopPropagation()}>
+        <div ref={focusTrapRef} className="modal time-controls-modal" onClick={(e) => e.stopPropagation()}>
           <div className="modal-header">
             <h2 id="time-setup-modal-title">Time & Weather Setup</h2>
             <button className="btn btn-icon" onClick={onClose} aria-label="Close">×</button>
@@ -119,7 +121,7 @@ function TimeControlsModal({ onClose }: TimeControlsModalProps) {
       aria-modal="true"
       aria-labelledby="time-controls-modal-title"
     >
-      <div className="modal time-controls-modal" onClick={(e) => e.stopPropagation()}>
+      <div ref={focusTrapRef} className="modal time-controls-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2 id="time-controls-modal-title">Time Controls</h2>
           <button className="btn btn-icon" onClick={onClose} aria-label="Close">×</button>
