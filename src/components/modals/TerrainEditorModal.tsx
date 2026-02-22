@@ -79,7 +79,7 @@ function TerrainEditorModal({ onClose }: TerrainEditorModalProps) {
       <div className="modal terrain-editor-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3 id="terrain-editor-modal-title"><Icon name="hexagon" size={18} /> Terrain Types</h3>
-          <button className="close-btn" onClick={onClose}>&times;</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">&times;</button>
         </div>
         <div className="terrain-editor-body">
           {/* Left panel: Terrain list */}
@@ -113,6 +113,7 @@ function TerrainEditorModal({ onClose }: TerrainEditorModalProps) {
                         className="terrain-delete-btn"
                         onClick={(e) => { e.stopPropagation(); handleDeleteClick(terrain.id); }}
                         title="Delete terrain type"
+                        aria-label="Delete terrain type"
                       >
                         <Icon name="trash" size={12} />
                       </button>
@@ -222,6 +223,7 @@ function TerrainEditor({ terrain, onUpdate, onRename }: TerrainEditorProps) {
               style={{ backgroundColor: color }}
               onClick={() => onUpdate({ colorHex: color })}
               title={color}
+              aria-label={`Color ${color}`}
             />
           ))}
           <input
@@ -243,6 +245,7 @@ function TerrainEditor({ terrain, onUpdate, onRename }: TerrainEditorProps) {
               className={`terrain-icon-option ${terrain.icon === iconName ? 'selected' : ''}`}
               onClick={() => onUpdate({ icon: iconName })}
               title={iconName}
+              aria-label={`Icon ${iconName}`}
             >
               <Icon name={iconName} size={16} />
             </button>

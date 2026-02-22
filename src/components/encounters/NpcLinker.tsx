@@ -50,6 +50,7 @@ function NpcLinker({ linkedNpcs, allNpcs, onChange }: NpcLinkerProps) {
             className="btn-icon-small danger"
             onClick={() => removeLink(ref.npcId)}
             title="Unlink NPC"
+            aria-label="Unlink NPC"
           >
             <Icon name="close" size={14} />
           </button>
@@ -62,6 +63,7 @@ function NpcLinker({ linkedNpcs, allNpcs, onChange }: NpcLinkerProps) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search NPCs..."
+            aria-label="Search NPCs to link"
             autoFocus
           />
           <div className="npc-picker-results">

@@ -71,6 +71,7 @@ function FactionManager({ factions, allNpcs, onUpdate }: FactionManagerProps) {
                   className="faction-delete-btn"
                   onClick={(e) => { e.stopPropagation(); handleDelete(faction.id); }}
                   title="Delete faction"
+                  aria-label="Delete faction"
                 >
                   <Icon name="trash" size={12} />
                 </button>
@@ -128,6 +129,7 @@ function FactionEditor({ faction, memberCount, onUpdate }: FactionEditorProps) {
               style={{ backgroundColor: color }}
               onClick={() => onUpdate({ color })}
               title={color}
+              aria-label={`Color ${color}`}
             />
           ))}
           <input

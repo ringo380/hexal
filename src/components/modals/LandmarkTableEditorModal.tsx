@@ -89,7 +89,7 @@ function LandmarkTableEditorModal({ onClose }: LandmarkTableEditorModalProps) {
       <div className="modal encounter-table-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3 id="landmark-table-editor-modal-title">Landmark Tables</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="modal-body encounter-table-layout">
           {/* Left panel - table list */}
@@ -110,6 +110,7 @@ function LandmarkTableEditorModal({ onClose }: LandmarkTableEditorModalProps) {
                   className="btn-icon-small danger"
                   onClick={(e) => { e.stopPropagation(); deleteTable(table.id); }}
                   title="Delete table"
+                  aria-label="Delete table"
                 >
                   <Icon name="trash" size={12} />
                 </button>
@@ -125,16 +126,18 @@ function LandmarkTableEditorModal({ onClose }: LandmarkTableEditorModalProps) {
                 {editingTable ? (
                   <div className="encounter-table-edit-header">
                     <div className="field-group">
-                      <label>Table Name</label>
+                      <label htmlFor="landmark-table-name">Table Name</label>
                       <input
+                        id="landmark-table-name"
                         type="text"
                         value={editingTable.name}
                         onChange={(e) => setEditingTable({ ...editingTable, name: e.target.value })}
                       />
                     </div>
                     <div className="field-group">
-                      <label>Terrain</label>
+                      <label htmlFor="landmark-table-terrain">Terrain</label>
                       <select
+                        id="landmark-table-terrain"
                         value={editingTable.terrain}
                         onChange={(e) => setEditingTable({ ...editingTable, terrain: e.target.value })}
                       >
@@ -172,6 +175,7 @@ function LandmarkTableEditorModal({ onClose }: LandmarkTableEditorModalProps) {
                         value={entry.title}
                         onChange={(e) => updateEntry(entry.id, { title: e.target.value })}
                         placeholder="Title"
+                        aria-label="Entry name"
                       />
                       <input
                         type="text"
@@ -179,6 +183,7 @@ function LandmarkTableEditorModal({ onClose }: LandmarkTableEditorModalProps) {
                         value={entry.rarity}
                         onChange={(e) => updateEntry(entry.id, { rarity: e.target.value })}
                         placeholder="Rarity"
+                        aria-label="Entry rarity"
                       />
                       <input
                         type="number"
@@ -186,12 +191,13 @@ function LandmarkTableEditorModal({ onClose }: LandmarkTableEditorModalProps) {
                         value={entry.weight}
                         onChange={(e) => updateEntry(entry.id, { weight: Math.max(1, parseInt(e.target.value) || 1) })}
                         min={1}
-                        title="Weight"
+                        aria-label="Entry weight"
                       />
                       <button
                         className="btn-icon-small danger"
                         onClick={() => deleteEntry(entry.id)}
                         title="Delete entry"
+                        aria-label="Delete entry"
                       >
                         <Icon name="close" size={14} />
                       </button>

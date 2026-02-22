@@ -41,7 +41,7 @@ function CreateRegionFromSelectionModal({ hexKeys, onClose, onCreated }: CreateR
       <div className="modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3 id="create-region-modal-title"><Icon name="map" size={18} /> Create Region from {hexKeys.length} Hex{hexKeys.length !== 1 ? 'es' : ''}</h3>
-          <button className="close-btn" onClick={onClose}>&times;</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">&times;</button>
         </div>
         <div className="modal-body" style={{ padding: '16px 20px' }}>
           <div style={{ marginBottom: 12 }}>

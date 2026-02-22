@@ -151,7 +151,7 @@ function QuestManagerModal({ onClose }: QuestManagerModalProps) {
       <div className="modal quest-manager-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3 id="quest-manager-modal-title"><Icon name="star" size={18} /> Quests & Story Arcs</h3>
-          <button className="close-btn" onClick={onClose}>&times;</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">&times;</button>
         </div>
 
         {/* Tabs */}

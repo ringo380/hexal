@@ -238,6 +238,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
             placeholder="Search... (⌘F)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search hexes"
           />
 
           <div className="filter-dropdown">
@@ -260,6 +261,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
                   <select
                     value={filterTerrain ?? ''}
                     onChange={(e) => setFilterTerrain(e.target.value || null)}
+                    aria-label="Filter by terrain"
                   >
                     <option value="">All Terrains</option>
                     {campaign.terrainTypes.map((t) => (
@@ -272,6 +274,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
                   <select
                     value={filterStatus ?? ''}
                     onChange={(e) => setFilterStatus((e.target.value || null) as any)}
+                    aria-label="Filter by status"
                   >
                     <option value="">All Statuses</option>
                     <option value="undiscovered">Undiscovered</option>
@@ -285,6 +288,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
                     <select
                       value={filterRegion ?? ''}
                       onChange={(e) => setFilterRegion(e.target.value || null)}
+                      aria-label="Filter by region"
                     >
                       <option value="">All Regions</option>
                       {regions.map((r) => (

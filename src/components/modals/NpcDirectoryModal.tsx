@@ -147,7 +147,7 @@ function NpcDirectoryModal({ onClose, onOpenRelationshipWeb }: NpcDirectoryModal
               Factions ({factions.length})
             </button>
           </div>
-          <button className="close-btn" onClick={onClose}>&times;</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">&times;</button>
         </div>
 
         {activeTab === 'npcs' ? (
