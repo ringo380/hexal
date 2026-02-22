@@ -54,7 +54,7 @@ function EncounterTemplateLibrary({ onClose }: EncounterTemplateLibraryProps) {
       <div className="modal encounter-template-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3 id="encounter-templates-modal-title">Encounter Templates</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="modal-body">
           <div className="template-toolbar">
@@ -64,6 +64,7 @@ function EncounterTemplateLibrary({ onClose }: EncounterTemplateLibraryProps) {
               placeholder="Search templates..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search encounter templates"
             />
             <button className="btn btn-primary btn-small" onClick={addTemplate}>
               + New Template
@@ -164,41 +165,41 @@ function TemplateEditor({ template, onSave, onCancel }: TemplateEditorProps) {
   return (
     <div className="template-editor">
       <div className="field-group">
-        <label>Template Name</label>
-        <input type="text" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+        <label htmlFor="tmpl-name">Template Name</label>
+        <input id="tmpl-name" type="text" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
       </div>
 
       <div className="field-row">
         <div className="field-group">
-          <label>Encounter Type</label>
-          <select value={encounterType} onChange={(e) => setEncounterType(e.target.value as EncounterType)}>
+          <label htmlFor="tmpl-type">Encounter Type</label>
+          <select id="tmpl-type" value={encounterType} onChange={(e) => setEncounterType(e.target.value as EncounterType)}>
             {ENCOUNTER_TYPES.map(t => (
               <option key={t} value={t}>{ENCOUNTER_TYPE_INFO[t].label}</option>
             ))}
           </select>
         </div>
         <div className="field-group">
-          <label>Difficulty</label>
-          <input type="text" value={difficulty} onChange={(e) => setDifficulty(e.target.value)} placeholder="e.g., CR 2, Hard" />
+          <label htmlFor="tmpl-difficulty">Difficulty</label>
+          <input id="tmpl-difficulty" type="text" value={difficulty} onChange={(e) => setDifficulty(e.target.value)} placeholder="e.g., CR 2, Hard" />
         </div>
       </div>
 
       <div className="field-group">
-        <label>Description</label>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+        <label htmlFor="tmpl-description">Description</label>
+        <textarea id="tmpl-description" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
       </div>
 
       <CreatureList creatures={creatures} onChange={setCreatures} />
       <RewardList rewards={rewards} onChange={setRewards} />
 
       <div className="field-group">
-        <label>Tags (comma-separated)</label>
-        <input type="text" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="e.g., undead, forest, night" />
+        <label htmlFor="tmpl-tags">Tags (comma-separated)</label>
+        <input id="tmpl-tags" type="text" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="e.g., undead, forest, night" />
       </div>
 
       <div className="field-group">
-        <label>Terrain Affinity (comma-separated)</label>
-        <input type="text" value={terrainAffinity} onChange={(e) => setTerrainAffinity(e.target.value)} placeholder="e.g., Forest, Swamp" />
+        <label htmlFor="tmpl-terrain">Terrain Affinity (comma-separated)</label>
+        <input id="tmpl-terrain" type="text" value={terrainAffinity} onChange={(e) => setTerrainAffinity(e.target.value)} placeholder="e.g., Forest, Swamp" />
       </div>
 
       <div className="template-editor-actions">

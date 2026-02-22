@@ -167,6 +167,7 @@ function QuestDetailPanel({
                 className="btn-icon-small danger"
                 onClick={() => removeObjective(obj.id)}
                 title="Remove objective"
+                aria-label="Remove objective"
               >
                 <Icon name="trash" size={12} />
               </button>
@@ -186,7 +187,7 @@ function QuestDetailPanel({
           {quest.linkedHexKeys.map(hk => (
             <span key={hk} className="quest-link-chip">
               ({hk})
-              <button className="chip-remove" onClick={() => removeHexLink(hk)}>&times;</button>
+              <button className="chip-remove" onClick={() => removeHexLink(hk)} aria-label={`Remove hex ${hk}`}>&times;</button>
             </span>
           ))}
           {quest.linkedHexKeys.length === 0 && (
@@ -205,7 +206,7 @@ function QuestDetailPanel({
             return (
               <span key={ref.npcId} className="quest-link-chip">
                 {entry?.npc.title || ref.npcId}
-                <button className="chip-remove" onClick={() => removeNpcLink(ref.npcId)}>&times;</button>
+                <button className="chip-remove" onClick={() => removeNpcLink(ref.npcId)} aria-label={`Remove NPC ${entry?.npc.title || ref.npcId}`}>&times;</button>
               </span>
             );
           })}
@@ -241,7 +242,7 @@ function QuestDetailPanel({
               <span key={f.id} className="quest-link-chip" style={{ borderColor: f.color }}>
                 <span className="quest-row-arc-dot" style={{ backgroundColor: f.color }} />
                 {f.name}
-                <button className="chip-remove" onClick={() => toggleFactionLink(f.id)}>&times;</button>
+                <button className="chip-remove" onClick={() => toggleFactionLink(f.id)} aria-label={`Remove faction ${f.name}`}>&times;</button>
               </span>
             ))}
           </div>
@@ -278,7 +279,7 @@ function QuestDetailPanel({
               return (
                 <span key={id} className="quest-link-chip">
                   {prereq?.title || id}
-                  <button className="chip-remove" onClick={() => togglePrerequisite(id)}>&times;</button>
+                  <button className="chip-remove" onClick={() => togglePrerequisite(id)} aria-label={`Remove prerequisite ${prereq?.title || id}`}>&times;</button>
                 </span>
               );
             })}

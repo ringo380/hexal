@@ -175,7 +175,7 @@ function RelationshipWebModal({ onClose }: RelationshipWebModalProps) {
       <div className="modal modal-xl relationship-web-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3 id="relationship-web-modal-title"><Icon name="link" size={18} /> Relationship Web</h3>
-          <button className="close-btn" onClick={onClose}>&times;</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">&times;</button>
         </div>
         <div className="relationship-web-body">
           <div className="relationship-web-controls">

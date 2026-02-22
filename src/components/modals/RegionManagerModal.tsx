@@ -50,7 +50,7 @@ function RegionManagerModal({ onClose }: RegionManagerModalProps) {
       <div className="modal region-manager-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3 id="region-manager-modal-title"><Icon name="map" size={18} /> Regions</h3>
-          <button className="close-btn" onClick={onClose}>&times;</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">&times;</button>
         </div>
         <div className="region-manager-body">
           {/* Left panel: Region list */}
@@ -84,6 +84,7 @@ function RegionManagerModal({ onClose }: RegionManagerModalProps) {
                       className="region-delete-btn"
                       onClick={(e) => { e.stopPropagation(); handleDeleteRegion(region.id); }}
                       title="Delete region"
+                      aria-label="Delete region"
                     >
                       <Icon name="trash" size={12} />
                     </button>
@@ -126,8 +127,9 @@ function RegionEditor({ region, onUpdate, onEnterPaintMode, onClearHexes }: Regi
   return (
     <div>
       <div className="field-group">
-        <label>Name</label>
+        <label htmlFor="region-name">Name</label>
         <input
+          id="region-name"
           type="text"
           value={region.name}
           onChange={(e) => onUpdate({ name: e.target.value })}
@@ -137,8 +139,8 @@ function RegionEditor({ region, onUpdate, onEnterPaintMode, onClearHexes }: Regi
       </div>
 
       <div className="field-group">
-        <label>Color</label>
-        <div className="region-color-picker">
+        <label id="region-color-label">Color</label>
+        <div className="region-color-picker" role="group" aria-labelledby="region-color-label">
           {REGION_COLORS.map(color => (
             <button
               key={color}
@@ -146,21 +148,24 @@ function RegionEditor({ region, onUpdate, onEnterPaintMode, onClearHexes }: Regi
               style={{ backgroundColor: color }}
               onClick={() => onUpdate({ color })}
               title={color}
+              aria-label={`Color ${color}`}
             />
           ))}
           <input
+            id="region-color-custom"
             type="color"
             className="region-color-custom"
             value={region.color}
             onChange={(e) => onUpdate({ color: e.target.value })}
-            title="Custom color"
+            aria-label="Custom color"
           />
         </div>
       </div>
 
       <div className="field-group">
-        <label>Description</label>
+        <label htmlFor="region-description">Description</label>
         <textarea
+          id="region-description"
           value={region.description}
           onChange={(e) => onUpdate({ description: e.target.value })}
           placeholder="Describe this region..."
@@ -169,8 +174,9 @@ function RegionEditor({ region, onUpdate, onEnterPaintMode, onClearHexes }: Regi
       </div>
 
       <div className="field-group">
-        <label>Notes</label>
+        <label htmlFor="region-notes">Notes</label>
         <textarea
+          id="region-notes"
           value={region.notes}
           onChange={(e) => onUpdate({ notes: e.target.value })}
           placeholder="DM notes..."
@@ -179,8 +185,9 @@ function RegionEditor({ region, onUpdate, onEnterPaintMode, onClearHexes }: Regi
       </div>
 
       <div className="field-group">
-        <label>Tags</label>
+        <label htmlFor="region-tags">Tags</label>
         <input
+          id="region-tags"
           type="text"
           value={region.tags.join(', ')}
           onChange={(e) => {

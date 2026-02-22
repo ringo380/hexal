@@ -210,7 +210,7 @@ function SessionLogModal({ onClose, onNavigateToHex }: SessionLogModalProps) {
               Export
             </button>
           </div>
-          <button className="close-btn" onClick={onClose}>&times;</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">&times;</button>
         </div>
 
         {activeTab === 'sessions' && (
@@ -240,6 +240,7 @@ function SessionLogModal({ onClose, onNavigateToHex }: SessionLogModalProps) {
                       className="btn-icon-small danger"
                       onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
                       title="Delete session"
+                      aria-label="Delete session"
                     >
                       <Icon name="trash" size={12} />
                     </button>
@@ -285,6 +286,7 @@ function SessionLogModal({ onClose, onNavigateToHex }: SessionLogModalProps) {
                 placeholder="Search entries..."
                 value={timelineSearch}
                 onChange={(e) => setTimelineSearch(e.target.value)}
+                aria-label="Search timeline entries"
               />
               <div className="tag-filter-bar">
                 {(Object.keys(SESSION_TAG_INFO) as SessionLogTag[]).map(tag => (
@@ -362,8 +364,9 @@ function SessionLogModal({ onClose, onNavigateToHex }: SessionLogModalProps) {
           <div className="session-log-body export-body">
             <div className="export-panel">
               <div className="field-group">
-                <label>Scope</label>
+                <label htmlFor="session-export-scope">Scope</label>
                 <select
+                  id="session-export-scope"
                   value={exportScope}
                   onChange={(e) => setExportScope(e.target.value as 'current' | 'all')}
                 >
@@ -435,8 +438,9 @@ function SessionEditor({
   return (
     <div className="session-editor">
       <div className="field-group">
-        <label>Title</label>
+        <label htmlFor="session-title">Title</label>
         <input
+          id="session-title"
           type="text"
           value={session.title}
           onChange={(e) => onUpdateSession({ ...session, title: e.target.value })}
@@ -444,8 +448,9 @@ function SessionEditor({
       </div>
 
       <div className="field-group">
-        <label>Real-World Date</label>
+        <label htmlFor="session-date">Real-World Date</label>
         <input
+          id="session-date"
           type="date"
           value={session.realWorldDate}
           onChange={(e) => onUpdateSession({ ...session, realWorldDate: e.target.value })}
@@ -453,8 +458,9 @@ function SessionEditor({
       </div>
 
       <div className="field-group">
-        <label>Summary</label>
+        <label htmlFor="session-summary">Summary</label>
         <textarea
+          id="session-summary"
           value={session.summary}
           onChange={(e) => onUpdateSession({ ...session, summary: e.target.value })}
           rows={3}
@@ -477,6 +483,7 @@ function SessionEditor({
                     hexesVisited: session.hexesVisited.filter(k => k !== key)
                   });
                 }}
+                aria-label={`Remove hex ${key}`}
               >
                 &times;
               </button>
@@ -490,6 +497,7 @@ function SessionEditor({
               onChange={(e) => setHexInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') addVisitedHex(); }}
               style={{ width: '60px', fontSize: '12px' }}
+              aria-label="Add hex coordinate"
             />
             <button className="btn btn-small" onClick={addVisitedHex}>+ Hex</button>
           </div>
