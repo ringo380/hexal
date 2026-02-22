@@ -30,15 +30,18 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      // Only handle events when focus is inside this trap's container
+      if (!container.contains(document.activeElement)) return;
+
       if (e.key === 'Escape') {
         onEscapeRef.current?.();
         return;
       }
 
       if (e.key !== 'Tab') return;
-
-      const container = containerRef.current;
-      if (!container) return;
 
       const focusable = Array.from(
         container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
@@ -68,9 +71,15 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
 
     const container = containerRef.current;
     if (container) {
-      const focusable = container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
-      if (focusable.length > 0) {
-        focusable[0].focus();
+      // Prefer element with autofocus attribute, then first focusable element
+      const autoFocused = container.querySelector<HTMLElement>('[autofocus]');
+      if (autoFocused) {
+        autoFocused.focus();
+      } else {
+        const focusable = container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+        if (focusable.length > 0) {
+          focusable[0].focus();
+        }
       }
     }
 

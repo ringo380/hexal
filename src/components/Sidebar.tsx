@@ -98,9 +98,14 @@ function Sidebar() {
       });
   }, [campaign, searchQuery, searchMatchMap, filterTerrain, filterStatus, filterHasUnresolvedHooks, filterContentTypes, filterBookmarked, bookmarkedHexes, filterRegion, hexRegionMap]);
 
-  // Announce filtered hex count to screen readers (debounced)
+  // Announce filtered hex count to screen readers (debounced, skip initial mount)
   const announceTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const isFirstRenderRef = useRef(true);
   useEffect(() => {
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      return;
+    }
     clearTimeout(announceTimerRef.current);
     announceTimerRef.current = setTimeout(() => {
       announce(`${filteredHexes.length} hex${filteredHexes.length === 1 ? '' : 'es'} shown`);
