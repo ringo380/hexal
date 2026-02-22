@@ -1,4 +1,5 @@
 // ConfirmDialog - Reusable confirmation modal to replace browser confirm()
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface ConfirmDialogProps {
   title: string;
@@ -19,6 +20,8 @@ function ConfirmDialog({
   onConfirm,
   onCancel
 }: ConfirmDialogProps) {
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onCancel });
+
   return (
     <div
       className="modal-overlay"
@@ -27,7 +30,7 @@ function ConfirmDialog({
       aria-modal="true"
       aria-labelledby="confirm-dialog-title"
     >
-      <div className="modal confirm-dialog" onClick={(e) => e.stopPropagation()}>
+      <div ref={focusTrapRef} className="modal confirm-dialog" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3 id="confirm-dialog-title">{title}</h3>
         </div>

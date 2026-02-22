@@ -2,6 +2,7 @@
 // Follows the same pattern as EncounterTableEditorModal
 import { useState } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import type { LandmarkTable, LandmarkEntry } from '../../types/Campaign';
 import Icon from '../icons/Icon';
 import { onActivate } from '../../utils/keyboard';
@@ -12,6 +13,7 @@ interface LandmarkTableEditorModalProps {
 
 function LandmarkTableEditorModal({ onClose }: LandmarkTableEditorModalProps) {
   const { campaign, updateCampaignData } = useCampaign();
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
   const tables = campaign?.landmarkTables ?? [];
   const [selectedTableId, setSelectedTableId] = useState<string | null>(tables[0]?.id ?? null);
   const [editingTable, setEditingTable] = useState<LandmarkTable | null>(null);
@@ -83,10 +85,10 @@ function LandmarkTableEditorModal({ onClose }: LandmarkTableEditorModalProps) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal encounter-table-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="landmark-table-editor-modal-title" onClick={onClose}>
+      <div className="modal encounter-table-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Landmark Tables</h3>
+          <h3 id="landmark-table-editor-modal-title">Landmark Tables</h3>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
         <div className="modal-body encounter-table-layout">

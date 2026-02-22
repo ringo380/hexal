@@ -4,6 +4,7 @@ import type { Npc, NpcAttitude, Faction } from '../../types/Campaign';
 import { ATTITUDE_INFO, parseHexKey } from '../../types/Campaign';
 import { moveNpc } from '../../services/npcService';
 import { updateQuestNpcHexKey, removeFactionFromQuests } from '../../services/questService';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import AlignmentBadge from '../npcs/AlignmentBadge';
 import AttitudeBadge from '../npcs/AttitudeBadge';
 import FactionBadge from '../npcs/FactionBadge';
@@ -21,6 +22,7 @@ interface NpcDirectoryModalProps {
 type Tab = 'npcs' | 'factions';
 
 function NpcDirectoryModal({ onClose, onOpenRelationshipWeb }: NpcDirectoryModalProps) {
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
   const { campaign, allNpcs, factions, updateCampaignData } = useCampaign();
   const [activeTab, setActiveTab] = useState<Tab>('npcs');
   const [searchQuery, setSearchQuery] = useState('');
@@ -127,10 +129,10 @@ function NpcDirectoryModal({ onClose, onOpenRelationshipWeb }: NpcDirectoryModal
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal modal-xl npc-directory-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="npc-directory-modal-title" onClick={onClose}>
+      <div ref={focusTrapRef} className="modal modal-xl npc-directory-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3><Icon name="users" size={18} /> NPC Directory</h3>
+          <h3 id="npc-directory-modal-title"><Icon name="users" size={18} /> NPC Directory</h3>
           <div className="npc-directory-tabs">
             <button
               className={`tab-btn ${activeTab === 'npcs' ? 'active' : ''}`}

@@ -1,6 +1,7 @@
 // ExportModal - Export campaign dialog
 import { useState } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { exportJSON, exportMarkdown } from '../../services/export';
 
 type ExportFormat = 'json' | 'markdown';
@@ -10,6 +11,7 @@ interface ExportModalProps {
 }
 
 function ExportModal({ onClose }: ExportModalProps) {
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
   const { campaign } = useCampaign();
   const [format, setFormat] = useState<ExportFormat>('json');
   const [includeUndiscovered, setIncludeUndiscovered] = useState(true);
@@ -66,7 +68,7 @@ function ExportModal({ onClose }: ExportModalProps) {
       aria-modal="true"
       aria-labelledby="export-modal-title"
     >
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div ref={focusTrapRef} className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3 id="export-modal-title">Export Campaign</h3>
           <button className="close-btn" onClick={onClose} aria-label="Close">×</button>

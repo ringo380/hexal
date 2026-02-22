@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import type { EncounterTable, EncounterEntry } from '../../types/Campaign';
 import Icon from '../icons/Icon';
 import { onActivate } from '../../utils/keyboard';
@@ -10,6 +11,7 @@ interface EncounterTableEditorModalProps {
 
 function EncounterTableEditorModal({ onClose }: EncounterTableEditorModalProps) {
   const { campaign, updateCampaignData } = useCampaign();
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
   const tables = campaign?.encounterTables ?? [];
   const [selectedTableId, setSelectedTableId] = useState<string | null>(tables[0]?.id ?? null);
   const [editingTable, setEditingTable] = useState<EncounterTable | null>(null);
@@ -81,10 +83,10 @@ function EncounterTableEditorModal({ onClose }: EncounterTableEditorModalProps) 
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal encounter-table-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="encounter-table-editor-modal-title" onClick={onClose}>
+      <div className="modal encounter-table-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Encounter Tables</h3>
+          <h3 id="encounter-table-editor-modal-title">Encounter Tables</h3>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
         <div className="modal-body encounter-table-layout">

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
 import { useSelection } from '../../stores/SelectionContext';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import type { Region } from '../../types/Campaign';
 import { REGION_COLORS } from '../../types/Campaign';
 import Icon from '../icons/Icon';
@@ -13,6 +14,7 @@ interface RegionManagerModalProps {
 function RegionManagerModal({ onClose }: RegionManagerModalProps) {
   const { regions, addRegion, updateRegion, deleteRegion } = useCampaign();
   const { setRegionPaintMode } = useSelection();
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(regions[0]?.id ?? null);
 
   const selectedRegion = regions.find(r => r.id === selectedRegionId) ?? null;
@@ -44,10 +46,10 @@ function RegionManagerModal({ onClose }: RegionManagerModalProps) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal region-manager-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="region-manager-modal-title" onClick={onClose}>
+      <div className="modal region-manager-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3><Icon name="map" size={18} /> Regions</h3>
+          <h3 id="region-manager-modal-title"><Icon name="map" size={18} /> Regions</h3>
           <button className="close-btn" onClick={onClose}>&times;</button>
         </div>
         <div className="region-manager-body">

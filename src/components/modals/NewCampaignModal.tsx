@@ -1,12 +1,14 @@
 // NewCampaignModal - Create new campaign dialog
 import React, { useState } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface NewCampaignModalProps {
   onClose: () => void;
 }
 
 function NewCampaignModal({ onClose }: NewCampaignModalProps) {
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
   const { newCampaign } = useCampaign();
   const [name, setName] = useState('My Campaign');
   const [width, setWidth] = useState(20);
@@ -21,8 +23,6 @@ function NewCampaignModal({ onClose }: NewCampaignModalProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleCreate();
-    } else if (e.key === 'Escape') {
-      onClose();
     }
   };
 
@@ -34,7 +34,7 @@ function NewCampaignModal({ onClose }: NewCampaignModalProps) {
       aria-modal="true"
       aria-labelledby="new-campaign-modal-title"
     >
-      <div className="modal" onClick={(e) => e.stopPropagation()} onKeyDown={handleKeyDown}>
+      <div ref={focusTrapRef} className="modal" onClick={(e) => e.stopPropagation()} onKeyDown={handleKeyDown}>
         <div className="modal-header">
           <h3 id="new-campaign-modal-title">New Campaign</h3>
           <button className="close-btn" onClick={onClose} aria-label="Close">×</button>

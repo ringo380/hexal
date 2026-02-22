@@ -1,6 +1,7 @@
 // WeatherSettingsModal - Modal for weather configuration
 import { useState } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { getWeatherSummary, describeWeather } from '../../services/weather';
 import Icon from '../icons/Icon';
 import { getWeatherEffects } from '../../data/weatherEffects';
@@ -49,6 +50,7 @@ function WeatherSettingsModal({ onClose }: WeatherSettingsModalProps) {
     updateWeatherSettings,
     initTimeWeather
   } = useCampaign();
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
 
   // Local state for weather editing
   const [editingWeather, setEditingWeather] = useState<Weather | null>(null);
@@ -63,7 +65,7 @@ function WeatherSettingsModal({ onClose }: WeatherSettingsModalProps) {
         aria-modal="true"
         aria-labelledby="weather-setup-modal-title"
       >
-        <div className="modal weather-settings-modal" onClick={(e) => e.stopPropagation()}>
+        <div ref={focusTrapRef} className="modal weather-settings-modal" onClick={(e) => e.stopPropagation()}>
           <div className="modal-header">
             <h2 id="weather-setup-modal-title">Weather Settings</h2>
             <button className="btn btn-icon" onClick={onClose} aria-label="Close">×</button>
@@ -134,7 +136,7 @@ function WeatherSettingsModal({ onClose }: WeatherSettingsModalProps) {
       aria-modal="true"
       aria-labelledby="weather-settings-modal-title"
     >
-      <div className="modal weather-settings-modal" onClick={(e) => e.stopPropagation()}>
+      <div ref={focusTrapRef} className="modal weather-settings-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2 id="weather-settings-modal-title">Weather Settings</h2>
           <button className="btn btn-icon" onClick={onClose} aria-label="Close">×</button>

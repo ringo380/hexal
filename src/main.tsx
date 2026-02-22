@@ -9,6 +9,7 @@ import type { ViewMode } from './stores/ViewModeContext';
 import PlayerApp from './components/player/PlayerApp';
 import { SettingsProvider } from './stores/SettingsContext';
 import { AuthProvider } from './stores/AuthContext';
+import { AnnouncerProvider } from './stores/AnnouncerContext';
 import { createPersistenceAdapter } from './services/persistence';
 import './styles/app.css';
 import './styles/auth.css';
@@ -27,7 +28,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <AuthProvider>
             <CampaignProvider adapter={persistenceAdapter}>
               <SelectionProvider>
-                <App />
+                <AnnouncerProvider>
+                  <App />
+                </AnnouncerProvider>
               </SelectionProvider>
             </CampaignProvider>
           </AuthProvider>

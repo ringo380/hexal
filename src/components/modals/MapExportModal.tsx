@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import Icon from '../icons/Icon';
 import { onActivate } from '../../utils/keyboard';
 import {
@@ -23,6 +24,7 @@ interface MapExportModalProps {
 
 function MapExportModal({ onClose }: MapExportModalProps) {
   const { campaign } = useCampaign();
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
 
   // Export options state
   const [options, setOptions] = useState<MapExportOptions>({ ...DEFAULT_EXPORT_OPTIONS });
@@ -125,19 +127,17 @@ function MapExportModal({ onClose }: MapExportModalProps) {
     }
   }, [campaign, options, onClose]);
 
-  // Handle keyboard
+  // Handle Ctrl+Enter / Cmd+Enter to export
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
         handleExport();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, handleExport]);
+  }, [handleExport]);
 
   if (!campaign) return null;
 
@@ -149,7 +149,7 @@ function MapExportModal({ onClose }: MapExportModalProps) {
       aria-modal="true"
       aria-labelledby="map-export-modal-title"
     >
-      <div className="modal modal-lg map-export-modal" onClick={(e) => e.stopPropagation()}>
+      <div ref={focusTrapRef} className="modal modal-lg map-export-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3 id="map-export-modal-title">Export Map</h3>
           <button className="close-btn" onClick={onClose} aria-label="Close">×</button>

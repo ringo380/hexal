@@ -1,4 +1,5 @@
 // AlertDialog - Reusable alert modal to replace browser alert()
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface AlertDialogProps {
   title: string;
@@ -15,6 +16,8 @@ function AlertDialog({
   buttonLabel = 'OK',
   onClose
 }: AlertDialogProps) {
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
+
   const variantClasses: Record<string, string> = {
     info: '',
     error: 'alert-dialog-error',
@@ -32,6 +35,7 @@ function AlertDialog({
       aria-describedby="alert-dialog-message"
     >
       <div
+        ref={focusTrapRef}
         className={`modal alert-dialog ${variantClasses[variant]}`}
         onClick={(e) => e.stopPropagation()}
       >
