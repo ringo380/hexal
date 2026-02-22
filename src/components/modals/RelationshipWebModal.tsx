@@ -201,6 +201,7 @@ function RelationshipWebModal({ onClose }: RelationshipWebModalProps) {
             ) : (
               <canvas
                 ref={canvasRef}
+                aria-label="NPC relationship web"
                 onClick={handleCanvasClick}
                 style={{ cursor: 'pointer' }}
               />

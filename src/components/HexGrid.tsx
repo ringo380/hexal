@@ -2,6 +2,7 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { useCampaign } from '../stores/CampaignContext';
 import { useSelection } from '../stores/SelectionContext';
+import { useAnnounce } from '../stores/AnnouncerContext';
 import {
   HEX_SIZE,
   hexCenter,
@@ -190,6 +191,17 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { campaign, getHex, removeMarker, moveMarker, moveMarkerToPosition, addMarkerAtPosition, regions, addHexToRegion, removeHexFromRegion } = useCampaign();
   const { selectedCoordinate, selectedMarker, selectHex, selectMarker, clearSelection, regionPaintMode, setRegionPaintMode, multiSelectedKeys, toggleMultiSelectHex, setMultiSelection, clearMultiSelection } = useSelection();
+  const announce = useAnnounce();
+
+  // Announce hex selection changes to screen readers
+  // Derive terrain outside effect so we depend on the value, not the campaign object
+  const selectedTerrain = selectedCoordinate
+    ? campaign?.hexes[hexKey(selectedCoordinate)]?.terrain
+    : undefined;
+  useEffect(() => {
+    if (!selectedCoordinate) return;
+    announce(`Selected hex ${selectedCoordinate.q}, ${selectedCoordinate.r}: ${selectedTerrain || 'empty'}`);
+  }, [selectedCoordinate, selectedTerrain, announce]);
 
   // Tooltip state
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
@@ -1334,6 +1346,8 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
       <canvas
         ref={canvasRef}
         className={`hex-grid-canvas ${isDraggingMap ? 'dragging' : ''} ${markerDrag.isDragging ? 'marker-dragging' : ''}`}
+        role="img"
+        aria-label="Hex grid map — click to select hexes, scroll to zoom"
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseMove={handleMouseMove}

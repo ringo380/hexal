@@ -25,13 +25,13 @@ function RewardList({ rewards, onChange }: RewardListProps) {
   return (
     <div className="reward-list">
       <label>Rewards</label>
-      {rewards.map((reward) => (
+      {rewards.map((reward, idx) => (
         <div key={reward.id} className="reward-row">
           <select
             className="reward-type"
             value={reward.type}
             onChange={(e) => updateReward(reward.id, { type: e.target.value as EncounterReward['type'] })}
-            aria-label="Reward type"
+            aria-label={`Reward ${idx + 1} type`}
           >
             {REWARD_TYPES.map(t => (
               <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
@@ -43,7 +43,7 @@ function RewardList({ rewards, onChange }: RewardListProps) {
             value={reward.description}
             onChange={(e) => updateReward(reward.id, { description: e.target.value })}
             placeholder="Description"
-            aria-label="Reward description"
+            aria-label={`Reward ${idx + 1} description`}
           />
           <input
             type="number"
@@ -51,13 +51,13 @@ function RewardList({ rewards, onChange }: RewardListProps) {
             value={reward.quantity ?? ''}
             onChange={(e) => updateReward(reward.id, { quantity: e.target.value ? parseInt(e.target.value) : undefined })}
             placeholder="Qty"
-            aria-label="Reward quantity"
+            aria-label={`Reward ${idx + 1} quantity`}
           />
           <button
             className="btn-icon-small danger"
             onClick={() => removeReward(reward.id)}
             title="Remove reward"
-            aria-label="Remove reward"
+            aria-label={`Remove reward ${idx + 1}`}
           >
             <Icon name="close" size={14} />
           </button>

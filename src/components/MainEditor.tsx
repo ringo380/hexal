@@ -189,6 +189,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
 
   return (
     <div className="main-editor">
+      <a className="skip-link" href="#main-content">Skip to map</a>
       {/* Toolbar */}
       <div className="toolbar">
         <div className="toolbar-left">
@@ -396,7 +397,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
           <MarkerPalette />
           <Sidebar />
         </div>
-        <div className="grid-panel">
+        <div className="grid-panel" id="main-content" tabIndex={-1}>
           <HexGrid onCreateRegionFromSelection={() => setShowCreateRegion(true)} />
         </div>
         <div className="detail-panel">
