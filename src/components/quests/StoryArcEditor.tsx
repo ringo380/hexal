@@ -68,6 +68,7 @@ function StoryArcEditor({ arc, quests, onUpdate, onDelete }: StoryArcEditorProps
               className={`story-arc-color-swatch ${arc.color === c ? 'selected' : ''}`}
               style={{ backgroundColor: c }}
               onClick={() => update({ color: c })}
+              aria-label={`Color ${c}`}
             />
           ))}
         </div>
@@ -123,6 +124,7 @@ function StoryArcEditor({ arc, quests, onUpdate, onDelete }: StoryArcEditorProps
                   disabled={idx === 0}
                   onClick={() => moveQuest(q.id, -1)}
                   title="Move up"
+                  aria-label="Move up"
                 >
                   <Icon name="chevron-right" size={12} className="rotate-270" />
                 </button>
@@ -131,6 +133,7 @@ function StoryArcEditor({ arc, quests, onUpdate, onDelete }: StoryArcEditorProps
                   disabled={idx === arcQuests.length - 1}
                   onClick={() => moveQuest(q.id, 1)}
                   title="Move down"
+                  aria-label="Move down"
                 >
                   <Icon name="chevron-down" size={12} />
                 </button>
@@ -138,6 +141,7 @@ function StoryArcEditor({ arc, quests, onUpdate, onDelete }: StoryArcEditorProps
                   className="btn-icon-small danger"
                   onClick={() => removeQuest(q.id)}
                   title="Remove from arc"
+                  aria-label="Remove from arc"
                 >
                   <Icon name="close" size={12} />
                 </button>

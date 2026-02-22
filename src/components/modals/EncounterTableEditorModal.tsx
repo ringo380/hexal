@@ -87,7 +87,7 @@ function EncounterTableEditorModal({ onClose }: EncounterTableEditorModalProps) 
       <div className="modal encounter-table-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3 id="encounter-table-editor-modal-title">Encounter Tables</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="modal-body encounter-table-layout">
           {/* Left panel - table list */}
@@ -108,6 +108,7 @@ function EncounterTableEditorModal({ onClose }: EncounterTableEditorModalProps) 
                   className="btn-icon-small danger"
                   onClick={(e) => { e.stopPropagation(); deleteTable(table.id); }}
                   title="Delete table"
+                  aria-label="Delete table"
                 >
                   <Icon name="trash" size={12} />
                 </button>
@@ -123,16 +124,18 @@ function EncounterTableEditorModal({ onClose }: EncounterTableEditorModalProps) 
                 {editingTable ? (
                   <div className="encounter-table-edit-header">
                     <div className="field-group">
-                      <label>Table Name</label>
+                      <label htmlFor="enc-table-name">Table Name</label>
                       <input
+                        id="enc-table-name"
                         type="text"
                         value={editingTable.name}
                         onChange={(e) => setEditingTable({ ...editingTable, name: e.target.value })}
                       />
                     </div>
                     <div className="field-group">
-                      <label>Terrain</label>
+                      <label htmlFor="enc-table-terrain">Terrain</label>
                       <select
+                        id="enc-table-terrain"
                         value={editingTable.terrain}
                         onChange={(e) => setEditingTable({ ...editingTable, terrain: e.target.value })}
                       >
@@ -170,6 +173,7 @@ function EncounterTableEditorModal({ onClose }: EncounterTableEditorModalProps) 
                         value={entry.title}
                         onChange={(e) => updateEntry(entry.id, { title: e.target.value })}
                         placeholder="Title"
+                        aria-label="Entry name"
                       />
                       <input
                         type="text"
@@ -177,6 +181,7 @@ function EncounterTableEditorModal({ onClose }: EncounterTableEditorModalProps) 
                         value={entry.difficulty}
                         onChange={(e) => updateEntry(entry.id, { difficulty: e.target.value })}
                         placeholder="Difficulty"
+                        aria-label="Entry difficulty"
                       />
                       <input
                         type="number"
@@ -184,12 +189,13 @@ function EncounterTableEditorModal({ onClose }: EncounterTableEditorModalProps) 
                         value={entry.weight}
                         onChange={(e) => updateEntry(entry.id, { weight: Math.max(1, parseInt(e.target.value) || 1) })}
                         min={1}
-                        title="Weight"
+                        aria-label="Entry weight"
                       />
                       <button
                         className="btn-icon-small danger"
                         onClick={() => deleteEntry(entry.id)}
                         title="Delete entry"
+                        aria-label="Delete entry"
                       >
                         <Icon name="close" size={14} />
                       </button>

@@ -63,30 +63,30 @@ function NpcEditorModal({ npc, factions, allNpcs, onSave, onClose }: NpcEditorMo
       <div ref={focusTrapRef} className="modal modal-lg npc-editor-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3 id="npc-editor-modal-title">Edit NPC</h3>
-          <button className="close-btn" onClick={onClose}>&times;</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">&times;</button>
         </div>
         <div className="modal-body">
           {/* Basic Info */}
           <div className="field-group">
-            <label>Name</label>
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
+            <label htmlFor="npc-name">Name</label>
+            <input id="npc-name" type="text" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
           </div>
 
           <div className="field-row">
             <div className="field-group">
-              <label>Race</label>
-              <input type="text" value={race} onChange={(e) => setRace(e.target.value)} placeholder="e.g., Human, Elf, Dwarf" />
+              <label htmlFor="npc-race">Race</label>
+              <input id="npc-race" type="text" value={race} onChange={(e) => setRace(e.target.value)} placeholder="e.g., Human, Elf, Dwarf" />
             </div>
             <div className="field-group">
-              <label>Class</label>
-              <input type="text" value={npcClass} onChange={(e) => setNpcClass(e.target.value)} placeholder="e.g., Fighter, Wizard" />
+              <label htmlFor="npc-class">Class</label>
+              <input id="npc-class" type="text" value={npcClass} onChange={(e) => setNpcClass(e.target.value)} placeholder="e.g., Fighter, Wizard" />
             </div>
           </div>
 
           <div className="field-row">
             <div className="field-group">
-              <label>Alignment</label>
-              <select value={alignment} onChange={(e) => setAlignment(e.target.value as NpcAlignment | '')}>
+              <label htmlFor="npc-alignment">Alignment</label>
+              <select id="npc-alignment" value={alignment} onChange={(e) => setAlignment(e.target.value as NpcAlignment | '')}>
                 <option value="">None</option>
                 {ALIGNMENTS.map(a => (
                   <option key={a} value={a}>
@@ -96,8 +96,8 @@ function NpcEditorModal({ npc, factions, allNpcs, onSave, onClose }: NpcEditorMo
               </select>
             </div>
             <div className="field-group">
-              <label>Attitude</label>
-              <select value={attitude} onChange={(e) => setAttitude(e.target.value as NpcAttitude | '')}>
+              <label htmlFor="npc-attitude">Attitude</label>
+              <select id="npc-attitude" value={attitude} onChange={(e) => setAttitude(e.target.value as NpcAttitude | '')}>
                 <option value="">None</option>
                 {ATTITUDES.map(a => (
                   <option key={a} value={a}>{ATTITUDE_INFO[a].label}</option>
@@ -107,24 +107,24 @@ function NpcEditorModal({ npc, factions, allNpcs, onSave, onClose }: NpcEditorMo
           </div>
 
           <div className="field-group">
-            <label>Appearance</label>
-            <textarea value={appearance} onChange={(e) => setAppearance(e.target.value)} rows={2} placeholder="Physical description..." />
+            <label htmlFor="npc-appearance">Appearance</label>
+            <textarea id="npc-appearance" value={appearance} onChange={(e) => setAppearance(e.target.value)} rows={2} placeholder="Physical description..." />
           </div>
 
           <div className="field-group">
-            <label>Personality</label>
-            <textarea value={personality} onChange={(e) => setPersonality(e.target.value)} rows={2} placeholder="Personality traits, mannerisms..." />
+            <label htmlFor="npc-personality">Personality</label>
+            <textarea id="npc-personality" value={personality} onChange={(e) => setPersonality(e.target.value)} rows={2} placeholder="Personality traits, mannerisms..." />
           </div>
 
           <div className="field-group">
-            <label>Description</label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Background, motivations..." />
+            <label htmlFor="npc-description">Description</label>
+            <textarea id="npc-description" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Background, motivations..." />
           </div>
 
           <div className="field-row">
             <div className="field-group">
-              <label>Faction</label>
-              <select value={factionId} onChange={(e) => setFactionId(e.target.value)}>
+              <label htmlFor="npc-faction">Faction</label>
+              <select id="npc-faction" value={factionId} onChange={(e) => setFactionId(e.target.value)}>
                 <option value="">None</option>
                 {factions.map(f => (
                   <option key={f.id} value={f.id}>{f.name}</option>
@@ -132,19 +132,19 @@ function NpcEditorModal({ npc, factions, allNpcs, onSave, onClose }: NpcEditorMo
               </select>
             </div>
             <div className="field-group">
-              <label>Faction Role</label>
-              <input type="text" value={factionRole} onChange={(e) => setFactionRole(e.target.value)} placeholder="e.g., Leader, Spy, Member" />
+              <label htmlFor="npc-faction-role">Faction Role</label>
+              <input id="npc-faction-role" type="text" value={factionRole} onChange={(e) => setFactionRole(e.target.value)} placeholder="e.g., Leader, Spy, Member" />
             </div>
           </div>
 
           <div className="field-row">
             <div className="field-group">
-              <label>Difficulty / CR</label>
-              <input type="text" value={difficulty} onChange={(e) => setDifficulty(e.target.value)} placeholder="e.g., CR 5" />
+              <label htmlFor="npc-difficulty">Difficulty / CR</label>
+              <input id="npc-difficulty" type="text" value={difficulty} onChange={(e) => setDifficulty(e.target.value)} placeholder="e.g., CR 5" />
             </div>
             <div className="field-group">
-              <label>Tags (comma-separated)</label>
-              <input type="text" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="e.g., quest-giver, merchant" />
+              <label htmlFor="npc-tags">Tags (comma-separated)</label>
+              <input id="npc-tags" type="text" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="e.g., quest-giver, merchant" />
             </div>
           </div>
 

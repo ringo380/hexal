@@ -1373,7 +1373,7 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
       )}
       {/* Zoom controls - fixed position */}
       <div className="zoom-controls">
-        <button className="zoom-btn" onClick={zoomOut} title="Zoom out (Cmd/Ctrl -)">−</button>
+        <button className="zoom-btn" onClick={zoomOut} title="Zoom out (Cmd/Ctrl -)" aria-label="Zoom out">−</button>
         <input
           type="range"
           className="zoom-slider"
@@ -1384,9 +1384,9 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
           onChange={handleZoomSliderChange}
           title={`Zoom: ${Math.round(zoomLevel * 100)}%`}
         />
-        <button className="zoom-btn" onClick={zoomIn} title="Zoom in (Cmd/Ctrl +)">+</button>
+        <button className="zoom-btn" onClick={zoomIn} title="Zoom in (Cmd/Ctrl +)" aria-label="Zoom in">+</button>
         <span className="zoom-label">{Math.round(zoomLevel * 100)}%</span>
-        <button className="zoom-btn zoom-reset" onClick={resetZoom} title="Reset zoom (Cmd/Ctrl 0)">⟲</button>
+        <button className="zoom-btn zoom-reset" onClick={resetZoom} title="Reset zoom (Cmd/Ctrl 0)" aria-label="Reset zoom">⟲</button>
       </div>
       {/* Content indicator tooltip */}
       {tooltip && (
