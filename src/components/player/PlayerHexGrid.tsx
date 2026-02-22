@@ -560,6 +560,8 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect }:
       <canvas
         ref={canvasRef}
         className={`player-hex-grid-canvas ${isDragging ? 'dragging' : ''}`}
+        role="img"
+        aria-label="Player hex grid map"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}

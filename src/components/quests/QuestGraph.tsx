@@ -338,6 +338,8 @@ function QuestGraph({ quests, storyArcs, selectedQuestId, onSelectQuest }: Quest
           <canvas
             ref={canvasRef}
             className={`quest-graph-canvas ${dragging ? 'dragging' : ''} ${hoveredQuestId ? 'hovering' : ''}`}
+            role="img"
+            aria-label="Quest dependency graph"
             onMouseDown={handleMouseDownWrapped}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}

@@ -188,6 +188,25 @@ select:focus {
   border: 0;
 }
 
+/* Skip navigation link — visible only on :focus */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 16px;
+  z-index: 10000;
+  padding: 8px 16px;
+  background: var(--accent-color);
+  color: white;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 8px;
+}
+
 textarea {
   resize: vertical;
   min-height: 60px;
