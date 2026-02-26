@@ -82,7 +82,7 @@ function TimeWeatherBar({ onOpenTimeControls, onOpenWeatherSettings }: TimeWeath
       }));
       weatherSim.startSimulation(
         { width: campaign.gridWidth, height: campaign.gridHeight, hexes },
-        campaign.weatherSimulation.config.enabled ? campaign.weatherSimulation.seed : String(Date.now()),
+        campaign.weatherSimulation.seed || String(Date.now()),
         { ...campaign.weatherSimulation.config, enabled: true }
       );
     } else if (!newEnabled && weatherSim.isRunning) {

@@ -1,5 +1,5 @@
 // MainEditor - Three-column layout for campaign editing
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useCampaign } from '../stores/CampaignContext';
 import { useSelection } from '../stores/SelectionContext';
 import Sidebar from './Sidebar';
@@ -39,7 +39,7 @@ interface MainEditorProps {
 }
 
 function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) {
-  const { campaign, saveStatus, saveCampaign, closeCampaign, hasUnsavedChanges, undo, redo, canUndo, canRedo, regions } = useCampaign();
+  const { campaign, saveStatus, saveCampaign, closeCampaign, hasUnsavedChanges, undo, redo, canUndo, canRedo, regions, updateCampaignData } = useCampaign();
   const {
     searchQuery, setSearchQuery, clearFilters,
     filterTerrain, setFilterTerrain, filterStatus, setFilterStatus,
@@ -81,6 +81,27 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
       weatherSim.stopSimulation();
     }
   }, [campaign?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Periodically sync weather simulation state back to campaign for persistence
+  const lastSyncRef = useRef(0);
+  useEffect(() => {
+    if (!weatherSim.isRunning || !campaign?.weatherSimulation) return;
+    const interval = setInterval(() => {
+      const now = Date.now();
+      if (now - lastSyncRef.current < 10000) return;
+      lastSyncRef.current = now;
+      updateCampaignData({
+        weatherSimulation: {
+          ...campaign.weatherSimulation!,
+          field: weatherSim.field,
+          pressureSystems: weatherSim.pressureSystems,
+          fronts: weatherSim.fronts,
+          activeEvents: weatherSim.activeEvents
+        }
+      });
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [weatherSim.isRunning, campaign?.weatherSimulation?.config]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Register export handler for menu command
   useEffect(() => {

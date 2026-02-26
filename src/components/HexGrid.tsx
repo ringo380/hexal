@@ -640,12 +640,13 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
 
     // ========================================================================
     // WEATHER OVERLAY PASS: Gradient overlay + isobars + fronts (DM view)
+    // Uses local save/restore to exit world-space without breaking the outer frame
     // ========================================================================
-    ctx.restore(); // Temporarily restore to screen space for overlay compositing
+    ctx.save();
+    ctx.scale(1 / zoomLevel, 1 / zoomLevel);
+    ctx.translate(-panOffset.x, -panOffset.y);
     renderWeatherOverlay(ctx, canvas.width, canvas.height, panOffset.x, panOffset.y, zoomLevel);
-    ctx.save();    // Re-enter world space for marker pass
-    ctx.translate(panOffset.x, panOffset.y);
-    ctx.scale(zoomLevel, zoomLevel);
+    ctx.restore();
 
     // ========================================================================
     // PASS 2: Draw all markers (figurines) on top of hex content

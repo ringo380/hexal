@@ -102,10 +102,18 @@ export function renderWeatherGradient(
   ctx.restore();
 
   // Apply Gaussian blur for smooth transitions between hexes
+  // Use a second canvas to avoid undefined behavior from self-draw
   const blurAmount = Math.max(2, Math.min(8, 4 * zoomLevel));
-  ctx.filter = `blur(${blurAmount}px)`;
-  ctx.drawImage(offscreen, 0, 0);
-  ctx.filter = 'none';
+  const blurred = document.createElement('canvas');
+  blurred.width = canvasWidth;
+  blurred.height = canvasHeight;
+  const blurCtx = blurred.getContext('2d');
+  if (blurCtx) {
+    blurCtx.filter = `blur(${blurAmount}px)`;
+    blurCtx.drawImage(offscreen, 0, 0);
+    blurCtx.filter = 'none';
+    return blurred;
+  }
 
   return offscreen;
 }

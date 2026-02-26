@@ -15,6 +15,7 @@ import {
   Season,
   TimeOfDay,
   WeatherEffects,
+  WeatherFieldCell,
   WeatherHistoryEntry
 } from '../types/Weather';
 import {
@@ -652,8 +653,8 @@ interface CampaignContextValue {
   formattedTime: string;
   formattedDate: string;
   weatherSummary: string;
-  getWeatherForHex: (coord: HexCoordinate, terrain: string) => Weather | undefined;
-  getWeatherEffectsForHex: (coord: HexCoordinate, terrain: string) => WeatherEffects | undefined;
+  getWeatherForHex: (coord: HexCoordinate, terrain: string, simulationCell?: WeatherFieldCell) => Weather | undefined;
+  getWeatherEffectsForHex: (coord: HexCoordinate, terrain: string, simulationCell?: WeatherFieldCell) => WeatherEffects | undefined;
 
   // Marker operations
   addMarker: (coord: HexCoordinate, typeId: string, label?: string) => void;
@@ -972,15 +973,15 @@ export function CampaignProvider({ children, adapter }: { children: React.ReactN
   }, []);
 
   // Get weather for a specific hex
-  const getWeatherForHex = useCallback((coord: HexCoordinate, terrain: string): Weather | undefined => {
+  const getWeatherForHex = useCallback((coord: HexCoordinate, terrain: string, simulationCell?: WeatherFieldCell): Weather | undefined => {
     if (!state.campaign?.timeWeather) return undefined;
-    return getHexWeather(state.campaign.timeWeather, coordinateKey(coord), terrain);
+    return getHexWeather(state.campaign.timeWeather, coordinateKey(coord), terrain, simulationCell);
   }, [state.campaign?.timeWeather]);
 
   // Get weather effects for a specific hex
-  const getWeatherEffectsForHex = useCallback((coord: HexCoordinate, terrain: string): WeatherEffects | undefined => {
+  const getWeatherEffectsForHex = useCallback((coord: HexCoordinate, terrain: string, simulationCell?: WeatherFieldCell): WeatherEffects | undefined => {
     if (!state.campaign?.timeWeather) return undefined;
-    return getHexWeatherEffects(state.campaign.timeWeather, coordinateKey(coord), terrain);
+    return getHexWeatherEffects(state.campaign.timeWeather, coordinateKey(coord), terrain, simulationCell);
   }, [state.campaign?.timeWeather]);
 
   // ============ COMPUTED VALUES ============

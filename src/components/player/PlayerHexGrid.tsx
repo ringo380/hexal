@@ -285,11 +285,12 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
     }
 
     // WEATHER OVERLAY PASS: Gradient overlay (player view: no isobars/fronts)
-    ctx.restore(); // Temporarily restore to screen space for overlay compositing
+    // Uses local save/restore to exit world-space without breaking the outer frame
+    ctx.save();
+    ctx.scale(1 / zoomLevel, 1 / zoomLevel);
+    ctx.translate(-panOffset.x, -panOffset.y);
     renderWeatherOverlay(ctx, canvas.width, canvas.height, panOffset.x, panOffset.y, zoomLevel);
-    ctx.save();    // Re-enter world space for marker pass
-    ctx.translate(panOffset.x, panOffset.y);
-    ctx.scale(zoomLevel, zoomLevel);
+    ctx.restore();
 
     // PASS 4: Markers (visible on discovered/cleared hexes)
     for (let q = 0; q < campaign.gridWidth; q++) {

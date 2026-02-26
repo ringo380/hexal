@@ -13,7 +13,7 @@ import type { WeatherSimulator, SimGrid, SimHex, TickResult } from './WeatherSim
 import { PerlinNoise2D } from './perlin';
 import { clamp } from './WeatherField';
 import { createWeatherEvent } from './WeatherEvents';
-import { stringToSeed } from '../rng';
+import { SeededRNG, stringToSeed } from '../rng';
 
 /** Terrain modifiers for the Perlin engine */
 const TERRAIN_MODIFIERS: Record<string, { tempMod: number; humidMod: number; windMod: number }> = {
@@ -39,6 +39,7 @@ export class PerlinWeatherEngine implements WeatherSimulator {
   private tickCount: number = 0;
   private field: WeatherField = {};
   private activeEvents: WeatherEvent[] = [];
+  private rng!: SeededRNG;
 
   // Noise layers (initialized on init)
   private pressureNoise!: PerlinNoise2D;
@@ -52,6 +53,7 @@ export class PerlinWeatherEngine implements WeatherSimulator {
     this.grid = grid;
     this.config = config;
     this.seed = stringToSeed(seed || 'default');
+    this.rng = new SeededRNG(this.seed + 9000);
     this.tickCount = 0;
     this.activeEvents = [];
 
@@ -240,8 +242,8 @@ export class PerlinWeatherEngine implements WeatherSimulator {
           case 'blizzard':
             cell.temperature -= strength * 15;
             cell.precipIntensity = clamp(cell.precipIntensity + strength * 0.9, 0, 1);
-            cell.windVector.u += strength * 8 * (Math.random() - 0.5);
-            cell.windVector.v += strength * 8 * (Math.random() - 0.5);
+            cell.windVector.u += strength * 8 * (this.rng.next() - 0.5);
+            cell.windVector.v += strength * 8 * (this.rng.next() - 0.5);
             cell.cloudCover = clamp(cell.cloudCover + strength * 0.7, 0, 1);
             break;
 

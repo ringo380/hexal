@@ -399,8 +399,8 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
         {/* Weather Section */}
         {timeWeather && selectedCoordinate && (
           <HexWeatherSection
-            weather={getWeatherForHex(selectedCoordinate, hex.terrain)}
-            effects={getWeatherEffectsForHex(selectedCoordinate, hex.terrain)}
+            weather={getWeatherForHex(selectedCoordinate, hex.terrain, weatherSim.field[`${selectedCoordinate.q},${selectedCoordinate.r}`])}
+            effects={getWeatherEffectsForHex(selectedCoordinate, hex.terrain, weatherSim.field[`${selectedCoordinate.q},${selectedCoordinate.r}`])}
             onSetWeather={(weather) => setHexWeather(selectedCoordinate, weather)}
             onClearOverride={() => clearHexWeather(selectedCoordinate)}
             hasOverride={!!timeWeather.hexWeatherOverrides[`${selectedCoordinate.q},${selectedCoordinate.r}`]}

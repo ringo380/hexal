@@ -355,9 +355,10 @@ function derivePrecipitation(intensity: number): PrecipitationLevel {
 export function getHexWeatherEffects(
   state: TimeWeatherState,
   hexKey: string,
-  terrain: string
+  terrain: string,
+  simulationCell?: WeatherFieldCell
 ): WeatherEffects {
-  const weather = getHexWeather(state, hexKey, terrain);
+  const weather = getHexWeather(state, hexKey, terrain, simulationCell);
   return getWeatherEffects(weather);
 }
 

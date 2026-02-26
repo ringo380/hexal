@@ -1,7 +1,7 @@
 // Player View Filter - Strips DM-only data from campaign for player consumption
 
 import type { Campaign, Hex, TerrainType, HexCoordinate, DiscoveryStatus, HexConnections, Faction, NpcAttitude } from '../types';
-import type { TimeWeatherState } from '../types/Weather';
+import type { TimeWeatherState, WeatherField } from '../types/Weather';
 import type { MarkerType, HexMarker } from '../types/Markers';
 import type { QuestStatus, StoryArcStatus } from '../types/Quest';
 
@@ -107,6 +107,7 @@ export interface PlayerCampaign {
   quests: PlayerQuest[];
   storyArcs: PlayerStoryArc[];
   weatherSimConfig?: PlayerWeatherSimConfig;
+  weatherField?: WeatherField;
 }
 
 /**
@@ -216,7 +217,8 @@ export function filterCampaignForPlayer(campaign: Campaign): PlayerCampaign {
     sessionLog,
     quests,
     storyArcs,
-    weatherSimConfig
+    weatherSimConfig,
+    weatherField: weatherSimConfig ? campaign.weatherSimulation?.field : undefined
   };
 }
 
