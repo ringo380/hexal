@@ -1,11 +1,14 @@
 // TimeWeatherBar - Compact toolbar display for time and weather
 import { useCampaign } from '../stores/CampaignContext';
+import { useWeatherSimulation } from '../stores/WeatherSimulationContext';
 import {
   WEATHER_ICONS,
   SEASON_ICONS
 } from '../types/Weather';
 import { getTimeOfDayIcon } from '../services/time';
 import Icon from './icons/Icon';
+import WeatherRadarToggle from './weather/WeatherRadarToggle';
+import WeatherEventBadge from './weather/WeatherEventBadge';
 
 interface TimeWeatherBarProps {
   onOpenTimeControls: () => void;
@@ -15,6 +18,7 @@ interface TimeWeatherBarProps {
 function TimeWeatherBar({ onOpenTimeControls, onOpenWeatherSettings }: TimeWeatherBarProps) {
   const {
     timeWeather,
+    campaign,
     currentSeason,
     currentTimeOfDay,
     formattedTime,
@@ -22,8 +26,13 @@ function TimeWeatherBar({ onOpenTimeControls, onOpenWeatherSettings }: TimeWeath
     weatherSummary,
     advanceTimeBy,
     generateNewWeather,
-    initTimeWeather
+    initTimeWeather,
+    updateCampaignData
   } = useCampaign();
+
+  const weatherSim = useWeatherSimulation();
+
+  const simConfig = campaign?.weatherSimulation?.config;
 
   // If no time/weather initialized, show setup button
   if (!timeWeather) {
@@ -48,6 +57,39 @@ function TimeWeatherBar({ onOpenTimeControls, onOpenWeatherSettings }: TimeWeath
     advanceTimeBy(hours);
   };
 
+  const handleToggleRadar = () => {
+    if (!campaign?.weatherSimulation) return;
+
+    const newEnabled = !simConfig?.enabled;
+    updateCampaignData({
+      weatherSimulation: {
+        ...campaign.weatherSimulation,
+        config: {
+          ...campaign.weatherSimulation.config,
+          enabled: newEnabled
+        }
+      }
+    });
+
+    if (newEnabled && !weatherSim.isRunning) {
+      // Start the simulation
+      const hexes = Object.entries(campaign.hexes).map(([key, hex]) => ({
+        key,
+        terrain: hex.terrain,
+        elevation: campaign.terrainTypes.find(t => t.name === hex.terrain)?.elevation ?? 1,
+        isCoast: hex.terrain === 'Coast',
+        hasRiver: !!(hex.connections?.rivers?.length)
+      }));
+      weatherSim.startSimulation(
+        { width: campaign.gridWidth, height: campaign.gridHeight, hexes },
+        campaign.weatherSimulation.seed || String(Date.now()),
+        { ...campaign.weatherSimulation.config, enabled: true }
+      );
+    } else if (!newEnabled && weatherSim.isRunning) {
+      weatherSim.stopSimulation();
+    }
+  };
+
   return (
     <div className="time-weather-bar">
       {/* Weather Section */}
@@ -59,6 +101,28 @@ function TimeWeatherBar({ onOpenTimeControls, onOpenWeatherSettings }: TimeWeath
         <span className="time-weather-bar__icon"><Icon name={weatherIconName} size={16} /></span>
         <span className="time-weather-bar__text">{weatherSummary}</span>
       </div>
+
+      {/* Simulation status + active events */}
+      {simConfig?.enabled && (
+        <>
+          <div className="time-weather-bar__divider" />
+          <div className={`weather-sim-status ${weatherSim.isRunning ? 'running' : ''}`}>
+            <Icon name="cloud-storm" size={12} />
+            <span>{weatherSim.isRunning ? 'Sim' : 'Paused'}</span>
+          </div>
+          {weatherSim.activeEvents.length > 0 && (
+            <div className="weather-sim-events">
+              {weatherSim.activeEvents.map(event => (
+                <WeatherEventBadge
+                  key={event.id}
+                  event={event}
+                  onCancel={(id) => weatherSim.cancelEvent(id)}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
 
       <div className="time-weather-bar__divider" />
 
@@ -98,6 +162,11 @@ function TimeWeatherBar({ onOpenTimeControls, onOpenWeatherSettings }: TimeWeath
 
       {/* Quick Actions */}
       <div className="time-weather-bar__actions">
+        <WeatherRadarToggle
+          enabled={!!simConfig?.enabled}
+          isRunning={weatherSim.isRunning}
+          onToggle={handleToggleRadar}
+        />
         <button
           className="btn btn-icon btn-small"
           onClick={() => handleQuickAdvance(1)}

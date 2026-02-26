@@ -9,7 +9,8 @@ import {
   Season,
   TimeWeatherState,
   CurrentTime,
-  WeatherEffects
+  WeatherEffects,
+  WeatherFieldCell
 } from '../types/Weather';
 import { getWeatherEffects } from '../data/weatherEffects';
 
@@ -242,16 +243,23 @@ export function generateTransitionWeather(
 }
 
 /**
- * Get weather for a specific hex, considering global, zone, and override weather
+ * Get weather for a specific hex, considering overrides, simulation, zone, and global weather.
+ * Fallback chain: hex override → simulation field → zone weather → global weather
  */
 export function getHexWeather(
   state: TimeWeatherState,
   hexKey: string,
-  terrain: string
+  terrain: string,
+  simulationCell?: WeatherFieldCell
 ): Weather {
-  // Check for hex-specific override first
+  // Check for hex-specific override first (DM manual override always wins)
   if (state.hexWeatherOverrides[hexKey]) {
     return state.hexWeatherOverrides[hexKey];
+  }
+
+  // Check for simulation-derived weather
+  if (simulationCell) {
+    return fieldCellToWeather(simulationCell);
   }
 
   // Check for zone weather (terrain-based)
@@ -264,14 +272,93 @@ export function getHexWeather(
 }
 
 /**
+ * Map continuous simulation field values to discrete Weather type.
+ */
+export function fieldCellToWeather(cell: WeatherFieldCell): Weather {
+  const condition = deriveCondition(cell);
+  const temperature = deriveTemperature(cell.temperature);
+  const wind = deriveWind(cell);
+  const precipitation = derivePrecipitation(cell.precipIntensity);
+
+  return { condition, temperature, wind, precipitation };
+}
+
+function deriveCondition(cell: WeatherFieldCell): WeatherCondition {
+  // Storm conditions
+  if (cell.precipIntensity > 0.8 && cell.turbulence > 0.5) {
+    return cell.temperature < 0 ? 'blizzard' : 'thunderstorm';
+  }
+  if (cell.precipIntensity > 0.6) {
+    return cell.temperature < 0 ? 'heavy-snow' : 'heavy-rain';
+  }
+  if (cell.precipIntensity > 0.3) {
+    return cell.temperature < 0 ? 'snow' : 'rain';
+  }
+  if (cell.precipIntensity > 0.1) {
+    return cell.temperature < 0 ? 'light-snow' : 'light-rain';
+  }
+  if (cell.precipIntensity > 0.05) {
+    return cell.temperature < 0 ? 'sleet' : 'drizzle';
+  }
+
+  // Fog/mist
+  if (cell.humidity > 0.75 && cell.cloudCover > 0.7) {
+    return cell.humidity > 0.85 ? 'fog' : 'mist';
+  }
+
+  // Wind
+  const windSpeed = Math.sqrt(cell.windVector.u ** 2 + cell.windVector.v ** 2);
+  if (windSpeed > 10) return 'windy';
+
+  // Temperature extremes
+  if (cell.temperature > 35) return 'hot';
+  if (cell.temperature < -5) return 'freezing';
+  if (cell.temperature < 5) return 'cold';
+
+  // Cloud cover
+  if (cell.cloudCover > 0.8) return 'overcast';
+  if (cell.cloudCover > 0.5) return 'cloudy';
+  if (cell.cloudCover > 0.25) return 'partly-cloudy';
+
+  return 'clear';
+}
+
+function deriveTemperature(tempC: number): Temperature {
+  if (tempC < -5) return 'freezing';
+  if (tempC < 5) return 'cold';
+  if (tempC < 13) return 'cool';
+  if (tempC < 22) return 'mild';
+  if (tempC < 30) return 'warm';
+  if (tempC < 38) return 'hot';
+  return 'scorching';
+}
+
+function deriveWind(cell: WeatherFieldCell): WindStrength {
+  const speed = Math.sqrt(cell.windVector.u ** 2 + cell.windVector.v ** 2);
+  if (speed > 14) return 'gale';
+  if (speed > 9) return 'strong';
+  if (speed > 5) return 'moderate';
+  if (speed > 2) return 'light';
+  return 'calm';
+}
+
+function derivePrecipitation(intensity: number): PrecipitationLevel {
+  if (intensity > 0.5) return 'heavy';
+  if (intensity > 0.2) return 'moderate';
+  if (intensity > 0.05) return 'light';
+  return 'none';
+}
+
+/**
  * Get the effects for weather at a specific hex
  */
 export function getHexWeatherEffects(
   state: TimeWeatherState,
   hexKey: string,
-  terrain: string
+  terrain: string,
+  simulationCell?: WeatherFieldCell
 ): WeatherEffects {
-  const weather = getHexWeather(state, hexKey, terrain);
+  const weather = getHexWeather(state, hexKey, terrain, simulationCell);
   return getWeatherEffects(weather);
 }
 

@@ -1,5 +1,5 @@
 // MainEditor - Three-column layout for campaign editing
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useCampaign } from '../stores/CampaignContext';
 import { useSelection } from '../stores/SelectionContext';
 import Sidebar from './Sidebar';
@@ -31,6 +31,7 @@ import CreateRegionFromSelectionModal from './modals/CreateRegionFromSelectionMo
 import CommandPalette from './CommandPalette';
 import Icon from './icons/Icon';
 import { CATEGORY_INFO, type ContentCategory, parseHexKey } from '../types/Campaign';
+import { useWeatherSimulation } from '../stores/WeatherSimulationContext';
 
 interface MainEditorProps {
   onRegisterExport?: (handler: () => void) => void;
@@ -38,7 +39,7 @@ interface MainEditorProps {
 }
 
 function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) {
-  const { campaign, saveStatus, saveCampaign, closeCampaign, hasUnsavedChanges, undo, redo, canUndo, canRedo, regions } = useCampaign();
+  const { campaign, saveStatus, saveCampaign, closeCampaign, hasUnsavedChanges, undo, redo, canUndo, canRedo, regions, updateCampaignData } = useCampaign();
   const {
     searchQuery, setSearchQuery, clearFilters,
     filterTerrain, setFilterTerrain, filterStatus, setFilterStatus,
@@ -51,6 +52,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
     selectHex,
     multiSelectedKeys, clearMultiSelection
   } = useSelection();
+  const weatherSim = useWeatherSimulation();
   const [showGenerator, setShowGenerator] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showMapExport, setShowMapExport] = useState(false);
@@ -72,10 +74,34 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
   const [showLogin, setShowLogin] = useState(false);
   const [showCreateRegion, setShowCreateRegion] = useState(false);
 
-  // Clear multi-selection when campaign changes (prevents stale keys across campaigns)
+  // Clear multi-selection and stop weather simulation when campaign changes
   useEffect(() => {
     clearMultiSelection();
+    if (weatherSim.isRunning) {
+      weatherSim.stopSimulation();
+    }
   }, [campaign?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Periodically sync weather simulation state back to campaign for persistence
+  const lastSyncRef = useRef(0);
+  useEffect(() => {
+    if (!weatherSim.isRunning || !campaign?.weatherSimulation) return;
+    const interval = setInterval(() => {
+      const now = Date.now();
+      if (now - lastSyncRef.current < 10000) return;
+      lastSyncRef.current = now;
+      updateCampaignData({
+        weatherSimulation: {
+          ...campaign.weatherSimulation!,
+          field: weatherSim.field,
+          pressureSystems: weatherSim.pressureSystems,
+          fronts: weatherSim.fronts,
+          activeEvents: weatherSim.activeEvents
+        }
+      });
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [weatherSim.isRunning, campaign?.weatherSimulation?.config]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Register export handler for menu command
   useEffect(() => {

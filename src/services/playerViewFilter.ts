@@ -1,7 +1,7 @@
 // Player View Filter - Strips DM-only data from campaign for player consumption
 
 import type { Campaign, Hex, TerrainType, HexCoordinate, DiscoveryStatus, HexConnections, Faction, NpcAttitude } from '../types';
-import type { TimeWeatherState } from '../types/Weather';
+import type { TimeWeatherState, WeatherField } from '../types/Weather';
 import type { MarkerType, HexMarker } from '../types/Markers';
 import type { QuestStatus, StoryArcStatus } from '../types/Quest';
 
@@ -82,6 +82,15 @@ export interface PlayerStoryArc {
   color: string;
 }
 
+// Player-safe weather simulation config (no analytical overlays)
+export interface PlayerWeatherSimConfig {
+  enabled: boolean;
+  overlayOpacity: number;
+  overlayMode: 'precipitation' | 'temperature' | 'pressure' | 'wind';
+  showParticles: boolean;
+  particleDensity: number;
+}
+
 // Player-safe campaign data
 export interface PlayerCampaign {
   id: string;
@@ -97,6 +106,8 @@ export interface PlayerCampaign {
   sessionLog: PlayerSessionLogEntry[];
   quests: PlayerQuest[];
   storyArcs: PlayerStoryArc[];
+  weatherSimConfig?: PlayerWeatherSimConfig;
+  weatherField?: WeatherField;
 }
 
 /**
@@ -179,6 +190,19 @@ export function filterCampaignForPlayer(campaign: Campaign): PlayerCampaign {
       color: a.color
     }));
 
+  // Filter weather simulation config for player (strip DM analytical overlays)
+  let weatherSimConfig: PlayerWeatherSimConfig | undefined;
+  if (campaign.weatherSimulation?.config?.enabled) {
+    const cfg = campaign.weatherSimulation.config;
+    weatherSimConfig = {
+      enabled: cfg.enabled,
+      overlayOpacity: cfg.overlayOpacity,
+      overlayMode: cfg.overlayMode,
+      showParticles: cfg.showParticles,
+      particleDensity: cfg.particleDensity
+    };
+  }
+
   return {
     id: campaign.id,
     name: campaign.name,
@@ -192,7 +216,9 @@ export function filterCampaignForPlayer(campaign: Campaign): PlayerCampaign {
     sessions,
     sessionLog,
     quests,
-    storyArcs
+    storyArcs,
+    weatherSimConfig,
+    weatherField: weatherSimConfig ? campaign.weatherSimulation?.field : undefined
   };
 }
 

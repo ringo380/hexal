@@ -13,6 +13,7 @@ import { AnnouncerProvider } from './stores/AnnouncerContext';
 import { createPersistenceAdapter } from './services/persistence';
 import './styles/app.css';
 import './styles/auth.css';
+import './styles/weather.css';
 
 const isPlayerView = window.location.hash === '#player-view';
 const viewMode: ViewMode = isPlayerView ? 'player' : 'dm';

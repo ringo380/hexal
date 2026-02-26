@@ -27,7 +27,9 @@ import {
   PrecipitationLevel
 } from '../types/Weather';
 import { getWeatherSummary } from '../services/weather';
-import { formatTravelModifier, formatVisibilityModifier, formatEncounterModifier } from '../data/weatherEffects';
+import { formatTravelModifier, formatVisibilityModifier, formatEncounterModifier, getDynamicEffects } from '../data/weatherEffects';
+import { useWeatherSimulation } from '../stores/WeatherSimulationContext';
+import type { WeatherFieldCell } from '../types/Weather';
 import SessionTagBadge from './sessions/SessionTagBadge';
 import QuestStatusBadge from './quests/QuestStatusBadge';
 import Icon from './icons/Icon';
@@ -77,6 +79,7 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
     sessionLog
   } = useCampaign();
   const { selectedCoordinate, selectedMarker, selectMarker, regionPaintMode } = useSelection();
+  const weatherSim = useWeatherSimulation();
 
   const [hex, setHex] = useState<Hex | null>(null);
   const [editingItem, setEditingItem] = useState<{ item: ContentItem; category: ContentCategory } | null>(null);
@@ -396,11 +399,12 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
         {/* Weather Section */}
         {timeWeather && selectedCoordinate && (
           <HexWeatherSection
-            weather={getWeatherForHex(selectedCoordinate, hex.terrain)}
-            effects={getWeatherEffectsForHex(selectedCoordinate, hex.terrain)}
+            weather={getWeatherForHex(selectedCoordinate, hex.terrain, weatherSim.field[`${selectedCoordinate.q},${selectedCoordinate.r}`])}
+            effects={getWeatherEffectsForHex(selectedCoordinate, hex.terrain, weatherSim.field[`${selectedCoordinate.q},${selectedCoordinate.r}`])}
             onSetWeather={(weather) => setHexWeather(selectedCoordinate, weather)}
             onClearOverride={() => clearHexWeather(selectedCoordinate)}
             hasOverride={!!timeWeather.hexWeatherOverrides[`${selectedCoordinate.q},${selectedCoordinate.r}`]}
+            simulationCell={weatherSim.field[`${selectedCoordinate.q},${selectedCoordinate.r}`]}
           />
         )}
 
@@ -769,6 +773,7 @@ interface HexWeatherSectionProps {
   onSetWeather: (weather: Weather) => void;
   onClearOverride: () => void;
   hasOverride: boolean;
+  simulationCell?: WeatherFieldCell;
 }
 
 function HexWeatherSection({
@@ -776,7 +781,8 @@ function HexWeatherSection({
   effects,
   onSetWeather,
   onClearOverride,
-  hasOverride
+  hasOverride,
+  simulationCell
 }: HexWeatherSectionProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -847,6 +853,37 @@ function HexWeatherSection({
                 </ul>
                 <p className="effect-description">{effects.description}</p>
               </div>
+
+              {/* Simulation-derived weather data */}
+              {simulationCell && (
+                <div className="hex-weather-sim">
+                  <h5>Simulation Data</h5>
+                  <div className="weather-sim-stats">
+                    <span>Pressure: {Math.round(simulationCell.pressure)} hPa</span>
+                    <span>Temp: {Math.round(simulationCell.temperature)}°C</span>
+                    <span>Humidity: {Math.round(simulationCell.humidity * 100)}%</span>
+                    <span>Cloud cover: {Math.round(simulationCell.cloudCover * 100)}%</span>
+                  </div>
+                  {(() => {
+                    const dynEffects = getDynamicEffects(simulationCell, effects);
+                    return (
+                      <>
+                        {dynEffects.temperatureHazard !== 'none' && (
+                          <p className={dynEffects.temperatureHazard === 'hypothermia' || dynEffects.temperatureHazard === 'heatstroke' ? 'storm-warning' : 'hazard-warning'}>
+                            {dynEffects.temperatureHazard === 'cold-risk' && 'Cold exposure risk'}
+                            {dynEffects.temperatureHazard === 'heat-risk' && 'Heat exposure risk'}
+                            {dynEffects.temperatureHazard === 'hypothermia' && 'Hypothermia danger!'}
+                            {dynEffects.temperatureHazard === 'heatstroke' && 'Heatstroke danger!'}
+                          </p>
+                        )}
+                        {dynEffects.stormCellWarning && (
+                          <p className="storm-warning">Active storm cell — travel extremely hazardous</p>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
 
               <div className="weather-actions">
                 <button

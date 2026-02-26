@@ -1,6 +1,6 @@
 // Direct port from Swift data models
 
-import { TimeWeatherState, DEFAULT_WEATHER, DEFAULT_TIME, CalendarSystem, CurrentTime } from './Weather';
+import { TimeWeatherState, DEFAULT_WEATHER, DEFAULT_TIME, CalendarSystem, CurrentTime, WeatherSimulationState, createDefaultSimulationState } from './Weather';
 import { CALENDAR_PRESETS } from '../data/calendars';
 import { HexMarker, MarkerType, DEFAULT_MARKER_TYPES } from './Markers';
 import { DEFAULT_EXPANDED_ENCOUNTER_TABLES, DEFAULT_LANDMARK_TABLES } from '../data/generatorTables';
@@ -111,6 +111,12 @@ export interface Campaign {
    * Optional for backward compatibility with legacy campaign files.
    */
   storyArcs?: StoryArc[];
+
+  /**
+   * Weather simulation state (radar overlay, pressure systems, events).
+   * Optional for backward compatibility with legacy campaign files.
+   */
+  weatherSimulation?: WeatherSimulationState;
 }
 
 export interface Hex {
@@ -293,7 +299,8 @@ export function createCampaign(name: string, gridWidth: number, gridHeight: numb
     sessions: [],
     sessionLog: [],
     quests: [],
-    storyArcs: []
+    storyArcs: [],
+    weatherSimulation: createDefaultSimulationState()
   };
 }
 
@@ -845,6 +852,7 @@ export function migrateCampaign(campaign: Campaign): Campaign {
     && campaign.sessionLog !== undefined
     && campaign.quests !== undefined
     && campaign.storyArcs !== undefined
+    && campaign.weatherSimulation !== undefined
   ) return campaign;
   return {
     ...campaign,
@@ -861,7 +869,8 @@ export function migrateCampaign(campaign: Campaign): Campaign {
     sessions: campaign.sessions ?? [],
     sessionLog: campaign.sessionLog ?? [],
     quests: campaign.quests ?? [],
-    storyArcs: campaign.storyArcs ?? []
+    storyArcs: campaign.storyArcs ?? [],
+    weatherSimulation: campaign.weatherSimulation ?? createDefaultSimulationState()
   };
 }
 

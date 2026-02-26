@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import type { PlayerCampaign } from '../../services/playerViewFilter';
+import { createDefaultSimulationConfig } from '../../types/Weather';
 import PlayerHexGrid from './PlayerHexGrid';
 import PlayerHexInfo from './PlayerHexInfo';
 import PlayerSidebar from './PlayerSidebar';
@@ -101,6 +102,11 @@ function PlayerView({ campaign }: PlayerViewProps) {
           selectedHexKey={selectedHexKey}
           onHexSelect={handleHexSelect}
           onHexDeselect={() => setSelectedHexKey(null)}
+          weatherField={campaign.weatherField}
+          weatherConfig={campaign.weatherSimConfig ? {
+            ...createDefaultSimulationConfig(),
+            ...campaign.weatherSimConfig
+          } : undefined}
         />
       </div>
 

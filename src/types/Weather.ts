@@ -184,6 +184,108 @@ export const WEATHER_CONDITION_LABELS: Record<WeatherCondition, string> = {
   'freezing': 'Freezing'
 };
 
+// ============ WEATHER SIMULATION SYSTEM ============
+
+/** Per-hex output from the weather simulation engine */
+export interface WeatherFieldCell {
+  pressure: number;         // hPa ~990-1040
+  temperature: number;      // Celsius
+  humidity: number;          // 0-1
+  windVector: { u: number; v: number };
+  gustIntensity: number;    // 0-1 (turbulence near terrain features)
+  turbulence: number;       // 0-1
+  precipIntensity: number;  // 0-1
+  cloudCover: number;       // 0-1
+  frontType: 'none' | 'cold' | 'warm' | 'occluded';
+}
+
+/** Full simulation field: a map of hex keys to field cells */
+export type WeatherField = Record<string, WeatherFieldCell>;
+
+/** A pressure system center (high or low) */
+export interface PressureSystem {
+  id: string;
+  type: 'high' | 'low';
+  centerKey: string;       // hex key "q,r"
+  pressure: number;        // hPa at center
+  radius: number;          // influence radius in hex units
+  driftVector: { u: number; v: number };
+}
+
+/** A weather front between opposing pressure systems */
+export interface WeatherFront {
+  id: string;
+  type: 'cold' | 'warm' | 'occluded';
+  hexKeys: string[];       // hex keys along the front line
+  direction: { u: number; v: number };
+  intensity: number;       // 0-1
+}
+
+/** Weather event type identifiers */
+export type WeatherEventType = 'hurricane' | 'blizzard' | 'heat-wave' | 'monsoon' | 'tornado';
+
+/** An active weather event on the map */
+export interface WeatherEvent {
+  id: string;
+  type: WeatherEventType;
+  centerKey: string;
+  radius: number;
+  intensity: number;       // 0-1
+  remainingTicks: number;
+  fadeoutTicks: number;
+  path?: string[];         // hex keys for moving events (tornado)
+}
+
+/** Configuration for the weather simulation (persisted on Campaign) */
+export interface WeatherSimulationConfig {
+  engineType: 'fluid' | 'perlin';
+  simulationSpeed: number;       // 1-10
+  overlayOpacity: number;        // 0-1, default 0.35
+  overlayMode: 'precipitation' | 'temperature' | 'pressure' | 'wind';
+  showIsobars: boolean;          // DM only
+  showFronts: boolean;           // DM only
+  showParticles: boolean;
+  particleDensity: number;       // 0-1
+  enabled: boolean;
+}
+
+/** Runtime simulation state (persisted snapshot for save/restore) */
+export interface WeatherSimulationState {
+  config: WeatherSimulationConfig;
+  field: WeatherField;
+  pressureSystems: PressureSystem[];
+  fronts: WeatherFront[];
+  activeEvents: WeatherEvent[];
+  tickCount: number;
+  seed: string;
+}
+
+export function createDefaultSimulationConfig(): WeatherSimulationConfig {
+  return {
+    engineType: 'perlin',
+    simulationSpeed: 3,
+    overlayOpacity: 0.35,
+    overlayMode: 'precipitation',
+    showIsobars: false,
+    showFronts: false,
+    showParticles: true,
+    particleDensity: 0.5,
+    enabled: false
+  };
+}
+
+export function createDefaultSimulationState(): WeatherSimulationState {
+  return {
+    config: createDefaultSimulationConfig(),
+    field: {},
+    pressureSystems: [],
+    fronts: [],
+    activeEvents: [],
+    tickCount: 0,
+    seed: ''
+  };
+}
+
 // ============ DEFAULT VALUES ============
 
 export const DEFAULT_WEATHER: Weather = {

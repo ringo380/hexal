@@ -534,4 +534,49 @@ describe('filterCampaignForPlayer', () => {
       expect(result.hexes['2,0'].npcs).toEqual([{ name: 'Freed NPC' }]);
     });
   });
+
+  describe('weather simulation config', () => {
+    it('omits weatherSimConfig when simulation is not enabled', () => {
+      const campaign = makeCampaign({});
+      const result = filterCampaignForPlayer(campaign);
+      expect(result.weatherSimConfig).toBeUndefined();
+    });
+
+    it('includes player-safe weatherSimConfig when enabled', () => {
+      const campaign = makeCampaign({}, {
+        weatherSimulation: {
+          config: {
+            engineType: 'fluid',
+            simulationSpeed: 5,
+            overlayOpacity: 0.4,
+            overlayMode: 'precipitation',
+            showIsobars: true,
+            showFronts: true,
+            showParticles: true,
+            particleDensity: 0.7,
+            enabled: true
+          },
+          field: {},
+          pressureSystems: [],
+          fronts: [],
+          activeEvents: [],
+          tickCount: 100,
+          seed: 'test'
+        }
+      });
+
+      const result = filterCampaignForPlayer(campaign);
+      expect(result.weatherSimConfig).toBeDefined();
+      expect(result.weatherSimConfig!.enabled).toBe(true);
+      expect(result.weatherSimConfig!.overlayOpacity).toBe(0.4);
+      expect(result.weatherSimConfig!.overlayMode).toBe('precipitation');
+      expect(result.weatherSimConfig!.showParticles).toBe(true);
+      expect(result.weatherSimConfig!.particleDensity).toBe(0.7);
+      // DM-only fields should NOT be present
+      const raw = result.weatherSimConfig as unknown as Record<string, unknown>;
+      expect(raw['showIsobars']).toBeUndefined();
+      expect(raw['showFronts']).toBeUndefined();
+      expect(raw['engineType']).toBeUndefined();
+    });
+  });
 });
