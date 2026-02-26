@@ -2,8 +2,8 @@
 // Direct port from Swift SelectionState
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import type { HexCoordinate, DiscoveryStatus, ContentCategory } from '../types';
-import { hexKey } from '../types';
+import type { HexCoordinate, DiscoveryStatus, ContentCategory, LayerVisibility } from '../types';
+import { hexKey, DEFAULT_LAYER_VISIBILITY } from '../types';
 
 interface SelectedMarker {
   markerId: string;
@@ -57,6 +57,10 @@ interface SelectionContextValue extends SelectionState {
   // Region filter
   filterRegion: string | null;
   setFilterRegion: (regionId: string | null) => void;
+  // Layer visibility
+  layerVisibility: LayerVisibility;
+  toggleLayer: (key: keyof LayerVisibility) => void;
+  setLayerVisibility: (vis: LayerVisibility) => void;
 }
 
 const SelectionContext = createContext<SelectionContextValue | null>(null);
@@ -75,6 +79,15 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
   const [regionPaintMode, setRegionPaintModeState] = useState<string | null>(null);
   const [filterRegion, setFilterRegionState] = useState<string | null>(null);
   const [multiSelectedKeys, setMultiSelectedKeys] = useState<Set<string>>(new Set());
+  const [layerVisibility, setLayerVisibilityState] = useState<LayerVisibility>(DEFAULT_LAYER_VISIBILITY);
+
+  const toggleLayer = useCallback((key: keyof LayerVisibility) => {
+    setLayerVisibilityState(prev => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+
+  const setLayerVisibility = useCallback((vis: LayerVisibility) => {
+    setLayerVisibilityState(vis);
+  }, []);
 
   const selectHex = useCallback((coord: HexCoordinate | null) => {
     setSelectedCoordinate(coord);
@@ -250,7 +263,10 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
     multiSelectedKeys,
     toggleMultiSelectHex,
     setMultiSelection,
-    clearMultiSelection
+    clearMultiSelection,
+    layerVisibility,
+    toggleLayer,
+    setLayerVisibility
   };
 
   return (

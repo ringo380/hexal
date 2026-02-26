@@ -72,7 +72,9 @@ export type IconName =
   | 'users'
   | 'heart'
   | 'skull'
-  | 'link';
+  | 'link'
+  // Map Layer Icons
+  | 'layers';
 
 const icons: Record<IconName, JSX.Element> = {
   'arrow-left': (
@@ -1396,6 +1398,43 @@ const icons: Record<IconName, JSX.Element> = {
       />
       <path
         d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </>
+  ),
+
+  // ============ Map Layer Icons ============
+
+  'layers': (
+    <>
+      {/* Secondary - stacked layer fills */}
+      <path
+        d="M12 2L2 7l10 5 10-5-10-5z"
+        fill="var(--icon-secondary)"
+      />
+      {/* Primary - three stacked layers */}
+      <path
+        d="M12 2L2 7l10 5 10-5-10-5z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <path
+        d="M2 17l10 5 10-5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <path
+        d="M2 12l10 5 10-5"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
