@@ -2,43 +2,13 @@
 // Direct port from Swift SelectionState
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import type { HexCoordinate, DiscoveryStatus, ContentCategory } from '../types';
-import { hexKey } from '../types';
+import type { HexCoordinate, DiscoveryStatus, ContentCategory, LayerVisibility } from '../types';
+import { hexKey, DEFAULT_LAYER_VISIBILITY } from '../types';
 
 interface SelectedMarker {
   markerId: string;
   hexCoord: HexCoordinate;
 }
-
-export interface LayerVisibility {
-  terrainLabels: boolean;
-  coordinateLabels: boolean;
-  statusIndicators: boolean;
-  contentIndicators: boolean;
-  connections: boolean;       // rivers + roads
-  regionBorders: boolean;
-  regionLabels: boolean;
-  markers: boolean;
-  weatherOverlay: boolean;
-  weatherParticles: boolean;
-  isobars: boolean;           // DM only
-  fronts: boolean;            // DM only
-}
-
-const DEFAULT_LAYER_VISIBILITY: LayerVisibility = {
-  terrainLabels: true,
-  coordinateLabels: true,
-  statusIndicators: true,
-  contentIndicators: true,
-  connections: true,
-  regionBorders: true,
-  regionLabels: true,
-  markers: true,
-  weatherOverlay: true,
-  weatherParticles: true,
-  isobars: true,
-  fronts: true,
-};
 
 interface SelectionState {
   selectedCoordinate: HexCoordinate | null;

@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useCampaign } from '../stores/CampaignContext';
 import { useSelection } from '../stores/SelectionContext';
+import { DEFAULT_LAYER_VISIBILITY } from '../types';
 import Sidebar from './Sidebar';
 import HexGrid from './HexGrid';
 import HexDetail from './HexDetail';
@@ -50,7 +51,8 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
     activeFilterCount,
     isCommandPaletteOpen, openCommandPalette, closeCommandPalette,
     selectHex,
-    multiSelectedKeys, clearMultiSelection
+    multiSelectedKeys, clearMultiSelection,
+    setLayerVisibility
   } = useSelection();
   const weatherSim = useWeatherSimulation();
   const [showGenerator, setShowGenerator] = useState(false);
@@ -74,9 +76,10 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
   const [showLogin, setShowLogin] = useState(false);
   const [showCreateRegion, setShowCreateRegion] = useState(false);
 
-  // Clear multi-selection and stop weather simulation when campaign changes
+  // Clear session-only UI state and stop weather simulation when campaign changes
   useEffect(() => {
     clearMultiSelection();
+    setLayerVisibility(DEFAULT_LAYER_VISIBILITY);
     if (weatherSim.isRunning) {
       weatherSim.stopSimulation();
     }

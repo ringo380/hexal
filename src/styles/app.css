@@ -170,7 +170,8 @@ select:focus {
 .btn-icon-small:focus-visible,
 .tab-btn:focus-visible,
 .tag-filter-chip:focus-visible,
-.quest-link-chip:focus-visible {
+.quest-link-chip:focus-visible,
+.layer-controls-btn:focus-visible {
   outline: 2px solid var(--accent-color);
   outline-offset: -2px;
 }

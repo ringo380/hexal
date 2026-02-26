@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useSelection } from '../stores/SelectionContext';
-import type { LayerVisibility } from '../stores/SelectionContext';
+import type { LayerVisibility } from '../types';
 import Icon from './icons/Icon';
 
 const LAYER_OPTIONS: { key: keyof LayerVisibility; label: string }[] = [
