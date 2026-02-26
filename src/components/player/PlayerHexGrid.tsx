@@ -17,6 +17,7 @@ import { createHexRegionMap, getRegionBorderSegments } from '../../services/regi
 import type { Region } from '../../types';
 import type { WeatherField, WeatherSimulationConfig } from '../../types/Weather';
 import { useWeatherOverlay } from '../../hooks/useWeatherOverlay';
+import { useWeatherAudio } from '../../hooks/useWeatherAudio';
 import PlayerLayerControl, { DEFAULT_PLAYER_LAYERS, type PlayerLayerVisibility } from './PlayerLayerControl';
 
 // Zoom config
@@ -64,16 +65,37 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
     if (!weatherConfig) return undefined;
     return {
       ...weatherConfig,
+      showIsobars: weatherConfig.showIsobars && playerLayers.isobars,
+      showFronts: weatherConfig.showFronts && playerLayers.fronts,
       showParticles: weatherConfig.showParticles && playerLayers.weatherParticles,
     };
-  }, [weatherConfig, playerLayers.weatherParticles]);
+  }, [weatherConfig, playerLayers.isobars, playerLayers.fronts, playerLayers.weatherParticles]);
+
+  const playerWeatherLayerFlags = useMemo(() => ({
+    cloudShadows: playerLayers.cloudShadows,
+    pressureLabels: playerLayers.pressureLabels,
+    windArrows: playerLayers.windArrows,
+  }), [playerLayers.cloudShadows, playerLayers.pressureLabels, playerLayers.windArrows]);
 
   const { renderOverlay: renderWeatherOverlay } = useWeatherOverlay({
     field: weatherField || {},
     config: effectiveWeatherConfig,
     gridWidth: campaign.gridWidth,
     gridHeight: campaign.gridHeight,
-    isDMView: false
+    isDMView: false,
+    layerFlags: playerWeatherLayerFlags
+  });
+
+  // Weather audio (local state for player view)
+  const [playerAudioEnabled, setPlayerAudioEnabled] = useState(false);
+  const [playerAudioVolume, setPlayerAudioVolume] = useState(0.5);
+
+  const { updateAudio } = useWeatherAudio({
+    field: weatherField || {},
+    enabled: playerAudioEnabled,
+    volume: playerAudioVolume,
+    gridWidth: campaign.gridWidth,
+    gridHeight: campaign.gridHeight,
   });
 
   const getTerrainColor = useCallback((terrain: string): string => {
@@ -307,6 +329,9 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
       ctx.restore();
     }
 
+    // Update weather audio with current camera state
+    updateAudio(zoomLevel, panOffset.x, panOffset.y, canvas.width, canvas.height);
+
     // PASS 4: Markers (layer visibility gated)
     if (playerLayers.markers) for (let q = 0; q < campaign.gridWidth; q++) {
       for (let r = 0; r < campaign.gridHeight; r++) {
@@ -331,7 +356,7 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
     }
 
     ctx.restore();
-  }, [campaign, zoomLevel, panOffset, selectedCoord, getTerrainColor, renderWeatherOverlay, playerLayers]);
+  }, [campaign, zoomLevel, panOffset, selectedCoord, getTerrainColor, renderWeatherOverlay, playerLayers, updateAudio]);
 
   // Track container size for responsive canvas
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -620,7 +645,14 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
         onWheel={handleWheel}
         tabIndex={0}
       />
-      <PlayerLayerControl layers={playerLayers} onToggle={togglePlayerLayer} />
+      <PlayerLayerControl
+        layers={playerLayers}
+        onToggle={togglePlayerLayer}
+        weatherAudioEnabled={playerAudioEnabled}
+        weatherAudioVolume={playerAudioVolume}
+        onWeatherAudioToggle={() => setPlayerAudioEnabled(prev => !prev)}
+        onWeatherAudioVolumeChange={setPlayerAudioVolume}
+      />
     </div>
   );
 }

@@ -2026,6 +2026,25 @@ label {
   cursor: pointer;
 }
 
+.layer-controls-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 4px 12px;
+}
+
+.layer-controls-slider {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px 6px;
+}
+
+.layer-controls-slider input[type="range"] {
+  flex: 1;
+  height: 4px;
+  accent-color: var(--accent-color);
+}
+
 /* ============ MAP EXPORT MODAL ============ */
 
 .map-export-modal {

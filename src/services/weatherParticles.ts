@@ -36,11 +36,11 @@ const PARTICLE_CONFIGS: Record<ParticleType, {
   maxLife: number;
   baseOpacity: number;
 }> = {
-  rain: { color: '180, 210, 255', minSize: 1, maxSize: 2, minLife: 0.3, maxLife: 0.8, baseOpacity: 0.6 },
-  snow: { color: '240, 245, 255', minSize: 1.5, maxSize: 3, minLife: 0.5, maxLife: 1.0, baseOpacity: 0.7 },
-  wind: { color: '200, 200, 200', minSize: 0.5, maxSize: 1.5, minLife: 0.2, maxLife: 0.5, baseOpacity: 0.25 },
-  fog:  { color: '200, 210, 220', minSize: 8, maxSize: 20, minLife: 0.6, maxLife: 1.0, baseOpacity: 0.12 },
-  storm: { color: '255, 255, 180', minSize: 1, maxSize: 2.5, minLife: 0.05, maxLife: 0.15, baseOpacity: 0.9 }
+  rain: { color: '180, 210, 255', minSize: 1.5, maxSize: 3, minLife: 0.3, maxLife: 0.8, baseOpacity: 0.8 },
+  snow: { color: '240, 245, 255', minSize: 2, maxSize: 4, minLife: 0.5, maxLife: 1.0, baseOpacity: 0.85 },
+  wind: { color: '200, 200, 200', minSize: 1, maxSize: 2.5, minLife: 0.2, maxLife: 0.5, baseOpacity: 0.45 },
+  fog:  { color: '200, 210, 220', minSize: 12, maxSize: 30, minLife: 0.6, maxLife: 1.0, baseOpacity: 0.25 },
+  storm: { color: '255, 255, 180', minSize: 1.5, maxSize: 3, minLife: 0.05, maxLife: 0.15, baseOpacity: 0.95 }
 };
 
 // ============ Particle Pool ============
@@ -87,15 +87,15 @@ export class WeatherParticleSystem {
     viewportW: number,
     viewportH: number
   ): void {
-    // LOD: No particles below zoom 0.3
-    if (zoomLevel < 0.3) return;
+    // LOD: No particles below zoom 0.2
+    if (zoomLevel < 0.2) return;
 
     // Density scaling by zoom
-    const zoomDensity = zoomLevel < 0.5 ? 0.5 : zoomLevel < 0.8 ? 0.75 : 1.0;
+    const zoomDensity = zoomLevel < 0.4 ? 0.4 : zoomLevel < 0.7 ? 0.65 : 1.0;
     const effectiveDensity = this.densityScale * zoomDensity;
 
     // Max spawns per frame to avoid burst
-    const maxSpawnsPerFrame = Math.floor(12 * effectiveDensity);
+    const maxSpawnsPerFrame = Math.floor(20 * effectiveDensity);
     let spawned = 0;
 
     for (let q = 0; q < gridWidth && spawned < maxSpawnsPerFrame; q++) {

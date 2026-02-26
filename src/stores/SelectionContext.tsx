@@ -61,6 +61,11 @@ interface SelectionContextValue extends SelectionState {
   layerVisibility: LayerVisibility;
   toggleLayer: (key: keyof LayerVisibility) => void;
   setLayerVisibility: (vis: LayerVisibility) => void;
+  // Weather audio
+  weatherAudioEnabled: boolean;
+  weatherAudioVolume: number;
+  setWeatherAudioEnabled: (enabled: boolean) => void;
+  setWeatherAudioVolume: (volume: number) => void;
 }
 
 const SelectionContext = createContext<SelectionContextValue | null>(null);
@@ -80,6 +85,8 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
   const [filterRegion, setFilterRegionState] = useState<string | null>(null);
   const [multiSelectedKeys, setMultiSelectedKeys] = useState<Set<string>>(new Set());
   const [layerVisibility, setLayerVisibilityState] = useState<LayerVisibility>(DEFAULT_LAYER_VISIBILITY);
+  const [weatherAudioEnabled, setWeatherAudioEnabled] = useState(false);
+  const [weatherAudioVolume, setWeatherAudioVolume] = useState(0.5);
 
   const toggleLayer = useCallback((key: keyof LayerVisibility) => {
     setLayerVisibilityState(prev => ({ ...prev, [key]: !prev[key] }));
@@ -266,7 +273,11 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
     clearMultiSelection,
     layerVisibility,
     toggleLayer,
-    setLayerVisibility
+    setLayerVisibility,
+    weatherAudioEnabled,
+    weatherAudioVolume,
+    setWeatherAudioEnabled,
+    setWeatherAudioVolume
   };
 
   return (

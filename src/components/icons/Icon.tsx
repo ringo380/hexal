@@ -74,7 +74,9 @@ export type IconName =
   | 'skull'
   | 'link'
   // Map Layer Icons
-  | 'layers';
+  | 'layers'
+  // Audio Icons
+  | 'speaker';
 
 const icons: Record<IconName, JSX.Element> = {
   'arrow-left': (
@@ -1439,6 +1441,35 @@ const icons: Record<IconName, JSX.Element> = {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
+        fill="none"
+      />
+    </>
+  ),
+
+  // ============ Audio Icons ============
+
+  'speaker': (
+    <>
+      {/* Secondary - sound cone fill */}
+      <path
+        d="M11 5L6 9H2v6h4l5 4V5z"
+        fill="var(--icon-secondary)"
+      />
+      {/* Primary - speaker outline */}
+      <path
+        d="M11 5L6 9H2v6h4l5 4V5z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      {/* Sound waves */}
+      <path
+        d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
         fill="none"
       />
     </>

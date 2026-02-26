@@ -18,12 +18,15 @@ const LAYER_OPTIONS: { key: keyof LayerVisibility; label: string }[] = [
   { key: 'weatherParticles', label: 'Weather Particles' },
   { key: 'isobars', label: 'Isobars' },
   { key: 'fronts', label: 'Fronts' },
+  { key: 'cloudShadows', label: 'Cloud Cover' },
+  { key: 'pressureLabels', label: 'Pressure Labels' },
+  { key: 'windArrows', label: 'Wind Arrows' },
 ];
 
 function LayerControl() {
   const [isOpen, setIsOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
-  const { layerVisibility, toggleLayer } = useSelection();
+  const { layerVisibility, toggleLayer, weatherAudioEnabled, weatherAudioVolume, setWeatherAudioEnabled, setWeatherAudioVolume } = useSelection();
 
   // Outside-click dismissal via ref + contains()
   useEffect(() => {
@@ -61,6 +64,32 @@ function LayerControl() {
               <span>{label}</span>
             </label>
           ))}
+          <div className="layer-controls-divider" />
+          <div className="layer-controls-header">
+            <Icon name="speaker" size={12} /> Audio
+          </div>
+          <label className="layer-controls-item">
+            <input
+              type="checkbox"
+              checked={weatherAudioEnabled}
+              onChange={() => setWeatherAudioEnabled(!weatherAudioEnabled)}
+            />
+            <span>Weather Sounds</span>
+          </label>
+          {weatherAudioEnabled && (
+            <div className="layer-controls-slider">
+              <Icon name="speaker" size={12} />
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={weatherAudioVolume}
+                onChange={(e) => setWeatherAudioVolume(parseFloat(e.target.value))}
+                aria-label="Weather audio volume"
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

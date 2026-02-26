@@ -9,8 +9,11 @@ export interface LayerVisibility {
   markers: boolean;
   weatherOverlay: boolean;
   weatherParticles: boolean;
-  isobars: boolean;           // DM only
-  fronts: boolean;            // DM only
+  isobars: boolean;
+  fronts: boolean;
+  cloudShadows: boolean;      // Cloud cover + ground shadows
+  pressureLabels: boolean;    // H/L pressure system labels
+  windArrows: boolean;        // Wind direction arrows (zoomed out)
 }
 
 export const DEFAULT_LAYER_VISIBILITY: LayerVisibility = {
@@ -26,4 +29,7 @@ export const DEFAULT_LAYER_VISIBILITY: LayerVisibility = {
   weatherParticles: true,
   isobars: true,
   fronts: true,
+  cloudShadows: true,
+  pressureLabels: true,
+  windArrows: true,
 };

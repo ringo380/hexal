@@ -14,6 +14,11 @@ export interface PlayerLayerVisibility {
   markers: boolean;
   weatherOverlay: boolean;
   weatherParticles: boolean;
+  isobars: boolean;
+  fronts: boolean;
+  cloudShadows: boolean;
+  pressureLabels: boolean;
+  windArrows: boolean;
 }
 
 export const DEFAULT_PLAYER_LAYERS: PlayerLayerVisibility = {
@@ -26,6 +31,11 @@ export const DEFAULT_PLAYER_LAYERS: PlayerLayerVisibility = {
   markers: true,
   weatherOverlay: true,
   weatherParticles: true,
+  isobars: true,
+  fronts: true,
+  cloudShadows: true,
+  pressureLabels: true,
+  windArrows: true,
 };
 
 const PLAYER_LAYER_OPTIONS: { key: keyof PlayerLayerVisibility; label: string }[] = [
@@ -38,14 +48,23 @@ const PLAYER_LAYER_OPTIONS: { key: keyof PlayerLayerVisibility; label: string }[
   { key: 'markers', label: 'Markers' },
   { key: 'weatherOverlay', label: 'Weather Overlay' },
   { key: 'weatherParticles', label: 'Weather Particles' },
+  { key: 'isobars', label: 'Isobars' },
+  { key: 'fronts', label: 'Fronts' },
+  { key: 'cloudShadows', label: 'Cloud Cover' },
+  { key: 'pressureLabels', label: 'Pressure Labels' },
+  { key: 'windArrows', label: 'Wind Arrows' },
 ];
 
 interface PlayerLayerControlProps {
   layers: PlayerLayerVisibility;
   onToggle: (key: keyof PlayerLayerVisibility) => void;
+  weatherAudioEnabled: boolean;
+  weatherAudioVolume: number;
+  onWeatherAudioToggle: () => void;
+  onWeatherAudioVolumeChange: (volume: number) => void;
 }
 
-function PlayerLayerControl({ layers, onToggle }: PlayerLayerControlProps) {
+function PlayerLayerControl({ layers, onToggle, weatherAudioEnabled, weatherAudioVolume, onWeatherAudioToggle, onWeatherAudioVolumeChange }: PlayerLayerControlProps) {
   const [isOpen, setIsOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -85,6 +104,32 @@ function PlayerLayerControl({ layers, onToggle }: PlayerLayerControlProps) {
               <span>{label}</span>
             </label>
           ))}
+          <div className="layer-controls-divider" />
+          <div className="layer-controls-header">
+            <Icon name="speaker" size={12} /> Audio
+          </div>
+          <label className="layer-controls-item">
+            <input
+              type="checkbox"
+              checked={weatherAudioEnabled}
+              onChange={onWeatherAudioToggle}
+            />
+            <span>Weather Sounds</span>
+          </label>
+          {weatherAudioEnabled && (
+            <div className="layer-controls-slider">
+              <Icon name="speaker" size={12} />
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={weatherAudioVolume}
+                onChange={(e) => onWeatherAudioVolumeChange(parseFloat(e.target.value))}
+                aria-label="Weather audio volume"
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

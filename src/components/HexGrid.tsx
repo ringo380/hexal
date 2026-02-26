@@ -30,6 +30,7 @@ import HexContextMenu from './HexContextMenu';
 import Icon from './icons/Icon';
 import { useWeatherSimulation } from '../stores/WeatherSimulationContext';
 import { useWeatherOverlay } from '../hooks/useWeatherOverlay';
+import { useWeatherAudio } from '../hooks/useWeatherAudio';
 import LayerControl from './LayerControl';
 
 // Zoom configuration
@@ -192,7 +193,7 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { campaign, getHex, removeMarker, moveMarker, moveMarkerToPosition, addMarkerAtPosition, regions, addHexToRegion, removeHexFromRegion } = useCampaign();
-  const { selectedCoordinate, selectedMarker, selectHex, selectMarker, clearSelection, regionPaintMode, setRegionPaintMode, multiSelectedKeys, toggleMultiSelectHex, setMultiSelection, clearMultiSelection, layerVisibility } = useSelection();
+  const { selectedCoordinate, selectedMarker, selectHex, selectMarker, clearSelection, regionPaintMode, setRegionPaintMode, multiSelectedKeys, toggleMultiSelectHex, setMultiSelection, clearMultiSelection, layerVisibility, weatherAudioEnabled, weatherAudioVolume } = useSelection();
   const announce = useAnnounce();
 
   // Weather simulation overlay with layer visibility applied
@@ -209,12 +210,28 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
   }, [campaign?.weatherSimulation?.config, layerVisibility.isobars,
       layerVisibility.fronts, layerVisibility.weatherParticles]);
 
+  const weatherLayerFlags = useMemo(() => ({
+    cloudShadows: layerVisibility.cloudShadows,
+    pressureLabels: layerVisibility.pressureLabels,
+    windArrows: layerVisibility.windArrows,
+  }), [layerVisibility.cloudShadows, layerVisibility.pressureLabels, layerVisibility.windArrows]);
+
   const { renderOverlay: renderWeatherOverlay } = useWeatherOverlay({
     field: weatherSim.field,
     config: effectiveWeatherConfig,
     gridWidth: campaign?.gridWidth ?? 0,
     gridHeight: campaign?.gridHeight ?? 0,
-    isDMView: true
+    isDMView: true,
+    layerFlags: weatherLayerFlags
+  });
+
+  // Weather audio hook
+  const { updateAudio } = useWeatherAudio({
+    field: weatherSim.field,
+    enabled: weatherAudioEnabled,
+    volume: weatherAudioVolume,
+    gridWidth: campaign?.gridWidth ?? 0,
+    gridHeight: campaign?.gridHeight ?? 0,
   });
 
   // Announce hex selection changes to screen readers
@@ -662,6 +679,9 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
       ctx.restore();
     }
 
+    // Update weather audio with current camera state
+    updateAudio(zoomLevel, panOffset.x, panOffset.y, canvas.width, canvas.height);
+
     // ========================================================================
     // PASS 2: Draw all markers (figurines) on top of hex content (layer visibility gated)
     // This ensures markers with free-form positions can overlap adjacent hexes
@@ -720,7 +740,7 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
         tilt
       );
     }
-  }, [campaign, getHex, selectedCoordinate, getTerrainColor, zoomLevel, panOffset, markerDrag.isDragging, markerDrag.state, regions, multiSelectedKeys, renderWeatherOverlay, layerVisibility]);
+  }, [campaign, getHex, selectedCoordinate, getTerrainColor, zoomLevel, panOffset, markerDrag.isDragging, markerDrag.state, regions, multiSelectedKeys, renderWeatherOverlay, layerVisibility, updateAudio]);
 
   // Track container size for responsive canvas
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });

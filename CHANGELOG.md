@@ -5,19 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.3.0] - 2026-02-13
+## [1.3.0] - 2026-02-26
 
 ### Added
-- **Hex Regions**: Define named geographic regions (e.g., "The Dark Woods", "City of Leris") by grouping hexes
-- **Region Manager Modal**: Two-panel modal for creating, editing, and managing regions (Cmd+R)
-- **Region Paint Mode**: Click hexes on the canvas to add/remove them from a region
-- **Canvas Region Visualization**: Semi-transparent color overlay on region hexes, colored border rendering on region boundaries, region name labels at overview zoom levels
-- **Region in HexDetail**: View and assign regions from the hex detail panel
-- **Region Filtering**: Filter sidebar hex list by region membership
-- **Region Search**: Search for hexes by region name
-- **Region Color Palette**: 12 preset colors plus custom color picker for region assignment
-- **Hex Neighbor Utilities**: `getHexNeighbors`, `areHexesAdjacent`, `getValidNeighbors` for odd-q offset grid
-- **Region Service**: Pure utility functions for region operations (contiguity checks, border detection, fast lookup maps)
+- **Weather Radar Overlay**: Real-time weather simulation with pressure systems, isobars, fronts, cloud cover/shadows, pressure labels, wind arrows, rain/snow/fog/storm particles, and lightning effects rendered via 9-pass canvas pipeline
+- **Weather Audio System**: Synthesized ambient sounds via Web Audio API — altitude wind, rain, snow, surface wind with gust LFO, thunder one-shots, and fog drone. Sound shifts with zoom level (thin high-altitude wind at far zoom, full surface weather at close zoom) and blends spatially from hexes near viewport center. Independent toggle and volume slider in layer panel for both DM and player views
+- **Quest & Story Arc System**: Campaign-level quests with objectives, status tracking, linked hexes/NPCs/encounters/clues, prerequisite chains, and story arcs that group quests. Includes quest graph visualization, status badges, and cross-entity cleanup on delete
+- **Player View**: Second BrowserWindow with fog-of-war, one-way state sync from DM, filtered campaign data (strips DM-only fields), independent layer controls, and keyboard/zoom navigation
+- **Session Log**: Timeline-based session logging with tags, in-game timestamps, and per-hex event tracking
+- **NPC Relationship & Faction Tracking**: NPC directory with race, class, alignment, attitude, faction membership, and relationship network across the map
+- **Enhanced Procedural Generation**: Seeded PRNG (mulberry32), biome clustering, landmark tables, configurable density sliders, and automatic river/road network generation
+- **Hex Regions**: Named geographic regions with color overlays, border rendering, region labels, paint mode, multi-select with flood-fill, and context menu for quick creation
+- **Search, Filtering & Navigation**: Full-text search, terrain/status/content type/region/bookmark filters, active filter count badge, and command palette (Cmd+K)
+- **Encounter Management**: Encounter editor with creature rosters, difficulty ratings, linked NPCs, rewards, outcome tracking, and reusable templates
+- **GitHub Pages Documentation Site**: Project landing page with feature showcase and generated screenshots
+- **Persistence Layer**: `PersistenceAdapter` interface abstracting campaign I/O, settings system via `electron-store`
+
+### Improved
+- **Accessibility**: Focus traps for all modals, live announcer for screen readers, form label associations, icon-only button aria-labels, keyboard accessibility for interactive elements, focus-visible outlines, aria-controls on collapsible sections, canvas alternatives and skip navigation
+- **Layer Controls**: Google Maps-style floating panel with toggles for all visual layers (terrain, coordinates, status, content, connections, regions, markers, weather overlay/particles/isobars/fronts/clouds/pressure/wind)
+
+### Fixed
+- Weather overlay responsive canvas sizing and layer control state management
+- Player view status dots and marker filtering on undiscovered hexes
+- Region context menu click handling, multi-select cleared on normal click and campaign switch
+- Resolved all npm audit vulnerabilities (jspdf, tar)
+
+### Testing
+- Vitest framework with 334 tests covering search, filtering, campaign migration, regions, weather simulation, player view, quests, NPCs, procedural generation, and RNG
+- Playwright E2E smoke test suite for Electron app
 
 ## [1.2.2] - 2026-01-19
 

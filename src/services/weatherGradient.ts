@@ -10,22 +10,22 @@ import { clamp } from './weather/WeatherField';
 function precipitationColor(cell: WeatherFieldCell): string {
   const i = cell.precipIntensity;
   if (i < 0.05) return 'transparent';
-  if (i < 0.2) return `rgba(0, 200, 50, ${0.3 + i * 2})`;      // Green (light)
-  if (i < 0.4) return `rgba(180, 200, 0, ${0.4 + i})`;           // Yellow
-  if (i < 0.6) return `rgba(255, 140, 0, ${0.5 + i * 0.5})`;     // Orange
-  if (i < 0.8) return `rgba(255, 40, 40, ${0.6 + i * 0.3})`;     // Red
-  return `rgba(180, 0, 180, ${0.7 + i * 0.2})`;                   // Purple (extreme)
+  if (i < 0.2) return `rgba(0, 200, 50, ${0.5 + i * 2})`;      // Green (light)
+  if (i < 0.4) return `rgba(180, 200, 0, ${0.6 + i})`;           // Yellow
+  if (i < 0.6) return `rgba(255, 140, 0, ${0.7 + i * 0.3})`;     // Orange
+  if (i < 0.8) return `rgba(255, 40, 40, ${0.8 + i * 0.2})`;     // Red
+  return `rgba(180, 0, 180, 0.85)`;                                // Purple (extreme)
 }
 
 function temperatureColor(cell: WeatherFieldCell): string {
   const t = cell.temperature;
-  if (t < -10) return `rgba(50, 50, 200, 0.7)`;         // Deep blue
-  if (t < 0) return `rgba(80, 120, 220, 0.6)`;           // Blue
-  if (t < 10) return `rgba(100, 180, 220, 0.5)`;         // Light blue
-  if (t < 20) return `rgba(100, 200, 100, 0.4)`;         // Green
-  if (t < 30) return `rgba(220, 200, 50, 0.5)`;          // Yellow
-  if (t < 40) return `rgba(220, 100, 30, 0.6)`;          // Orange
-  return `rgba(200, 30, 30, 0.7)`;                        // Red (extreme heat)
+  if (t < -10) return `rgba(50, 50, 200, 0.85)`;        // Deep blue
+  if (t < 0) return `rgba(80, 120, 220, 0.75)`;          // Blue
+  if (t < 10) return `rgba(100, 180, 220, 0.65)`;        // Light blue
+  if (t < 20) return `rgba(100, 200, 100, 0.55)`;        // Green
+  if (t < 30) return `rgba(220, 200, 50, 0.65)`;         // Yellow
+  if (t < 40) return `rgba(220, 100, 30, 0.75)`;         // Orange
+  return `rgba(200, 30, 30, 0.85)`;                       // Red (extreme heat)
 }
 
 function pressureColor(cell: WeatherFieldCell): string {
@@ -34,7 +34,7 @@ function pressureColor(cell: WeatherFieldCell): string {
   const r = Math.round(norm * 200);
   const g = Math.round(norm * 200);
   const b = Math.round((1 - norm) * 150 + 50);
-  return `rgba(${r}, ${g}, ${b}, 0.45)`;
+  return `rgba(${r}, ${g}, ${b}, 0.55)`;
 }
 
 function windColor(cell: WeatherFieldCell): string {
@@ -43,7 +43,7 @@ function windColor(cell: WeatherFieldCell): string {
   if (norm < 0.15) return 'transparent';
   const r = Math.round(norm * 255);
   const g = Math.round((1 - norm) * 200);
-  return `rgba(${r}, ${g}, 80, ${0.2 + norm * 0.4})`;
+  return `rgba(${r}, ${g}, 80, ${0.35 + norm * 0.45})`;
 }
 
 const COLOR_MAP: Record<string, (cell: WeatherFieldCell) => string> = {
@@ -103,7 +103,7 @@ export function renderWeatherGradient(
 
   // Apply Gaussian blur for smooth transitions between hexes
   // Use a second canvas to avoid undefined behavior from self-draw
-  const blurAmount = Math.max(2, Math.min(8, 4 * zoomLevel));
+  const blurAmount = Math.max(3, Math.min(12, 6 * zoomLevel));
   const blurred = document.createElement('canvas');
   blurred.width = canvasWidth;
   blurred.height = canvasHeight;
@@ -131,9 +131,9 @@ export function renderIsobars(
 ): void {
   const interval = 5; // hPa between isobar lines
   ctx.save();
-  ctx.strokeStyle = 'rgba(200, 200, 200, 0.35)';
-  ctx.lineWidth = 1 / zoomLevel;
-  ctx.setLineDash([3 / zoomLevel, 3 / zoomLevel]);
+  ctx.strokeStyle = 'rgba(220, 220, 220, 0.6)';
+  ctx.lineWidth = 1.5 / zoomLevel;
+  ctx.setLineDash([4 / zoomLevel, 2 / zoomLevel]);
 
   for (let q = 0; q < gridWidth; q++) {
     for (let r = 0; r < gridHeight; r++) {
@@ -187,7 +187,7 @@ export function renderFronts(
   zoomLevel: number
 ): void {
   ctx.save();
-  ctx.lineWidth = 2.5 / zoomLevel;
+  ctx.lineWidth = 3.5 / zoomLevel;
 
   for (let q = 0; q < gridWidth; q++) {
     for (let r = 0; r < gridHeight; r++) {
@@ -196,11 +196,11 @@ export function renderFronts(
       if (!cell || cell.frontType === 'none') continue;
 
       const center = hexCenter({ q, r });
-      const size = 4 / zoomLevel;
+      const size = 8 / zoomLevel;
 
       if (cell.frontType === 'cold') {
-        ctx.strokeStyle = 'rgba(80, 130, 255, 0.7)';
-        ctx.fillStyle = 'rgba(80, 130, 255, 0.5)';
+        ctx.strokeStyle = 'rgba(80, 130, 255, 0.9)';
+        ctx.fillStyle = 'rgba(80, 130, 255, 0.7)';
         // Draw small triangle
         ctx.beginPath();
         ctx.moveTo(center.x, center.y - size);
@@ -210,8 +210,8 @@ export function renderFronts(
         ctx.fill();
         ctx.stroke();
       } else if (cell.frontType === 'warm') {
-        ctx.strokeStyle = 'rgba(255, 80, 80, 0.7)';
-        ctx.fillStyle = 'rgba(255, 80, 80, 0.5)';
+        ctx.strokeStyle = 'rgba(255, 80, 80, 0.9)';
+        ctx.fillStyle = 'rgba(255, 80, 80, 0.7)';
         // Draw small semicircle
         ctx.beginPath();
         ctx.arc(center.x, center.y, size, 0, Math.PI);
@@ -219,8 +219,8 @@ export function renderFronts(
         ctx.stroke();
       } else {
         // Occluded front: purple
-        ctx.strokeStyle = 'rgba(160, 80, 200, 0.7)';
-        ctx.fillStyle = 'rgba(160, 80, 200, 0.5)';
+        ctx.strokeStyle = 'rgba(160, 80, 200, 0.9)';
+        ctx.fillStyle = 'rgba(160, 80, 200, 0.7)';
         ctx.beginPath();
         ctx.arc(center.x, center.y, size * 0.7, 0, Math.PI * 2);
         ctx.fill();
