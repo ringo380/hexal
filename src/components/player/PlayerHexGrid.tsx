@@ -1,13 +1,12 @@
 // PlayerHexGrid - Read-only canvas hex grid with fog-of-war for player view
 
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import type { PlayerCampaign } from '../../services/playerViewFilter';
 import type { HexCoordinate } from '../../types';
 import { DEFAULT_MARKER_TYPES } from '../../types/Markers';
 import {
   HEX_SIZE,
   hexCenter,
-  canvasSize,
   drawHexPath,
   hexPoints,
   coordinateAt
@@ -18,6 +17,7 @@ import { createHexRegionMap, getRegionBorderSegments } from '../../services/regi
 import type { Region } from '../../types';
 import type { WeatherField, WeatherSimulationConfig } from '../../types/Weather';
 import { useWeatherOverlay } from '../../hooks/useWeatherOverlay';
+import PlayerLayerControl, { DEFAULT_PLAYER_LAYERS, type PlayerLayerVisibility } from './PlayerLayerControl';
 
 // Zoom config
 const MIN_ZOOM = 0.15;
@@ -53,10 +53,24 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
   const [isPotentialDrag, setIsPotentialDrag] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
 
-  // Weather overlay (player view: no isobars/fronts)
+  // Layer visibility (local state — player view has reduced set)
+  const [playerLayers, setPlayerLayers] = useState<PlayerLayerVisibility>(DEFAULT_PLAYER_LAYERS);
+  const togglePlayerLayer = useCallback((key: keyof PlayerLayerVisibility) => {
+    setPlayerLayers(prev => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+
+  // Weather overlay with layer visibility applied
+  const effectiveWeatherConfig = useMemo(() => {
+    if (!weatherConfig) return undefined;
+    return {
+      ...weatherConfig,
+      showParticles: weatherConfig.showParticles && playerLayers.weatherParticles,
+    };
+  }, [weatherConfig, playerLayers.weatherParticles]);
+
   const { renderOverlay: renderWeatherOverlay } = useWeatherOverlay({
     field: weatherField || {},
-    config: weatherConfig,
+    config: effectiveWeatherConfig,
     gridWidth: campaign.gridWidth,
     gridHeight: campaign.gridHeight,
     isDMView: false
@@ -142,16 +156,16 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
         ctx.lineWidth = isSelected ? 3 : 0.75;
         ctx.stroke();
 
-        // Status indicator (discovered/cleared dots)
-        if (hex && hex.status !== 'undiscovered' && zoomLevel >= 0.40) {
+        // Status indicator (discovered/cleared dots, layer visibility gated)
+        if (playerLayers.statusIndicators && hex && hex.status !== 'undiscovered' && zoomLevel >= 0.40) {
           ctx.beginPath();
           ctx.arc(center.x, center.y, 4, 0, Math.PI * 2);
           ctx.fillStyle = hex.status === 'discovered' ? 'rgba(74, 158, 255, 0.7)' : 'rgba(76, 175, 80, 0.7)';
           ctx.fill();
         }
 
-        // Terrain label (only for discovered/cleared, at sufficient zoom)
-        if (hex && hex.terrain && hex.status !== 'undiscovered' && zoomLevel >= 1.5) {
+        // Terrain label (layer visibility gated)
+        if (playerLayers.terrainLabels && hex && hex.terrain && hex.status !== 'undiscovered' && zoomLevel >= 1.5) {
           ctx.font = 'bold 6px sans-serif';
           ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
           ctx.textAlign = 'center';
@@ -162,8 +176,8 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
           ctx.shadowBlur = 0;
         }
 
-        // Coordinate label (only for discovered/cleared, at sufficient zoom)
-        if (hex && hex.status !== 'undiscovered' && zoomLevel >= 0.8) {
+        // Coordinate label (layer visibility gated)
+        if (playerLayers.coordinateLabels && hex && hex.status !== 'undiscovered' && zoomLevel >= 0.8) {
           ctx.font = '5px sans-serif';
           ctx.fillStyle = 'rgba(136, 136, 136, 0.5)';
           ctx.textAlign = 'center';
@@ -173,8 +187,8 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
       }
     }
 
-    // CONNECTION PASS: Draw rivers and roads (visible on discovered/cleared hexes)
-    if (zoomLevel >= 0.25) {
+    // CONNECTION PASS: Draw rivers and roads (layer visibility gated)
+    if (playerLayers.connections && zoomLevel >= 0.25) {
       for (let q = 0; q < campaign.gridWidth; q++) {
         for (let r = 0; r < campaign.gridHeight; r++) {
           const key = `${q},${r}`;
@@ -232,8 +246,8 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
       }
     }
 
-    // PASS 2: Region borders
-    for (const region of regionAdapters) {
+    // PASS 2: Region borders (layer visibility gated)
+    if (playerLayers.regionBorders) for (const region of regionAdapters) {
       if (region.hexKeys.length === 0) continue;
       const borderSegments = getRegionBorderSegments(region);
 
@@ -255,8 +269,8 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
       }
     }
 
-    // PASS 3: Region name labels
-    if (zoomLevel >= 0.25 && zoomLevel <= 0.80) {
+    // PASS 3: Region name labels (layer visibility gated)
+    if (playerLayers.regionLabels && zoomLevel >= 0.25 && zoomLevel <= 0.80) {
       for (const region of campaign.regions) {
         if (region.hexKeys.length === 0) continue;
 
@@ -284,16 +298,17 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
       }
     }
 
-    // WEATHER OVERLAY PASS: Gradient overlay (player view: no isobars/fronts)
-    // Uses local save/restore to exit world-space without breaking the outer frame
-    ctx.save();
-    ctx.scale(1 / zoomLevel, 1 / zoomLevel);
-    ctx.translate(-panOffset.x, -panOffset.y);
-    renderWeatherOverlay(ctx, canvas.width, canvas.height, panOffset.x, panOffset.y, zoomLevel);
-    ctx.restore();
+    // WEATHER OVERLAY PASS: Gradient overlay (layer visibility gated)
+    if (playerLayers.weatherOverlay) {
+      ctx.save();
+      ctx.scale(1 / zoomLevel, 1 / zoomLevel);
+      ctx.translate(-panOffset.x, -panOffset.y);
+      renderWeatherOverlay(ctx, canvas.width, canvas.height, panOffset.x, panOffset.y, zoomLevel);
+      ctx.restore();
+    }
 
-    // PASS 4: Markers (visible on discovered/cleared hexes)
-    for (let q = 0; q < campaign.gridWidth; q++) {
+    // PASS 4: Markers (layer visibility gated)
+    if (playerLayers.markers) for (let q = 0; q < campaign.gridWidth; q++) {
       for (let r = 0; r < campaign.gridHeight; r++) {
         const key = `${q},${r}`;
         const hex = campaign.hexes[key];
@@ -316,19 +331,34 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
     }
 
     ctx.restore();
-  }, [campaign, zoomLevel, panOffset, selectedCoord, getTerrainColor]);
+  }, [campaign, zoomLevel, panOffset, selectedCoord, getTerrainColor, renderWeatherOverlay, playerLayers]);
 
-  // Canvas sizing
+  // Track container size for responsive canvas
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        const { width, height } = entry.contentRect;
+        setContainerSize({ width: Math.floor(width), height: Math.floor(height) });
+      }
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
+  // Update canvas size and redraw on campaign or container size change
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
-    const size = canvasSize(campaign.gridWidth, campaign.gridHeight);
-    canvas.width = size.width;
-    canvas.height = size.height;
-
+    if (containerSize.width === 0 || containerSize.height === 0) return;
+    canvas.width = containerSize.width;
+    canvas.height = containerSize.height;
     draw();
-  }, [campaign, draw]);
+  }, [campaign, draw, containerSize]);
 
   // Preload figurine cache when campaign data arrives
   useEffect(() => {
@@ -590,6 +620,7 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
         onWheel={handleWheel}
         tabIndex={0}
       />
+      <PlayerLayerControl layers={playerLayers} onToggle={togglePlayerLayer} />
     </div>
   );
 }

@@ -1,12 +1,11 @@
 // HexGrid - Canvas-based hex grid with selection and zoom
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { useCampaign } from '../stores/CampaignContext';
 import { useSelection } from '../stores/SelectionContext';
 import { useAnnounce } from '../stores/AnnouncerContext';
 import {
   HEX_SIZE,
   hexCenter,
-  canvasSize,
   drawHexPath,
   hexPoints,
   coordinateAt,
@@ -31,6 +30,7 @@ import HexContextMenu from './HexContextMenu';
 import Icon from './icons/Icon';
 import { useWeatherSimulation } from '../stores/WeatherSimulationContext';
 import { useWeatherOverlay } from '../hooks/useWeatherOverlay';
+import LayerControl from './LayerControl';
 
 // Zoom configuration
 const MIN_ZOOM = 0.15;            // Allow more zoom out
@@ -192,14 +192,26 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { campaign, getHex, removeMarker, moveMarker, moveMarkerToPosition, addMarkerAtPosition, regions, addHexToRegion, removeHexFromRegion } = useCampaign();
-  const { selectedCoordinate, selectedMarker, selectHex, selectMarker, clearSelection, regionPaintMode, setRegionPaintMode, multiSelectedKeys, toggleMultiSelectHex, setMultiSelection, clearMultiSelection } = useSelection();
+  const { selectedCoordinate, selectedMarker, selectHex, selectMarker, clearSelection, regionPaintMode, setRegionPaintMode, multiSelectedKeys, toggleMultiSelectHex, setMultiSelection, clearMultiSelection, layerVisibility } = useSelection();
   const announce = useAnnounce();
 
-  // Weather simulation overlay
+  // Weather simulation overlay with layer visibility applied
   const weatherSim = useWeatherSimulation();
+  const effectiveWeatherConfig = useMemo(() => {
+    const cfg = campaign?.weatherSimulation?.config;
+    if (!cfg) return undefined;
+    return {
+      ...cfg,
+      showIsobars: cfg.showIsobars && layerVisibility.isobars,
+      showFronts: cfg.showFronts && layerVisibility.fronts,
+      showParticles: cfg.showParticles && layerVisibility.weatherParticles,
+    };
+  }, [campaign?.weatherSimulation?.config, layerVisibility.isobars,
+      layerVisibility.fronts, layerVisibility.weatherParticles]);
+
   const { renderOverlay: renderWeatherOverlay } = useWeatherOverlay({
     field: weatherSim.field,
-    config: campaign?.weatherSimulation?.config,
+    config: effectiveWeatherConfig,
     gridWidth: campaign?.gridWidth ?? 0,
     gridHeight: campaign?.gridHeight ?? 0,
     isDMView: true
@@ -359,16 +371,16 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
           ctx.stroke();
         }
 
-        // Draw status indicator (LOD-controlled)
-        if (lod.showStatusDot && hex && hex.status !== 'undiscovered') {
+        // Draw status indicator (LOD-controlled + layer visibility)
+        if (lod.showStatusDot && layerVisibility.statusIndicators && hex && hex.status !== 'undiscovered') {
           ctx.beginPath();
           ctx.arc(center.x, center.y, lod.statusDotRadius, 0, Math.PI * 2);
           ctx.fillStyle = hex.status === 'discovered' ? 'rgba(74, 158, 255, 0.7)' : 'rgba(76, 175, 80, 0.7)';
           ctx.fill();
         }
 
-        // Draw content indicators in a row near top of hex (LOD-controlled)
-        if (lod.showIndicators && hex) {
+        // Draw content indicators in a row near top of hex (LOD-controlled + layer visibility)
+        if (lod.showIndicators && layerVisibility.contentIndicators && hex) {
           const contentSummary = getContentSummary(hex);
           if (contentSummary.length > 0) {
             // Calculate row layout - centered horizontally
@@ -430,8 +442,8 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
           }
         }
 
-        // Draw terrain label (LOD-controlled - appears at high zoom)
-        if (lod.showTerrainLabels && hex && hex.terrain && lod.terrainFont > 0) {
+        // Draw terrain label (LOD-controlled + layer visibility)
+        if (lod.showTerrainLabels && layerVisibility.terrainLabels && hex && hex.terrain && lod.terrainFont > 0) {
           ctx.font = `bold ${lod.terrainFont}px sans-serif`;
           ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
           ctx.textAlign = 'center';
@@ -492,8 +504,8 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
           }
         }
 
-        // Draw coordinate label (LOD-controlled)
-        if (lod.showCoordLabels && lod.coordFont > 0) {
+        // Draw coordinate label (LOD-controlled + layer visibility)
+        if (lod.showCoordLabels && layerVisibility.coordinateLabels && lod.coordFont > 0) {
           ctx.font = `${lod.coordFont}px sans-serif`;
           ctx.fillStyle = `rgba(136, 136, 136, ${lod.coordOpacity})`;
           ctx.textAlign = 'center';
@@ -522,9 +534,9 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
     }
 
     // ========================================================================
-    // CONNECTION PASS: Draw rivers and roads
+    // CONNECTION PASS: Draw rivers and roads (layer visibility gated)
     // ========================================================================
-    if (zoomLevel >= 0.25) {
+    if (layerVisibility.connections && zoomLevel >= 0.25) {
       for (let q = 0; q < campaign.gridWidth; q++) {
         for (let r = 0; r < campaign.gridHeight; r++) {
           const coord: HexCoordinate = { q, r };
@@ -582,9 +594,9 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
     }
 
     // ========================================================================
-    // REGION BORDER PASS: Draw region boundary edges
+    // REGION BORDER PASS: Draw region boundary edges (layer visibility gated)
     // ========================================================================
-    for (const region of regions) {
+    if (layerVisibility.regionBorders) for (const region of regions) {
       if (region.hexKeys.length === 0) continue;
       const borderSegments = getRegionBorderSegments(region);
 
@@ -607,9 +619,9 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
     }
 
     // ========================================================================
-    // REGION NAME LABELS (at lower zoom levels)
+    // REGION NAME LABELS (at lower zoom levels, layer visibility gated)
     // ========================================================================
-    if (zoomLevel >= 0.25 && zoomLevel <= 0.80) {
+    if (layerVisibility.regionLabels && zoomLevel >= 0.25 && zoomLevel <= 0.80) {
       for (const region of regions) {
         if (region.hexKeys.length === 0) continue;
 
@@ -639,20 +651,22 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
     }
 
     // ========================================================================
-    // WEATHER OVERLAY PASS: Gradient overlay + isobars + fronts (DM view)
+    // WEATHER OVERLAY PASS: Gradient overlay + isobars + fronts (layer visibility gated)
     // Uses local save/restore to exit world-space without breaking the outer frame
     // ========================================================================
-    ctx.save();
-    ctx.scale(1 / zoomLevel, 1 / zoomLevel);
-    ctx.translate(-panOffset.x, -panOffset.y);
-    renderWeatherOverlay(ctx, canvas.width, canvas.height, panOffset.x, panOffset.y, zoomLevel);
-    ctx.restore();
+    if (layerVisibility.weatherOverlay) {
+      ctx.save();
+      ctx.scale(1 / zoomLevel, 1 / zoomLevel);
+      ctx.translate(-panOffset.x, -panOffset.y);
+      renderWeatherOverlay(ctx, canvas.width, canvas.height, panOffset.x, panOffset.y, zoomLevel);
+      ctx.restore();
+    }
 
     // ========================================================================
-    // PASS 2: Draw all markers (figurines) on top of hex content
+    // PASS 2: Draw all markers (figurines) on top of hex content (layer visibility gated)
     // This ensures markers with free-form positions can overlap adjacent hexes
     // ========================================================================
-    if (lod.showMarkers) {
+    if (lod.showMarkers && layerVisibility.markers) {
       for (let q = 0; q < campaign.gridWidth; q++) {
         for (let r = 0; r < campaign.gridHeight; r++) {
           const coord: HexCoordinate = { q, r };
@@ -706,19 +720,34 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
         tilt
       );
     }
-  }, [campaign, getHex, selectedCoordinate, getTerrainColor, zoomLevel, panOffset, markerDrag.isDragging, markerDrag.state, regions, multiSelectedKeys]);
+  }, [campaign, getHex, selectedCoordinate, getTerrainColor, zoomLevel, panOffset, markerDrag.isDragging, markerDrag.state, regions, multiSelectedKeys, renderWeatherOverlay, layerVisibility]);
 
-  // Update canvas size and redraw on campaign change
+  // Track container size for responsive canvas
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        const { width, height } = entry.contentRect;
+        setContainerSize({ width: Math.floor(width), height: Math.floor(height) });
+      }
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
+  // Update canvas size and redraw on campaign or container size change
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !campaign) return;
-
-    const size = canvasSize(campaign.gridWidth, campaign.gridHeight);
-    canvas.width = size.width;
-    canvas.height = size.height;
-
+    if (containerSize.width === 0 || containerSize.height === 0) return;
+    canvas.width = containerSize.width;
+    canvas.height = containerSize.height;
     draw();
-  }, [campaign, draw]);
+  }, [campaign, draw, containerSize]);
 
   // Redraw on selection change (hex or marker)
   useEffect(() => {
@@ -1407,6 +1436,8 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
           onClose={() => setContextMenu(null)}
         />
       )}
+      {/* Layer controls */}
+      <LayerControl />
       {/* Zoom controls - fixed position */}
       <div className="zoom-controls">
         <button className="zoom-btn" onClick={zoomOut} title="Zoom out (Cmd/Ctrl -)" aria-label="Zoom out">−</button>

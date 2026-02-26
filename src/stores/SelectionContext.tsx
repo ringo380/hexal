@@ -10,6 +10,36 @@ interface SelectedMarker {
   hexCoord: HexCoordinate;
 }
 
+export interface LayerVisibility {
+  terrainLabels: boolean;
+  coordinateLabels: boolean;
+  statusIndicators: boolean;
+  contentIndicators: boolean;
+  connections: boolean;       // rivers + roads
+  regionBorders: boolean;
+  regionLabels: boolean;
+  markers: boolean;
+  weatherOverlay: boolean;
+  weatherParticles: boolean;
+  isobars: boolean;           // DM only
+  fronts: boolean;            // DM only
+}
+
+const DEFAULT_LAYER_VISIBILITY: LayerVisibility = {
+  terrainLabels: true,
+  coordinateLabels: true,
+  statusIndicators: true,
+  contentIndicators: true,
+  connections: true,
+  regionBorders: true,
+  regionLabels: true,
+  markers: true,
+  weatherOverlay: true,
+  weatherParticles: true,
+  isobars: true,
+  fronts: true,
+};
+
 interface SelectionState {
   selectedCoordinate: HexCoordinate | null;
   selectedMarker: SelectedMarker | null;
@@ -57,6 +87,10 @@ interface SelectionContextValue extends SelectionState {
   // Region filter
   filterRegion: string | null;
   setFilterRegion: (regionId: string | null) => void;
+  // Layer visibility
+  layerVisibility: LayerVisibility;
+  toggleLayer: (key: keyof LayerVisibility) => void;
+  setLayerVisibility: (vis: LayerVisibility) => void;
 }
 
 const SelectionContext = createContext<SelectionContextValue | null>(null);
@@ -75,6 +109,15 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
   const [regionPaintMode, setRegionPaintModeState] = useState<string | null>(null);
   const [filterRegion, setFilterRegionState] = useState<string | null>(null);
   const [multiSelectedKeys, setMultiSelectedKeys] = useState<Set<string>>(new Set());
+  const [layerVisibility, setLayerVisibilityState] = useState<LayerVisibility>(DEFAULT_LAYER_VISIBILITY);
+
+  const toggleLayer = useCallback((key: keyof LayerVisibility) => {
+    setLayerVisibilityState(prev => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+
+  const setLayerVisibility = useCallback((vis: LayerVisibility) => {
+    setLayerVisibilityState(vis);
+  }, []);
 
   const selectHex = useCallback((coord: HexCoordinate | null) => {
     setSelectedCoordinate(coord);
@@ -250,7 +293,10 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
     multiSelectedKeys,
     toggleMultiSelectHex,
     setMultiSelection,
-    clearMultiSelection
+    clearMultiSelection,
+    layerVisibility,
+    toggleLayer,
+    setLayerVisibility
   };
 
   return (
