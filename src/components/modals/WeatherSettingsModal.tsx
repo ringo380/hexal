@@ -1,10 +1,13 @@
 // WeatherSettingsModal - Modal for weather configuration
 import { useState } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
+import { useWeatherSimulation } from '../../stores/WeatherSimulationContext';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { getWeatherSummary, describeWeather } from '../../services/weather';
 import Icon from '../icons/Icon';
 import { getWeatherEffects } from '../../data/weatherEffects';
+import { WEATHER_EVENT_DEFS } from '../../services/weather/WeatherEvents';
+import type { WeatherEventType, WeatherSimulationConfig } from '../../types/Weather';
 import {
   Weather,
   WeatherCondition,
@@ -42,15 +45,20 @@ const PRECIPITATION_OPTIONS: PrecipitationLevel[] = [
 
 function WeatherSettingsModal({ onClose }: WeatherSettingsModalProps) {
   const {
+    campaign,
     timeWeather,
     currentSeason,
     weatherSummary,
     setGlobalWeather,
     generateNewWeather,
     updateWeatherSettings,
+    updateCampaignData,
     initTimeWeather
   } = useCampaign();
+  const weatherSim = useWeatherSimulation();
   const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
+
+  const simConfig = campaign?.weatherSimulation?.config;
 
   // Local state for weather editing
   const [editingWeather, setEditingWeather] = useState<Weather | null>(null);
@@ -124,6 +132,29 @@ function WeatherSettingsModal({ onClose }: WeatherSettingsModalProps) {
 
   const handleIntervalChange = (hours: number) => {
     updateWeatherSettings({ weatherChangeInterval: Math.max(1, hours) });
+  };
+
+  const handleSimConfigChange = (changes: Partial<WeatherSimulationConfig>) => {
+    if (!campaign?.weatherSimulation) return;
+    const newConfig = { ...campaign.weatherSimulation.config, ...changes };
+    updateCampaignData({
+      weatherSimulation: {
+        ...campaign.weatherSimulation,
+        config: newConfig
+      }
+    });
+    // Sync to the running worker
+    if (weatherSim.isRunning) {
+      weatherSim.setConfig(changes);
+    }
+  };
+
+  const handleSpawnEvent = (type: WeatherEventType) => {
+    if (!weatherSim.isRunning || !campaign) return;
+    // Spawn at grid center
+    const cx = Math.floor(campaign.gridWidth / 2);
+    const cy = Math.floor(campaign.gridHeight / 2);
+    weatherSim.spawnEvent(type, `${cx},${cy}`);
   };
 
   const effects = getWeatherEffects(weatherToEdit);
@@ -309,6 +340,118 @@ function WeatherSettingsModal({ onClose }: WeatherSettingsModalProps) {
               <span className="form-hint">How often weather may change when time advances</span>
             </div>
           </div>
+
+          {/* Weather Simulation Settings */}
+          {campaign?.weatherSimulation && (
+            <div className="weather-sim-panel">
+              <h4>Weather Simulation (Radar Overlay)</h4>
+              <div className="weather-sim-controls">
+                <div className="weather-sim-row">
+                  <label htmlFor="sim-engine">Engine</label>
+                  <select
+                    id="sim-engine"
+                    value={simConfig?.engineType || 'perlin'}
+                    onChange={(e) => handleSimConfigChange({ engineType: e.target.value as 'fluid' | 'perlin' })}
+                  >
+                    <option value="perlin">Perlin (Lightweight)</option>
+                    <option value="fluid">Fluid Dynamics (Full)</option>
+                  </select>
+                </div>
+
+                <div className="weather-sim-row">
+                  <label htmlFor="sim-speed">Sim Speed</label>
+                  <input
+                    id="sim-speed"
+                    type="range"
+                    min={1}
+                    max={10}
+                    value={simConfig?.simulationSpeed || 3}
+                    onChange={(e) => handleSimConfigChange({ simulationSpeed: parseInt(e.target.value) })}
+                  />
+                  <span>{simConfig?.simulationSpeed || 3}x</span>
+                </div>
+
+                <div className="weather-sim-row">
+                  <label htmlFor="sim-opacity">Overlay Opacity</label>
+                  <input
+                    id="sim-opacity"
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={Math.round((simConfig?.overlayOpacity || 0.35) * 100)}
+                    onChange={(e) => handleSimConfigChange({ overlayOpacity: parseInt(e.target.value) / 100 })}
+                  />
+                  <span>{Math.round((simConfig?.overlayOpacity || 0.35) * 100)}%</span>
+                </div>
+
+                <div className="weather-sim-row">
+                  <label htmlFor="sim-overlay-mode">Overlay Mode</label>
+                  <select
+                    id="sim-overlay-mode"
+                    value={simConfig?.overlayMode || 'precipitation'}
+                    onChange={(e) => handleSimConfigChange({ overlayMode: e.target.value as WeatherSimulationConfig['overlayMode'] })}
+                  >
+                    <option value="precipitation">Precipitation Radar</option>
+                    <option value="temperature">Temperature Map</option>
+                    <option value="pressure">Pressure Map</option>
+                    <option value="wind">Wind Speed</option>
+                  </select>
+                </div>
+
+                <div className="weather-sim-row">
+                  <label htmlFor="sim-particles">Particle Density</label>
+                  <input
+                    id="sim-particles"
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={Math.round((simConfig?.particleDensity || 0.5) * 100)}
+                    onChange={(e) => handleSimConfigChange({ particleDensity: parseInt(e.target.value) / 100 })}
+                  />
+                  <span>{Math.round((simConfig?.particleDensity || 0.5) * 100)}%</span>
+                </div>
+
+                <div className="weather-sim-row">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={simConfig?.showIsobars || false}
+                      onChange={(e) => handleSimConfigChange({ showIsobars: e.target.checked })}
+                    />
+                    Show isobars (pressure contours)
+                  </label>
+                </div>
+
+                <div className="weather-sim-row">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={simConfig?.showFronts || false}
+                      onChange={(e) => handleSimConfigChange({ showFronts: e.target.checked })}
+                    />
+                    Show weather fronts
+                  </label>
+                </div>
+
+                {/* Spawn weather event */}
+                <div style={{ marginTop: 8 }}>
+                  <label style={{ fontSize: 12, color: '#999' }}>Spawn Weather Event</label>
+                  <div className="weather-event-spawner">
+                    {(Object.keys(WEATHER_EVENT_DEFS) as WeatherEventType[]).map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => handleSpawnEvent(type)}
+                        disabled={!weatherSim.isRunning}
+                        title={WEATHER_EVENT_DEFS[type].description}
+                      >
+                        {WEATHER_EVENT_DEFS[type].label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Weather History */}
           {timeWeather.weatherHistory.length > 0 && (

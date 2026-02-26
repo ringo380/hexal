@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useCampaign } from './stores/CampaignContext';
 import CampaignBrowser from './components/CampaignBrowser';
 import MainEditor from './components/MainEditor';
+import { WeatherSimulationProvider } from './stores/WeatherSimulationContext';
 import UnsavedChangesDialog from './components/modals/UnsavedChangesDialog';
 import AlertDialog from './components/modals/AlertDialog';
 import { filterCampaignForPlayer } from './services/playerViewFilter';
@@ -220,10 +221,12 @@ function App() {
   return (
     <div className="app">
       {campaign ? (
-        <MainEditor
-          onRegisterExport={registerExportHandler}
-          onRegisterMapExport={registerMapExportHandler}
-        />
+        <WeatherSimulationProvider>
+          <MainEditor
+            onRegisterExport={registerExportHandler}
+            onRegisterMapExport={registerMapExportHandler}
+          />
+        </WeatherSimulationProvider>
       ) : (
         <CampaignBrowser />
       )}

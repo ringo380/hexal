@@ -9,6 +9,7 @@ import {
   CAMPAIGN_SCHEMA_VERSION
 } from '../types/Campaign';
 import type { Campaign, Hex, Encounter, ContentItem, Npc } from '../types/Campaign';
+import { createDefaultSimulationState } from '../types/Weather';
 
 describe('hexKey', () => {
   it('formats coordinate as "q,r"', () => {
@@ -165,6 +166,7 @@ describe('migrateCampaign', () => {
       sessionLog: [],
       quests: [],
       storyArcs: [],
+      weatherSimulation: createDefaultSimulationState(),
     });
     const migrated = migrateCampaign(campaign);
     // No encounter migration needed, fields exist => same reference
@@ -332,6 +334,7 @@ describe('migrateCampaign', () => {
       sessionLog: [],
       quests: [],
       storyArcs: [],
+      weatherSimulation: createDefaultSimulationState(),
     });
     const migrated = migrateCampaign(campaign);
     expect(migrated.schemaVersion).toBe(CAMPAIGN_SCHEMA_VERSION);
@@ -355,6 +358,17 @@ describe('migrateCampaign', () => {
     const migrated = migrateCampaign(legacy);
     expect(migrated.quests).toEqual([]);
     expect(migrated.storyArcs).toEqual([]);
+  });
+
+  it('adds weatherSimulation with defaults when missing', () => {
+    const legacy = makeLegacyCampaign();
+    expect(legacy.weatherSimulation).toBeUndefined();
+
+    const migrated = migrateCampaign(legacy);
+    expect(migrated.weatherSimulation).toBeDefined();
+    expect(migrated.weatherSimulation!.config.enabled).toBe(false);
+    expect(migrated.weatherSimulation!.config.engineType).toBe('perlin');
+    expect(migrated.weatherSimulation!.field).toEqual({});
   });
 
   it('preserves existing quests and storyArcs', () => {

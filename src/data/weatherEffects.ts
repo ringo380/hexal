@@ -1,6 +1,6 @@
 // Weather Effects Lookup Table
 
-import { WeatherCondition, WeatherEffects, Weather } from '../types/Weather';
+import { WeatherCondition, WeatherEffects, Weather, WeatherFieldCell } from '../types/Weather';
 
 /**
  * Effects for each weather condition
@@ -256,4 +256,73 @@ export function getWeatherSeverity(weather: Weather): 'calm' | 'mild' | 'moderat
     return 'mild';
   }
   return 'calm';
+}
+
+// ============ SIMULATION-ENHANCED EFFECTS ============
+
+export interface DynamicWeatherEffects extends WeatherEffects {
+  /** Temperature hazard warnings */
+  temperatureHazard: 'none' | 'cold-risk' | 'heat-risk' | 'hypothermia' | 'heatstroke';
+  /** Wind direction relative to travel (for directional travel modifier) */
+  windDirectionEffect: string;
+  /** Storm cell penalty description */
+  stormCellWarning: string | null;
+}
+
+/**
+ * Get simulation-enhanced weather effects from a field cell.
+ * Provides richer modifiers than the base getWeatherEffects().
+ */
+export function getDynamicEffects(cell: WeatherFieldCell, baseEffects: WeatherEffects): DynamicWeatherEffects {
+  let { travelModifier, visibilityModifier, encounterModifier, description } = baseEffects;
+  const descriptions: string[] = [description];
+
+  // Temperature hazards
+  let temperatureHazard: DynamicWeatherEffects['temperatureHazard'] = 'none';
+  if (cell.temperature < -15) {
+    temperatureHazard = 'hypothermia';
+    travelModifier += 0.3;
+    descriptions.push('Extreme cold: hypothermia risk without shelter.');
+  } else if (cell.temperature < -5) {
+    temperatureHazard = 'cold-risk';
+    travelModifier += 0.1;
+    descriptions.push('Cold exposure risk during extended travel.');
+  } else if (cell.temperature > 40) {
+    temperatureHazard = 'heatstroke';
+    travelModifier += 0.3;
+    descriptions.push('Extreme heat: heatstroke risk without water/rest.');
+  } else if (cell.temperature > 35) {
+    temperatureHazard = 'heat-risk';
+    travelModifier += 0.1;
+    descriptions.push('Heat exhaustion risk during extended travel.');
+  }
+
+  // Storm cell penalties (low pressure + high turbulence)
+  let stormCellWarning: string | null = null;
+  if (cell.pressure < 995 && cell.turbulence > 0.5) {
+    const severity = cell.pressure < 985 ? 'severe' : 'active';
+    stormCellWarning = `${severity === 'severe' ? 'Severe' : 'Active'} storm cell overhead`;
+    travelModifier += severity === 'severe' ? 0.5 : 0.25;
+    visibilityModifier *= severity === 'severe' ? 0.5 : 0.7;
+    descriptions.push(`${stormCellWarning}. Take shelter.`);
+  }
+
+  // Wind-direction travel effect (descriptive, not a modifier — direction-dependent)
+  const windSpeed = Math.sqrt(cell.windVector.u ** 2 + cell.windVector.v ** 2);
+  let windDirectionEffect = 'Calm winds';
+  if (windSpeed > 8) {
+    windDirectionEffect = 'Strong winds: headwind +25% travel, tailwind -15% travel';
+  } else if (windSpeed > 4) {
+    windDirectionEffect = 'Moderate winds: headwind +10% travel, tailwind -5% travel';
+  }
+
+  return {
+    travelModifier: Math.round(travelModifier * 100) / 100,
+    visibilityModifier: Math.round(visibilityModifier * 100) / 100,
+    encounterModifier: Math.round(encounterModifier * 100) / 100,
+    description: descriptions.join(' '),
+    temperatureHazard,
+    windDirectionEffect,
+    stormCellWarning
+  };
 }

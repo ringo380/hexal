@@ -31,6 +31,7 @@ import CreateRegionFromSelectionModal from './modals/CreateRegionFromSelectionMo
 import CommandPalette from './CommandPalette';
 import Icon from './icons/Icon';
 import { CATEGORY_INFO, type ContentCategory, parseHexKey } from '../types/Campaign';
+import { useWeatherSimulation } from '../stores/WeatherSimulationContext';
 
 interface MainEditorProps {
   onRegisterExport?: (handler: () => void) => void;
@@ -51,6 +52,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
     selectHex,
     multiSelectedKeys, clearMultiSelection
   } = useSelection();
+  const weatherSim = useWeatherSimulation();
   const [showGenerator, setShowGenerator] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showMapExport, setShowMapExport] = useState(false);
@@ -72,9 +74,12 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
   const [showLogin, setShowLogin] = useState(false);
   const [showCreateRegion, setShowCreateRegion] = useState(false);
 
-  // Clear multi-selection when campaign changes (prevents stale keys across campaigns)
+  // Clear multi-selection and stop weather simulation when campaign changes
   useEffect(() => {
     clearMultiSelection();
+    if (weatherSim.isRunning) {
+      weatherSim.stopSimulation();
+    }
   }, [campaign?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Register export handler for menu command

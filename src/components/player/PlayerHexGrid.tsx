@@ -16,6 +16,8 @@ import { hexToRgba, renderMarkers } from '../../services/hexRenderer';
 import { figurineCache } from '../../services/markerFigurines';
 import { createHexRegionMap, getRegionBorderSegments } from '../../services/regions';
 import type { Region } from '../../types';
+import type { WeatherField, WeatherSimulationConfig } from '../../types/Weather';
+import { useWeatherOverlay } from '../../hooks/useWeatherOverlay';
 
 // Zoom config
 const MIN_ZOOM = 0.15;
@@ -30,9 +32,11 @@ interface PlayerHexGridProps {
   selectedHexKey: string | null;
   onHexSelect: (coord: HexCoordinate) => void;
   onHexDeselect: () => void;
+  weatherField?: WeatherField;
+  weatherConfig?: WeatherSimulationConfig;
 }
 
-function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect }: PlayerHexGridProps) {
+function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, weatherField, weatherConfig }: PlayerHexGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -48,6 +52,15 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect }:
   const [isDragging, setIsDragging] = useState(false);
   const [isPotentialDrag, setIsPotentialDrag] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+
+  // Weather overlay (player view: no isobars/fronts)
+  const { renderOverlay: renderWeatherOverlay } = useWeatherOverlay({
+    field: weatherField || {},
+    config: weatherConfig,
+    gridWidth: campaign.gridWidth,
+    gridHeight: campaign.gridHeight,
+    isDMView: false
+  });
 
   const getTerrainColor = useCallback((terrain: string): string => {
     const terrainType = campaign.terrainTypes.find(t => t.name === terrain);
@@ -270,6 +283,13 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect }:
         ctx.shadowBlur = 0;
       }
     }
+
+    // WEATHER OVERLAY PASS: Gradient overlay (player view: no isobars/fronts)
+    ctx.restore(); // Temporarily restore to screen space for overlay compositing
+    renderWeatherOverlay(ctx, canvas.width, canvas.height, panOffset.x, panOffset.y, zoomLevel);
+    ctx.save();    // Re-enter world space for marker pass
+    ctx.translate(panOffset.x, panOffset.y);
+    ctx.scale(zoomLevel, zoomLevel);
 
     // PASS 4: Markers (visible on discovered/cleared hexes)
     for (let q = 0; q < campaign.gridWidth; q++) {

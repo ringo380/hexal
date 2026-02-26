@@ -29,6 +29,8 @@ import type { HexCoordinate, ContentCategory, MarkerPosition } from '../types';
 import { DEFAULT_MARKER_TYPES } from '../types/Markers';
 import HexContextMenu from './HexContextMenu';
 import Icon from './icons/Icon';
+import { useWeatherSimulation } from '../stores/WeatherSimulationContext';
+import { useWeatherOverlay } from '../hooks/useWeatherOverlay';
 
 // Zoom configuration
 const MIN_ZOOM = 0.15;            // Allow more zoom out
@@ -192,6 +194,16 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
   const { campaign, getHex, removeMarker, moveMarker, moveMarkerToPosition, addMarkerAtPosition, regions, addHexToRegion, removeHexFromRegion } = useCampaign();
   const { selectedCoordinate, selectedMarker, selectHex, selectMarker, clearSelection, regionPaintMode, setRegionPaintMode, multiSelectedKeys, toggleMultiSelectHex, setMultiSelection, clearMultiSelection } = useSelection();
   const announce = useAnnounce();
+
+  // Weather simulation overlay
+  const weatherSim = useWeatherSimulation();
+  const { renderOverlay: renderWeatherOverlay } = useWeatherOverlay({
+    field: weatherSim.field,
+    config: campaign?.weatherSimulation?.config,
+    gridWidth: campaign?.gridWidth ?? 0,
+    gridHeight: campaign?.gridHeight ?? 0,
+    isDMView: true
+  });
 
   // Announce hex selection changes to screen readers
   // Derive terrain outside effect so we depend on the value, not the campaign object
@@ -625,6 +637,15 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
         ctx.shadowBlur = 0;
       }
     }
+
+    // ========================================================================
+    // WEATHER OVERLAY PASS: Gradient overlay + isobars + fronts (DM view)
+    // ========================================================================
+    ctx.restore(); // Temporarily restore to screen space for overlay compositing
+    renderWeatherOverlay(ctx, canvas.width, canvas.height, panOffset.x, panOffset.y, zoomLevel);
+    ctx.save();    // Re-enter world space for marker pass
+    ctx.translate(panOffset.x, panOffset.y);
+    ctx.scale(zoomLevel, zoomLevel);
 
     // ========================================================================
     // PASS 2: Draw all markers (figurines) on top of hex content
