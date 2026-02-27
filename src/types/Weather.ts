@@ -271,7 +271,8 @@ export function createDefaultSimulationConfig(): WeatherSimulationConfig {
     showFronts: true,
     showParticles: true,
     particleDensity: 0.5,
-    enabled: false
+    enabled: false,
+    timeMode: 'realtime'
   };
 }
 

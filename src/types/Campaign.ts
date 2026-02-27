@@ -841,6 +841,11 @@ export function migrateCampaign(campaign: Campaign): Campaign {
   if (campaign.schemaVersion !== CAMPAIGN_SCHEMA_VERSION) changed = true;
   if (campaign.version === undefined) changed = true;
 
+  // Migrate weatherSimulation.config.timeMode for existing campaigns
+  if (campaign.weatherSimulation && !campaign.weatherSimulation.config.timeMode) {
+    changed = true;
+  }
+
   if (!changed
     && campaign.encounterTemplates !== undefined
     && campaign.bookmarkedHexes !== undefined
@@ -853,7 +858,10 @@ export function migrateCampaign(campaign: Campaign): Campaign {
     && campaign.quests !== undefined
     && campaign.storyArcs !== undefined
     && campaign.weatherSimulation !== undefined
+    && campaign.weatherSimulation.config.timeMode !== undefined
   ) return campaign;
+
+  const ws = campaign.weatherSimulation ?? createDefaultSimulationState();
   return {
     ...campaign,
     hexes,
@@ -870,7 +878,10 @@ export function migrateCampaign(campaign: Campaign): Campaign {
     sessionLog: campaign.sessionLog ?? [],
     quests: campaign.quests ?? [],
     storyArcs: campaign.storyArcs ?? [],
-    weatherSimulation: campaign.weatherSimulation ?? createDefaultSimulationState()
+    weatherSimulation: {
+      ...ws,
+      config: { ...ws.config, timeMode: ws.config.timeMode ?? 'realtime' }
+    }
   };
 }
 
