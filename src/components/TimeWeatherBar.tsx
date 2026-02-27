@@ -55,6 +55,10 @@ function TimeWeatherBar({ onOpenTimeControls, onOpenWeatherSettings }: TimeWeath
 
   const handleQuickAdvance = (hours: number) => {
     advanceTimeBy(hours);
+    // Advance weather simulation to match (4 ticks per hour)
+    if (weatherSim.isRunning && simConfig?.timeMode === 'campaign') {
+      weatherSim.advanceTicks(hours * 4);
+    }
   };
 
   const handleToggleRadar = () => {

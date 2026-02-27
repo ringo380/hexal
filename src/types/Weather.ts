@@ -247,6 +247,7 @@ export interface WeatherSimulationConfig {
   showParticles: boolean;
   particleDensity: number;       // 0-1
   enabled: boolean;
+  timeMode?: 'realtime' | 'campaign';  // default 'realtime' for backward compat
 }
 
 /** Runtime simulation state (persisted snapshot for save/restore) */
@@ -266,11 +267,12 @@ export function createDefaultSimulationConfig(): WeatherSimulationConfig {
     simulationSpeed: 3,
     overlayOpacity: 0.35,
     overlayMode: 'precipitation',
-    showIsobars: false,
-    showFronts: false,
+    showIsobars: true,
+    showFronts: true,
     showParticles: true,
     particleDensity: 0.5,
-    enabled: false
+    enabled: false,
+    timeMode: 'realtime'
   };
 }
 

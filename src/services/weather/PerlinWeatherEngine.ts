@@ -31,6 +31,21 @@ const TERRAIN_MODIFIERS: Record<string, { tempMod: number; humidMod: number; win
 
 const DEFAULT_MOD = { tempMod: 0, humidMod: 0, windMod: 0 };
 
+/** Hex 6-neighbor offsets for odd-q vertical layout (inline to avoid DOM imports in worker) */
+function hexNeighborKeys(q: number, r: number): string[] {
+  const isOdd = q % 2 !== 0;
+  if (isOdd) {
+    return [
+      `${q + 1},${r}`, `${q + 1},${r + 1}`, `${q},${r + 1}`,
+      `${q - 1},${r + 1}`, `${q - 1},${r}`, `${q},${r - 1}`
+    ];
+  }
+  return [
+    `${q + 1},${r - 1}`, `${q + 1},${r}`, `${q},${r + 1}`,
+    `${q - 1},${r}`, `${q - 1},${r - 1}`, `${q},${r - 1}`
+  ];
+}
+
 export class PerlinWeatherEngine implements WeatherSimulator {
   private grid!: SimGrid;
   private hexMap: Map<string, SimHex> = new Map();
@@ -314,17 +329,14 @@ export class PerlinWeatherEngine implements WeatherSimulator {
       const q = parseInt(parts[0], 10);
       const r = parseInt(parts[1], 10);
 
-      // Check neighbors for large pressure difference
-      const neighborKeys = [
-        `${q + 1},${r}`, `${q - 1},${r}`,
-        `${q},${r + 1}`, `${q},${r - 1}`
-      ];
+      // Check hex 6-neighbors for pressure difference
+      const neighborKeyList = hexNeighborKeys(q, r);
 
-      for (const nk of neighborKeys) {
+      for (const nk of neighborKeyList) {
         const neighbor = this.field[nk];
         if (!neighbor) continue;
         const pressureDiff = Math.abs(cell.pressure - neighbor.pressure);
-        if (pressureDiff > 8) {
+        if (pressureDiff > 3) {
           const tempDiff = cell.temperature - neighbor.temperature;
           cell.frontType = tempDiff > 0 ? 'warm' : tempDiff < 0 ? 'cold' : 'occluded';
           frontCells.push(key);

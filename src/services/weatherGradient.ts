@@ -2,7 +2,7 @@
 // Draws per-hex colored fills with Gaussian blur for smooth transitions
 
 import type { WeatherField, WeatherFieldCell, WeatherSimulationConfig } from '../types/Weather';
-import { hexCenter, drawHexPath, HEX_SIZE } from './hexGeometry';
+import { hexCenter, drawHexPath, HEX_SIZE, getHexNeighbors } from './hexGeometry';
 import { clamp } from './weather/WeatherField';
 
 /** Color mapping functions for different overlay modes */
@@ -119,8 +119,9 @@ export function renderWeatherGradient(
 }
 
 /**
- * Render isobar lines (pressure contours) — DM only.
- * Draws contour lines at regular pressure intervals.
+ * Render isobar lines (pressure contours).
+ * Uses edge-crossing detection: for each hex edge, if the two hexes straddle
+ * an isobar level (one above, one below), draw a segment at the midpoint.
  */
 export function renderIsobars(
   ctx: CanvasRenderingContext2D,
@@ -135,38 +136,51 @@ export function renderIsobars(
   ctx.lineWidth = 1.5 / zoomLevel;
   ctx.setLineDash([4 / zoomLevel, 2 / zoomLevel]);
 
+  // Track drawn edges to avoid duplicates (lower key first)
+  const drawnEdges = new Set<string>();
+
   for (let q = 0; q < gridWidth; q++) {
     for (let r = 0; r < gridHeight; r++) {
       const key = `${q},${r}`;
       const cell = field[key];
       if (!cell) continue;
 
-      const roundedP = Math.round(cell.pressure / interval) * interval;
-      if (Math.abs(cell.pressure - roundedP) > 1) continue;
+      const neighbors = getHexNeighbors({ q, r });
 
-      // Check if any neighbor crosses this contour
-      const neighbors: [number, number][] = [
-        [q + 1, r], [q - 1, r], [q, r + 1], [q, r - 1]
-      ];
-
-      for (const [nq, nr] of neighbors) {
-        const nk = `${nq},${nr}`;
+      for (const n of neighbors) {
+        if (n.q < 0 || n.q >= gridWidth || n.r < 0 || n.r >= gridHeight) continue;
+        const nk = `${n.q},${n.r}`;
         const neighbor = field[nk];
         if (!neighbor) continue;
 
-        const nRoundedP = Math.round(neighbor.pressure / interval) * interval;
-        if (roundedP !== nRoundedP) {
-          // Draw a short line segment between hex centers
+        // Deduplicate edges
+        const edgeKey = key < nk ? `${key}|${nk}` : `${nk}|${key}`;
+        if (drawnEdges.has(edgeKey)) continue;
+
+        // Check if this edge crosses any isobar level
+        const pMin = Math.min(cell.pressure, neighbor.pressure);
+        const pMax = Math.max(cell.pressure, neighbor.pressure);
+        const lowestLevel = Math.ceil(pMin / interval) * interval;
+
+        if (lowestLevel < pMax) {
+          // Edge straddles at least one isobar level — draw segment
+          drawnEdges.add(edgeKey);
           const c1 = hexCenter({ q, r });
-          const c2 = hexCenter({ q: nq, r: nr });
+          const c2 = hexCenter({ q: n.q, r: n.r });
           const mx = (c1.x + c2.x) / 2;
           const my = (c1.y + c2.y) / 2;
 
+          // Draw perpendicular segment at midpoint for contour feel
+          const dx = c2.x - c1.x;
+          const dy = c2.y - c1.y;
+          const len = Math.sqrt(dx * dx + dy * dy);
+          const perpX = -dy / len * HEX_SIZE * 0.4;
+          const perpY = dx / len * HEX_SIZE * 0.4;
+
           ctx.beginPath();
-          ctx.moveTo(c1.x, c1.y);
-          ctx.lineTo(mx, my);
+          ctx.moveTo(mx - perpX, my - perpY);
+          ctx.lineTo(mx + perpX, my + perpY);
           ctx.stroke();
-          break;
         }
       }
     }

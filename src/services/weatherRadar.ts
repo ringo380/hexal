@@ -1,12 +1,12 @@
 // News-station style radar rendering: pressure labels, wind arrows, cloud cover, ground shadows
 
 import type { WeatherField } from '../types/Weather';
-import { hexCenter, drawHexPath, HEX_SIZE } from './hexGeometry';
+import { hexCenter, drawHexPath, HEX_SIZE, getHexNeighbors } from './hexGeometry';
 import { clamp } from './weather/WeatherField';
 
 /**
  * Render bold "H" (high) and "L" (low) pressure system labels at local extremes.
- * Scans the field for cells whose pressure is higher/lower than all 4 cardinal neighbors.
+ * Scans the field for cells whose pressure is higher/lower than all 6 hex neighbors.
  */
 export function renderPressureLabels(
   ctx: CanvasRenderingContext2D,
@@ -15,7 +15,7 @@ export function renderPressureLabels(
   gridHeight: number,
   zoomLevel: number
 ): void {
-  const threshold = 5; // hPa above/below neighbor average to qualify
+  const threshold = 2; // hPa above/below neighbor average to qualify
 
   ctx.save();
   ctx.textAlign = 'center';
@@ -27,17 +27,16 @@ export function renderPressureLabels(
       const cell = field[key];
       if (!cell) continue;
 
-      const neighbors: [number, number][] = [
-        [q + 1, r], [q - 1, r], [q, r + 1], [q, r - 1]
-      ];
+      const hexNeighbors = getHexNeighbors({ q, r });
 
       let isHigh = true;
       let isLow = true;
       let neighborSum = 0;
       let neighborCount = 0;
 
-      for (const [nq, nr] of neighbors) {
-        const neighbor = field[`${nq},${nr}`];
+      for (const n of hexNeighbors) {
+        if (n.q < 0 || n.q >= gridWidth || n.r < 0 || n.r >= gridHeight) continue;
+        const neighbor = field[`${n.q},${n.r}`];
         if (!neighbor) continue;
         neighborCount++;
         neighborSum += neighbor.pressure;
@@ -82,7 +81,7 @@ export function renderPressureLabels(
 
 /**
  * Render wind direction arrows across the map.
- * Only at zoomed-out levels (zoom < 0.8). Uses checkerboard skip at medium zoom.
+ * Uses checkerboard skip at medium zoom for readability.
  */
 export function renderWindArrows(
   ctx: CanvasRenderingContext2D,
@@ -177,7 +176,7 @@ export function renderCloudCover(
       if (!cell) continue;
 
       const cc = cell.cloudCover;
-      if (cc < 0.2) continue;
+      if (cc < 0.05) continue;
 
       let color: string;
       if (cc < 0.5) {

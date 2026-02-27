@@ -15,6 +15,7 @@ import type { SimGrid } from './weather/WeatherSimulator';
 export type WorkerInMessage =
   | { type: 'INIT'; grid: SimGrid; seed: string; config: WeatherSimulationConfig }
   | { type: 'TICK' }
+  | { type: 'ADVANCE_TICKS'; ticks: number }
   | { type: 'SET_CONFIG'; config: Partial<WeatherSimulationConfig> }
   | { type: 'SPAWN_EVENT'; eventType: WeatherEventType; centerKey: string; intensity?: number; durationTicks?: number }
   | { type: 'CANCEL_EVENT'; eventId: string }
