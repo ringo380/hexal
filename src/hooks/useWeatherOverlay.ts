@@ -182,8 +182,8 @@ export function useWeatherOverlay({
       ctx.restore();
     }
 
-    // ── 7. Wind arrows (zoomed out only) ──
-    if (showWind && zoomLevel < 0.8) {
+    // ── 7. Wind arrows ──
+    if (showWind && zoomLevel < 1.5) {
       ctx.save();
       ctx.translate(offsetX, offsetY);
       ctx.scale(zoomLevel, zoomLevel);

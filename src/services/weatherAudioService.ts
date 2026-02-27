@@ -1,5 +1,5 @@
-// Weather Audio Service - Synthesized ambient weather sounds via Web Audio API
-// Generates continuous noise layers that respond to weather conditions and zoom level
+// Weather Audio Service - Sample-based ambient weather sounds via Web Audio API
+// Loads real audio files and crossfades layers based on weather conditions and zoom level
 
 export interface WeatherAudioParams {
   zoomLevel: number;         // 0.15–5.0
@@ -12,19 +12,24 @@ export interface WeatherAudioParams {
   stormIntensity: number;    // 0–1 derived
 }
 
-// Clamp value between min and max
 function clamp(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v));
 }
 
-// Linear interpolation
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
-const NOISE_DURATION = 2; // seconds
-const RAMP_TIME = 0.1;    // seconds for parameter transitions
+const RAMP_TIME = 0.15;    // seconds for parameter transitions
 const THUNDER_MIN_INTERVAL = 4; // seconds between thunder cracks
+
+const AUDIO_BASE_PATH = '/audio/weather/';
+const SAMPLE_NAMES = [
+  'rain-loop', 'wind-loop', 'snow-loop', 'fog-drone',
+  'thunder-1', 'thunder-2', 'thunder-3'
+] as const;
+
+type SampleName = typeof SAMPLE_NAMES[number];
 
 class WeatherAudioService {
   private ctx: AudioContext | null = null;
@@ -32,32 +37,27 @@ class WeatherAudioService {
   private enabled = false;
   private volume = 0.5;
   private graphBuilt = false;
+  private isLoaded = false;
+  private loadingPromise: Promise<void> | null = null;
 
-  // Noise source nodes (looping)
-  private whiteSource: AudioBufferSourceNode | null = null;
-  private pinkSource: AudioBufferSourceNode | null = null;
-  private brownSource: AudioBufferSourceNode | null = null;
+  // Decoded audio buffers
+  private buffers: Map<SampleName, AudioBuffer> = new Map();
 
-  // Noise buffers (generated once, reused)
-  private whiteBuffer: AudioBuffer | null = null;
-  private pinkBuffer: AudioBuffer | null = null;
-  private brownBuffer: AudioBuffer | null = null;
+  // Looping source nodes
+  private rainSource: AudioBufferSourceNode | null = null;
+  private windSource: AudioBufferSourceNode | null = null;
+  private snowSource: AudioBufferSourceNode | null = null;
+  private fogSource: AudioBufferSourceNode | null = null;
 
-  // Filter nodes
-  private altitudeFilter: BiquadFilterNode | null = null;
-  private rainFilter: BiquadFilterNode | null = null;
-  private windFilter: BiquadFilterNode | null = null;
-
-  // Gain nodes per layer
-  private altitudeGain: GainNode | null = null;
+  // Per-layer gain nodes
   private rainGain: GainNode | null = null;
   private windGain: GainNode | null = null;
+  private snowGain: GainNode | null = null;
   private fogGain: GainNode | null = null;
 
-  // Fog oscillators (persistent, detuned sine pair)
-  private fogOsc1: OscillatorNode | null = null;
-  private fogOsc2: OscillatorNode | null = null;
-  private fogLowpass: BiquadFilterNode | null = null;
+  // Altitude filter (highpass at far zoom for "altitude" feel)
+  private altitudeFilter: BiquadFilterNode | null = null;
+  private surfaceBus: GainNode | null = null;
 
   // Wind gust LFO
   private gustLFO: OscillatorNode | null = null;
@@ -77,142 +77,111 @@ class WeatherAudioService {
     return this.ctx;
   }
 
-  // Generate noise buffers
-  private generateBuffers(ctx: AudioContext): void {
-    if (this.whiteBuffer) return;
+  private async loadSamples(ctx: AudioContext): Promise<void> {
+    if (this.isLoaded) return;
+    if (this.loadingPromise) return this.loadingPromise;
 
-    const length = ctx.sampleRate * NOISE_DURATION;
+    this.loadingPromise = (async () => {
+      const loadOne = async (name: SampleName) => {
+        const url = `${AUDIO_BASE_PATH}${name}.mp3`;
+        const response = await fetch(url);
+        const arrayBuffer = await response.arrayBuffer();
+        const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+        this.buffers.set(name, audioBuffer);
+      };
 
-    // White noise
-    this.whiteBuffer = ctx.createBuffer(1, length, ctx.sampleRate);
-    const white = this.whiteBuffer.getChannelData(0);
-    for (let i = 0; i < length; i++) {
-      white[i] = Math.random() * 2 - 1;
-    }
+      await Promise.all(SAMPLE_NAMES.map(loadOne));
+      this.isLoaded = true;
+    })();
 
-    // Pink noise (Paul Kellet's refined method)
-    this.pinkBuffer = ctx.createBuffer(1, length, ctx.sampleRate);
-    const pink = this.pinkBuffer.getChannelData(0);
-    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-    for (let i = 0; i < length; i++) {
-      const w = Math.random() * 2 - 1;
-      b0 = 0.99886 * b0 + w * 0.0555179;
-      b1 = 0.99332 * b1 + w * 0.0750759;
-      b2 = 0.96900 * b2 + w * 0.1538520;
-      b3 = 0.86650 * b3 + w * 0.3104856;
-      b4 = 0.55000 * b4 + w * 0.5329522;
-      b5 = -0.7616 * b5 - w * 0.0168980;
-      pink[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11;
-      b6 = w * 0.115926;
-    }
-
-    // Brown noise (integration of white noise)
-    this.brownBuffer = ctx.createBuffer(1, length, ctx.sampleRate);
-    const brown = this.brownBuffer.getChannelData(0);
-    let lastBrown = 0;
-    for (let i = 0; i < length; i++) {
-      const w = Math.random() * 2 - 1;
-      lastBrown = (lastBrown + (0.02 * w)) / 1.02;
-      brown[i] = lastBrown * 3.5; // compensate for volume loss
-    }
+    return this.loadingPromise;
   }
 
-  private createLoopingSource(ctx: AudioContext, buffer: AudioBuffer): AudioBufferSourceNode {
+  private createLoop(ctx: AudioContext, name: SampleName): AudioBufferSourceNode | null {
+    const buffer = this.buffers.get(name);
+    if (!buffer) return null;
     const source = ctx.createBufferSource();
     source.buffer = buffer;
     source.loop = true;
     return source;
   }
 
-  ensureGraph(): void {
+  async ensureGraph(): Promise<void> {
     if (this.graphBuilt) return;
 
     try {
       const ctx = this.ensureContext();
-      this.generateBuffers(ctx);
+      await this.loadSamples(ctx);
 
       // Master gain
       this.masterGain = ctx.createGain();
-      this.masterGain.gain.value = 0; // start silent
+      this.masterGain.gain.value = 0;
       this.masterGain.connect(ctx.destination);
 
-      // ── Altitude wind: white noise → highpass → gain ──
+      // Surface bus: all surface sounds → altitudeFilter → masterGain
+      this.surfaceBus = ctx.createGain();
+      this.surfaceBus.gain.value = 1;
+
       this.altitudeFilter = ctx.createBiquadFilter();
       this.altitudeFilter.type = 'highpass';
-      this.altitudeFilter.frequency.value = 2000;
+      this.altitudeFilter.frequency.value = 20; // starts transparent
       this.altitudeFilter.Q.value = 0.5;
 
-      this.altitudeGain = ctx.createGain();
-      this.altitudeGain.gain.value = 0;
+      this.surfaceBus.connect(this.altitudeFilter);
+      this.altitudeFilter.connect(this.masterGain);
 
-      this.whiteSource = this.createLoopingSource(ctx, this.whiteBuffer!);
-      this.whiteSource.connect(this.altitudeFilter);
-      this.altitudeFilter.connect(this.altitudeGain);
-      this.altitudeGain.connect(this.masterGain);
-      this.whiteSource.start();
-
-      // ── Rain: pink noise → bandpass → gain ──
-      this.rainFilter = ctx.createBiquadFilter();
-      this.rainFilter.type = 'bandpass';
-      this.rainFilter.frequency.value = 3000;
-      this.rainFilter.Q.value = 0.8;
-
+      // ── Rain layer ──
       this.rainGain = ctx.createGain();
       this.rainGain.gain.value = 0;
+      this.rainGain.connect(this.surfaceBus);
 
-      this.pinkSource = this.createLoopingSource(ctx, this.pinkBuffer!);
-      this.pinkSource.connect(this.rainFilter);
-      this.rainFilter.connect(this.rainGain);
-      this.rainGain.connect(this.masterGain);
-      this.pinkSource.start();
+      this.rainSource = this.createLoop(ctx, 'rain-loop');
+      if (this.rainSource) {
+        this.rainSource.connect(this.rainGain);
+        this.rainSource.start();
+      }
 
-      // ── Surface wind: brown noise → lowpass → gain (with LFO for gusts) ──
-      this.windFilter = ctx.createBiquadFilter();
-      this.windFilter.type = 'lowpass';
-      this.windFilter.frequency.value = 400;
-      this.windFilter.Q.value = 0.5;
-
+      // ── Wind layer (with gust LFO) ──
       this.windGain = ctx.createGain();
       this.windGain.gain.value = 0;
+      this.windGain.connect(this.surfaceBus);
 
-      // Gust LFO modulates wind gain
       this.gustLFO = ctx.createOscillator();
       this.gustLFO.type = 'sine';
-      this.gustLFO.frequency.value = 0.3; // slow gusts
+      this.gustLFO.frequency.value = 0.3;
       this.gustLFOGain = ctx.createGain();
-      this.gustLFOGain.gain.value = 0; // modulation depth, set by params
+      this.gustLFOGain.gain.value = 0;
       this.gustLFO.connect(this.gustLFOGain);
       this.gustLFOGain.connect(this.windGain.gain);
       this.gustLFO.start();
 
-      this.brownSource = this.createLoopingSource(ctx, this.brownBuffer!);
-      this.brownSource.connect(this.windFilter);
-      this.windFilter.connect(this.windGain);
-      this.windGain.connect(this.masterGain);
-      this.brownSource.start();
+      this.windSource = this.createLoop(ctx, 'wind-loop');
+      if (this.windSource) {
+        this.windSource.connect(this.windGain);
+        this.windSource.start();
+      }
 
-      // ── Fog drone: detuned sine pair → lowpass → gain ──
-      this.fogLowpass = ctx.createBiquadFilter();
-      this.fogLowpass.type = 'lowpass';
-      this.fogLowpass.frequency.value = 150;
+      // ── Snow layer ──
+      this.snowGain = ctx.createGain();
+      this.snowGain.gain.value = 0;
+      this.snowGain.connect(this.surfaceBus);
 
+      this.snowSource = this.createLoop(ctx, 'snow-loop');
+      if (this.snowSource) {
+        this.snowSource.connect(this.snowGain);
+        this.snowSource.start();
+      }
+
+      // ── Fog layer ──
       this.fogGain = ctx.createGain();
       this.fogGain.gain.value = 0;
+      this.fogGain.connect(this.surfaceBus);
 
-      this.fogOsc1 = ctx.createOscillator();
-      this.fogOsc1.type = 'sine';
-      this.fogOsc1.frequency.value = 60;
-
-      this.fogOsc2 = ctx.createOscillator();
-      this.fogOsc2.type = 'sine';
-      this.fogOsc2.frequency.value = 90.5; // slight detuning for shimmer
-
-      this.fogOsc1.connect(this.fogLowpass);
-      this.fogOsc2.connect(this.fogLowpass);
-      this.fogLowpass.connect(this.fogGain);
-      this.fogGain.connect(this.masterGain);
-      this.fogOsc1.start();
-      this.fogOsc2.start();
+      this.fogSource = this.createLoop(ctx, 'fog-drone');
+      if (this.fogSource) {
+        this.fogSource.connect(this.fogGain);
+        this.fogSource.start();
+      }
 
       this.graphBuilt = true;
     } catch (e) {
@@ -226,47 +195,36 @@ class WeatherAudioService {
     const now = this.ctx.currentTime;
     const ramp = now + RAMP_TIME;
 
-    // Zoom-to-altitude factor: 0 at far zoom, 1 at close zoom
-    const zoomFactor = clamp((params.zoomLevel - 0.15) / (1.5 - 0.15), 0, 1);
+    // Surface gain: ramps up as you zoom IN, quiet when zoomed OUT
+    const surfaceGain = clamp((params.zoomLevel - 0.3) / (1.2 - 0.3), 0, 1);
 
-    // Surface proximity: 0 below zoom 0.3, ramps to 1 at zoom 0.8
-    const surfaceProximity = clamp((params.zoomLevel - 0.3) / (0.8 - 0.3), 0, 1);
-
-    // At far zoom with extreme weather, surface layers bleed through at 15% max
-    const farBleed = (1 - surfaceProximity) * 0.15;
-    const surfaceFactor = Math.max(surfaceProximity, farBleed);
-
-    // ── Altitude wind ──
-    const altGain = lerp(0.15, 0.0, zoomFactor);
-    const altFreq = lerp(2000, 200, zoomFactor);
-    this.altitudeGain!.gain.linearRampToValueAtTime(altGain, ramp);
+    // Altitude filter: at far zoom, highpass cuts low frequencies for "altitude" feel
+    const altFreq = lerp(1500, 20, surfaceGain); // 1500 Hz at far zoom → 20 Hz (transparent) close
     this.altitudeFilter!.frequency.linearRampToValueAtTime(altFreq, ramp);
+
+    // Surface bus overall gain tracks zoom
+    this.surfaceBus!.gain.linearRampToValueAtTime(Math.max(surfaceGain, 0.05), ramp);
 
     // ── Rain / Snow ──
     const isSnow = params.temperature < 0;
     const precipActive = params.precipIntensity > 0.05;
-    if (precipActive) {
-      const rainLevel = params.precipIntensity * surfaceFactor;
-      this.rainGain!.gain.linearRampToValueAtTime(rainLevel * 0.4, ramp);
-      // Snow: higher bandpass, lighter; Rain: midrange bandpass
-      const rainFreq = isSnow ? 5000 : 3000;
-      const rainQ = isSnow ? 1.2 : 0.8;
-      this.rainFilter!.frequency.linearRampToValueAtTime(rainFreq, ramp);
-      this.rainFilter!.Q.linearRampToValueAtTime(rainQ, ramp);
+    if (precipActive && !isSnow) {
+      this.rainGain!.gain.linearRampToValueAtTime(params.precipIntensity * 0.6, ramp);
+      this.snowGain!.gain.linearRampToValueAtTime(0, ramp);
+    } else if (precipActive && isSnow) {
+      this.snowGain!.gain.linearRampToValueAtTime(params.precipIntensity * 0.4, ramp);
+      this.rainGain!.gain.linearRampToValueAtTime(0, ramp);
     } else {
       this.rainGain!.gain.linearRampToValueAtTime(0, ramp);
+      this.snowGain!.gain.linearRampToValueAtTime(0, ramp);
     }
 
-    // ── Surface wind ──
+    // ── Wind ──
     const windActive = params.windSpeed > 2;
     if (windActive) {
-      const windLevel = clamp((params.windSpeed - 2) / 15, 0, 1) * surfaceFactor;
-      this.windGain!.gain.linearRampToValueAtTime(windLevel * 0.3, ramp);
-      // Distant howl at far zoom, full wind at close
-      const windFreq = lerp(200, 400, surfaceProximity);
-      this.windFilter!.frequency.linearRampToValueAtTime(windFreq, ramp);
-      // Gust modulation depth tied to gustIntensity
-      this.gustLFOGain!.gain.linearRampToValueAtTime(params.gustIntensity * 0.1 * surfaceFactor, ramp);
+      const windLevel = clamp((params.windSpeed - 2) / 15, 0, 1);
+      this.windGain!.gain.linearRampToValueAtTime(windLevel * 0.5, ramp);
+      this.gustLFOGain!.gain.linearRampToValueAtTime(params.gustIntensity * 0.15, ramp);
       this.gustLFO!.frequency.linearRampToValueAtTime(0.2 + params.gustIntensity * 0.5, ramp);
     } else {
       this.windGain!.gain.linearRampToValueAtTime(0, ramp);
@@ -277,84 +235,65 @@ class WeatherAudioService {
     const fogActive = params.humidity > 0.7 && params.cloudCover > 0.6;
     if (fogActive) {
       const fogLevel = ((params.humidity - 0.7) / 0.3) * ((params.cloudCover - 0.6) / 0.4);
-      this.fogGain!.gain.linearRampToValueAtTime(clamp(fogLevel, 0, 1) * 0.06 * surfaceFactor, ramp);
+      this.fogGain!.gain.linearRampToValueAtTime(clamp(fogLevel, 0, 1) * 0.08, ramp);
     } else {
       this.fogGain!.gain.linearRampToValueAtTime(0, ramp);
     }
 
-    // ── Thunder (stochastic one-shots) ──
+    // ── Thunder (stochastic one-shots from samples) ──
     if (params.stormIntensity > 0.5 && !this.thunderScheduled) {
       const timeSinceLastThunder = now - this.lastThunderTime;
       if (timeSinceLastThunder > THUNDER_MIN_INTERVAL) {
-        // Probability increases with storm intensity
-        const prob = (params.stormIntensity - 0.5) * 0.02; // ~1% chance per update at max
+        const prob = (params.stormIntensity - 0.5) * 0.02;
         if (Math.random() < prob) {
-          this.scheduleThunder(params.stormIntensity, surfaceFactor);
+          this.playThunder(params.stormIntensity, surfaceGain);
         }
       }
     }
   }
 
-  private scheduleThunder(intensity: number, surfaceFactor: number): void {
-    if (!this.ctx || !this.masterGain) return;
+  private playThunder(intensity: number, surfaceGain: number): void {
+    if (!this.ctx || !this.masterGain || !this.isLoaded) return;
 
     this.thunderScheduled = true;
     const ctx = this.ctx;
     const now = ctx.currentTime;
-    // Random delay 0-2s
     const delay = Math.random() * 2;
     const start = now + delay;
 
+    // Pick random thunder sample
+    const thunderNames: SampleName[] = ['thunder-1', 'thunder-2', 'thunder-3'];
+    const name = thunderNames[Math.floor(Math.random() * thunderNames.length)];
+    const buffer = this.buffers.get(name);
+    if (!buffer) {
+      this.thunderScheduled = false;
+      return;
+    }
+
     try {
-      // Thunder: low sine burst + noise burst
-      const thunderOsc = ctx.createOscillator();
-      thunderOsc.type = 'sine';
-      thunderOsc.frequency.setValueAtTime(60, start);
-      thunderOsc.frequency.exponentialRampToValueAtTime(30, start + 0.4);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
 
-      const thunderGain = ctx.createGain();
-      thunderGain.gain.setValueAtTime(0, start);
-      thunderGain.gain.linearRampToValueAtTime(intensity * 0.5 * surfaceFactor, start + 0.02);
-      thunderGain.gain.exponentialRampToValueAtTime(0.001, start + 0.6);
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(
+        intensity * 0.7 * Math.max(surfaceGain, 0.1),
+        start + 0.02
+      );
+      gain.gain.linearRampToValueAtTime(0.001, start + buffer.duration);
 
-      // Noise burst for crack texture
-      const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.3, ctx.sampleRate);
-      const noiseData = noiseBuffer.getChannelData(0);
-      for (let i = 0; i < noiseData.length; i++) {
-        noiseData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.05));
-      }
-      const noiseSrc = ctx.createBufferSource();
-      noiseSrc.buffer = noiseBuffer;
-
-      const noiseGain = ctx.createGain();
-      noiseGain.gain.setValueAtTime(intensity * 0.3 * surfaceFactor, start);
-      noiseGain.gain.exponentialRampToValueAtTime(0.001, start + 0.3);
-
-      const noiseFilter = ctx.createBiquadFilter();
-      noiseFilter.type = 'lowpass';
-      noiseFilter.frequency.value = 800;
-
-      thunderOsc.connect(thunderGain);
-      thunderGain.connect(this.masterGain);
-
-      noiseSrc.connect(noiseFilter);
-      noiseFilter.connect(noiseGain);
-      noiseGain.connect(this.masterGain);
-
-      thunderOsc.start(start);
-      noiseSrc.start(start);
-      thunderOsc.stop(start + 0.7);
-      noiseSrc.stop(start + 0.4);
+      source.connect(gain);
+      gain.connect(this.masterGain);
+      source.start(start);
+      source.stop(start + buffer.duration);
 
       this.lastThunderTime = start;
 
-      // Clean up scheduled flag after thunder plays
       setTimeout(() => {
         this.thunderScheduled = false;
-      }, (delay + 0.7) * 1000);
-    } catch (e) {
+      }, (delay + buffer.duration) * 1000);
+    } catch {
       this.thunderScheduled = false;
-      console.warn('Thunder scheduling failed:', e);
     }
   }
 
@@ -388,35 +327,38 @@ class WeatherAudioService {
     }
   }
 
+  getIsLoaded(): boolean {
+    return this.isLoaded;
+  }
+
   dispose(): void {
     try {
-      this.whiteSource?.stop();
-      this.pinkSource?.stop();
-      this.brownSource?.stop();
-      this.fogOsc1?.stop();
-      this.fogOsc2?.stop();
+      this.rainSource?.stop();
+      this.windSource?.stop();
+      this.snowSource?.stop();
+      this.fogSource?.stop();
       this.gustLFO?.stop();
     } catch {
       // Sources may already be stopped
     }
 
-    this.whiteSource = null;
-    this.pinkSource = null;
-    this.brownSource = null;
-    this.fogOsc1 = null;
-    this.fogOsc2 = null;
+    this.rainSource = null;
+    this.windSource = null;
+    this.snowSource = null;
+    this.fogSource = null;
     this.gustLFO = null;
-    this.altitudeFilter = null;
-    this.rainFilter = null;
-    this.windFilter = null;
-    this.altitudeGain = null;
+    this.gustLFOGain = null;
     this.rainGain = null;
     this.windGain = null;
+    this.snowGain = null;
     this.fogGain = null;
-    this.fogLowpass = null;
-    this.gustLFOGain = null;
+    this.altitudeFilter = null;
+    this.surfaceBus = null;
     this.masterGain = null;
     this.graphBuilt = false;
+    this.isLoaded = false;
+    this.loadingPromise = null;
+    this.buffers.clear();
 
     if (this.ctx) {
       this.ctx.close();

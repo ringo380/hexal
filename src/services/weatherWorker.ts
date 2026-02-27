@@ -64,7 +64,10 @@ self.onmessage = (e: MessageEvent<WorkerInMessage>) => {
       engine.init(msg.grid, msg.seed, msg.config);
       paused = false;
       postMsg({ type: 'READY' });
-      startTicking(msg.config.simulationSpeed);
+      // In campaign mode, don't auto-tick — wait for ADVANCE_TICKS
+      if (msg.config.timeMode !== 'campaign') {
+        startTicking(msg.config.simulationSpeed);
+      }
       break;
     }
 
@@ -81,10 +84,31 @@ self.onmessage = (e: MessageEvent<WorkerInMessage>) => {
       break;
     }
 
+    case 'ADVANCE_TICKS': {
+      if (!engine) break;
+      let lastResult;
+      for (let i = 0; i < msg.ticks; i++) {
+        lastResult = engine.tick();
+      }
+      if (lastResult) {
+        postMsg({
+          type: 'FIELD_UPDATE',
+          field: lastResult.field,
+          pressureSystems: lastResult.pressureSystems,
+          fronts: lastResult.fronts,
+          activeEvents: lastResult.activeEvents
+        });
+      }
+      break;
+    }
+
     case 'SET_CONFIG': {
       if (!engine) break;
       engine.setConfig(msg.config);
-      if (msg.config.simulationSpeed !== undefined) {
+      // In campaign mode, stop real-time ticking
+      if (msg.config.timeMode === 'campaign') {
+        stopTicking();
+      } else if (msg.config.simulationSpeed !== undefined) {
         startTicking(msg.config.simulationSpeed);
       }
       break;

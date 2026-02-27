@@ -42,6 +42,8 @@ interface WeatherSimulationActions {
   resumeSimulation: () => void;
   /** Update simulation configuration */
   setConfig: (config: Partial<WeatherSimulationConfig>) => void;
+  /** Advance simulation by N ticks at once (for campaign time mode) */
+  advanceTicks: (ticks: number) => void;
   /** Manually spawn a weather event */
   spawnEvent: (type: WeatherEventType, centerKey: string, intensity?: number, durationTicks?: number) => void;
   /** Cancel an active event */
@@ -201,6 +203,10 @@ export function WeatherSimulationProvider({ children }: { children: React.ReactN
     }
   }, [postMessage]);
 
+  const advanceTicks = useCallback((ticks: number) => {
+    postMessage({ type: 'ADVANCE_TICKS', ticks });
+  }, [postMessage]);
+
   const spawnEvent = useCallback((type: WeatherEventType, centerKey: string, intensity?: number, durationTicks?: number) => {
     postMessage({ type: 'SPAWN_EVENT', eventType: type, centerKey, intensity, durationTicks });
   }, [postMessage]);
@@ -226,6 +232,7 @@ export function WeatherSimulationProvider({ children }: { children: React.ReactN
     pauseSimulation,
     resumeSimulation,
     setConfig,
+    advanceTicks,
     spawnEvent,
     cancelEvent,
     updateTerrain

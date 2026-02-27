@@ -1,7 +1,7 @@
 // Hook bridging camera state + weather field to WeatherAudioService
 // Samples weather around viewport center, blends values, and updates audio params
 
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect, useState } from 'react';
 import type { WeatherField } from '../types/Weather';
 import { coordinateAt, getHexNeighbors } from '../services/hexGeometry';
 import { weatherAudio } from '../services/weatherAudioService';
@@ -30,12 +30,20 @@ export function useWeatherAudio({
   gridHeight,
 }: UseWeatherAudioOptions): {
   updateAudio: (zoom: number, panX: number, panY: number, canvasW: number, canvasH: number) => void;
+  isLoaded: boolean;
 } {
   const lastUpdateRef = useRef(0);
+  const [isLoaded, setIsLoaded] = useState(false);
 
-  // Sync enabled/volume to the service
+  // Sync enabled/volume to the service, track loading state
   useEffect(() => {
     weatherAudio.setEnabled(enabled);
+    if (enabled) {
+      // ensureGraph is async — it loads samples, then sets isLoaded
+      weatherAudio.ensureGraph().then(() => {
+        setIsLoaded(weatherAudio.getIsLoaded());
+      });
+    }
   }, [enabled]);
 
   useEffect(() => {
@@ -56,7 +64,7 @@ export function useWeatherAudio({
     canvasW: number,
     canvasH: number
   ) => {
-    if (!enabled || Object.keys(field).length === 0) return;
+    if (!enabled || !weatherAudio.getIsLoaded() || Object.keys(field).length === 0) return;
 
     // Throttle updates
     const now = performance.now();
@@ -162,5 +170,5 @@ export function useWeatherAudio({
     weatherAudio.updateParams(params);
   }, [field, enabled, gridWidth, gridHeight]);
 
-  return { updateAudio };
+  return { updateAudio, isLoaded };
 }
