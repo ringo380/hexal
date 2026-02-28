@@ -83,7 +83,7 @@ function TimeWeatherBar({ onOpenTimeControls, onOpenWeatherSettings }: TimeWeath
           key,
           terrain: hex.terrain,
           elevation: terrainType?.elevation ?? 1,
-          isCoast: (terrainType?.elevation ?? 1) === 0 && (terrainType?.moisture ?? 0) >= 4,
+          isCoast: (terrainType?.elevation ?? 1) === 0 && (terrainType?.moisture ?? 0) >= 4 && (terrainType?.moveCost ?? 1) >= 4,
           hasRiver: !!(hex.connections?.rivers?.length),
           moisture: terrainType?.moisture,
           temperature: terrainType?.temperature

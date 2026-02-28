@@ -69,7 +69,7 @@ function getAffinity(terrainA: string, terrainB: string, terrainTypes?: TerrainT
   const dist = Math.sqrt(
     ((a.elevation ?? 1) - (b.elevation ?? 1)) ** 2 +
     ((a.moisture ?? 2) - (b.moisture ?? 2)) ** 2 +
-    ((a.temperature ?? 2) - (b.temperature ?? 2)) ** 2
+    ((a.temperature ?? 3) - (b.temperature ?? 3)) ** 2
   );
   return Math.max(0.1, 1 - dist / 8.66);
 }

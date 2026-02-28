@@ -122,8 +122,22 @@ function TerrainEditorModal({ onClose }: TerrainEditorModalProps) {
   };
 
   const handleImportReplace = () => {
-    if (!importDialog) return;
-    updateCampaignData({ terrainTypes: importDialog.terrainTypes });
+    if (!importDialog || !campaign) return;
+    const importedNames = new Set(importDialog.terrainTypes.map(t => t.name));
+    const fallbackName = importDialog.terrainTypes[0]?.name ?? '';
+    // Reassign any hexes whose terrain name doesn't exist in the imported set
+    const hexes = { ...campaign.hexes };
+    let hexesChanged = false;
+    for (const [key, hex] of Object.entries(hexes)) {
+      if (hex.terrain && !importedNames.has(hex.terrain)) {
+        hexes[key] = { ...hex, terrain: fallbackName };
+        hexesChanged = true;
+      }
+    }
+    updateCampaignData({
+      terrainTypes: importDialog.terrainTypes,
+      ...(hexesChanged ? { hexes } : {})
+    });
     setImportDialog(null);
     setSelectedId(importDialog.terrainTypes[0]?.id ?? null);
   };
