@@ -58,9 +58,20 @@ const TERRAIN_AFFINITY: Record<string, Record<string, number>> = {
   Tundra:   { Mountains: 0.7, Hills: 0.5, Plains: 0.3 }
 };
 
-function getAffinity(terrainA: string, terrainB: string): number {
+function getAffinity(terrainA: string, terrainB: string, terrainTypes?: TerrainType[]): number {
   if (terrainA === terrainB) return 1.0; // Self-affinity is always highest
-  return TERRAIN_AFFINITY[terrainA]?.[terrainB] ?? 0.3;
+  const hardcoded = TERRAIN_AFFINITY[terrainA]?.[terrainB];
+  if (hardcoded !== undefined) return hardcoded;
+  if (!terrainTypes) return 0.3;
+  const a = terrainTypes.find(t => t.name === terrainA);
+  const b = terrainTypes.find(t => t.name === terrainB);
+  if (!a || !b) return 0.3;
+  const dist = Math.sqrt(
+    ((a.elevation ?? 1) - (b.elevation ?? 1)) ** 2 +
+    ((a.moisture ?? 2) - (b.moisture ?? 2)) ** 2 +
+    ((a.temperature ?? 3) - (b.temperature ?? 3)) ** 2
+  );
+  return Math.max(0.1, 1 - dist / 8.66);
 }
 
 // Movement cost for road pathfinding
@@ -259,7 +270,7 @@ export function neighborAwareTerrain(
   const adjustedTypes = terrainTypes.map(t => {
     let affinityBonus = 0;
     for (const [neighborTerrain, count] of Object.entries(counts)) {
-      affinityBonus += getAffinity(t.name, neighborTerrain) * count;
+      affinityBonus += getAffinity(t.name, neighborTerrain, terrainTypes) * count;
     }
     return { ...t, weight: t.weight + affinityBonus * 3 };
   });
@@ -350,7 +361,7 @@ export function generateBiomeTerrain(
         // Fresh roll with affinity bias
         const affinityAdjusted = adjustedTypes.map(t => ({
           ...t,
-          weight: t.weight * (1 + getAffinity(t.name, currentTerrain) * clusterStrength)
+          weight: t.weight * (1 + getAffinity(t.name, currentTerrain, terrainTypes) * clusterStrength)
         }));
         terrain = rng.weightedChoice(affinityAdjusted, t => t.weight).name;
       }
@@ -480,8 +491,8 @@ export function generateRivers(
       if (!currentHex) break;
       const currentElev = getTerrainElevation(currentHex.terrain, terrainTypes);
 
-      // Check termination: Coast or Swamp
-      if (currentHex.terrain === 'Coast' || currentHex.terrain === 'Swamp') break;
+      // Check termination: low-elevation terrain (Coast, Swamp, or custom low terrain)
+      if (getTerrainElevation(currentHex.terrain, terrainTypes) === 0) break;
 
       // Get valid neighbors sorted by elevation
       const neighbors = getValidNeighbors(currentCoord, gridWidth, gridHeight);

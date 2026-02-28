@@ -33,6 +33,8 @@ interface FluidCell {
   elevation: number;
   isCoast: boolean;
   hasRiver: boolean;
+  baseMoisture: number;
+  baseTemp: number;
   q: number;
   r: number;
 }
@@ -63,6 +65,14 @@ const TERRAIN_TEMP: Record<string, number> = {
   Desert: 4, Jungle: 2, Coast: 0, Plains: 0, Grassland: 0,
   Forest: -1, Hills: -2, Swamp: 0, Tundra: -6, Mountains: -5
 };
+
+function getMoistureRate(terrain: string, moisture?: number): number {
+  return TERRAIN_MOISTURE[terrain] ?? ((moisture ?? 2) / 5) * 0.012;
+}
+
+function getTempBias(terrain: string, temperature?: number): number {
+  return TERRAIN_TEMP[terrain] ?? ((temperature ?? 3) - 3) * 2;
+}
 
 export class FluidWeatherEngine implements WeatherSimulator {
   private grid!: SimGrid;
@@ -100,9 +110,11 @@ export class FluidWeatherEngine implements WeatherSimulator {
       const q = parseInt(parts[0], 10);
       const r = parseInt(parts[1], 10);
 
+      const bm = hex.moisture;
+      const bt = hex.temperature;
       const cell: FluidCell = {
         pressure: 1013 + (this.rng.next() - 0.5) * 10,
-        temperature: 15 + (TERRAIN_TEMP[hex.terrain] || 0) - hex.elevation * 1.3,
+        temperature: 15 + getTempBias(hex.terrain, bt) - hex.elevation * 1.3,
         humidity: 0.4 + (hex.isCoast ? 0.15 : 0) + (hex.hasRiver ? 0.08 : 0),
         windU: (this.rng.next() - 0.5) * 4,
         windV: (this.rng.next() - 0.5) * 4,
@@ -115,6 +127,8 @@ export class FluidWeatherEngine implements WeatherSimulator {
         elevation: hex.elevation,
         isCoast: hex.isCoast,
         hasRiver: hex.hasRiver,
+        baseMoisture: bm ?? 2,
+        baseTemp: bt ?? 3,
         q, r
       };
       this.cells.set(hex.key, cell);
@@ -199,6 +213,8 @@ export class FluidWeatherEngine implements WeatherSimulator {
         cell.elevation = hex.elevation;
         cell.isCoast = hex.isCoast;
         cell.hasRiver = hex.hasRiver;
+        cell.baseMoisture = hex.moisture ?? 2;
+        cell.baseTemp = hex.temperature ?? 3;
       }
     }
   }
@@ -367,7 +383,7 @@ export class FluidWeatherEngine implements WeatherSimulator {
     // Transport humidity by wind (semi-Lagrangian advection)
     for (const [, cell] of this.nextCells) {
       // Source humidity injection
-      const moistureRate = TERRAIN_MOISTURE[cell.terrain] || 0;
+      const moistureRate = getMoistureRate(cell.terrain, cell.baseMoisture);
       const riverMoisture = cell.hasRiver ? 0.005 : 0;
 
       // Find upwind cell (trace back along wind vector)
@@ -401,7 +417,7 @@ export class FluidWeatherEngine implements WeatherSimulator {
 
   private computeTemperature(): void {
     for (const [, cell] of this.nextCells) {
-      const baseTempBias = TERRAIN_TEMP[cell.terrain] || 0;
+      const baseTempBias = getTempBias(cell.terrain, cell.baseTemp);
       const elevationLapse = -6.5 * (cell.elevation / 5);
 
       // Pressure influence: high pressure = warmer, low pressure = cooler

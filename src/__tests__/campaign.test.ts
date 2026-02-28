@@ -156,6 +156,9 @@ describe('migrateCampaign', () => {
     const campaign = makeLegacyCampaign({
       schemaVersion: 2,
       version: 1,
+      terrainTypes: [
+        { id: 't1', name: 'Plains', colorHex: '#90EE90', icon: 'leaf', weight: 3, moveCost: 1, elevation: 1, isDefault: true, hazardLevel: 0, category: 'Temperate', moisture: 2, temperature: 3 }
+      ],
       bookmarkedHexes: [],
       encounterTemplates: [],
       regions: [],

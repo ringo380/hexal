@@ -300,6 +300,25 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
               <option key={t.name} value={t.name}>{t.name}</option>
             ))}
           </select>
+          {(() => {
+            const terrainType = campaign?.terrainTypes.find(t => t.name === hex.terrain);
+            if (!terrainType || !terrainType.hazardLevel) return null;
+            const hazardColors: Record<number, string> = { 1: '#e6a817', 2: '#e87520', 3: '#d94c2e', 4: '#d32f2f', 5: '#8b1a1a' };
+            return (
+              <div className="hazard-indicator" style={{ borderLeftColor: hazardColors[terrainType.hazardLevel] || '#e6a817' }}>
+                <div className="hazard-header">
+                  <Icon name="skull" size={14} />
+                  <span>{terrainType.hazardType || 'Hazard'}</span>
+                  <span className="hazard-level-badge" style={{ backgroundColor: hazardColors[terrainType.hazardLevel] || '#e6a817' }}>
+                    Lv {terrainType.hazardLevel}
+                  </span>
+                </div>
+                {terrainType.hazardDescription && (
+                  <div className="hazard-description">{terrainType.hazardDescription}</div>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Status */}

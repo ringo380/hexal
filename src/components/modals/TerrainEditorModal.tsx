@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import type { TerrainType } from '../../types/Campaign';
@@ -27,17 +27,37 @@ interface TerrainEditorModalProps {
 function TerrainEditorModal({ onClose }: TerrainEditorModalProps) {
   const {
     terrainTypes,
+    campaign,
     addTerrainType,
     updateTerrainType,
     deleteTerrainType,
-    renameTerrainType
+    renameTerrainType,
+    updateCampaignData
   } = useCampaign();
   const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
   const [selectedId, setSelectedId] = useState<string | null>(terrainTypes[0]?.id ?? null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [replacementId, setReplacementId] = useState<string>('');
+  const [importDialog, setImportDialog] = useState<{ terrainTypes: TerrainType[]; count: number } | null>(null);
 
   const selectedTerrain = terrainTypes.find(t => t.id === selectedId) ?? null;
+
+  // Group terrain types by category
+  const groupedTerrains = useMemo(() => {
+    const groups: Record<string, TerrainType[]> = {};
+    for (const t of terrainTypes) {
+      const cat = t.category || 'Uncategorized';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(t);
+    }
+    // Sort categories: named categories first, then Uncategorized
+    const sorted = Object.entries(groups).sort(([a], [b]) => {
+      if (a === 'Uncategorized') return 1;
+      if (b === 'Uncategorized') return -1;
+      return a.localeCompare(b);
+    });
+    return sorted;
+  }, [terrainTypes]);
 
   const handleAdd = () => {
     const usedColors = new Set(terrainTypes.map(t => t.colorHex));
@@ -50,7 +70,11 @@ function TerrainEditorModal({ onClose }: TerrainEditorModalProps) {
       weight: 1,
       moveCost: 1,
       elevation: 1,
-      isDefault: false
+      isDefault: false,
+      hazardLevel: 0,
+      category: '',
+      moisture: 2,
+      temperature: 3
     };
     addTerrainType(terrain);
     setSelectedId(terrain.id);
@@ -74,6 +98,60 @@ function TerrainEditorModal({ onClose }: TerrainEditorModalProps) {
     setDeleteConfirmId(null);
   };
 
+  const handleExport = async () => {
+    if (!campaign) return;
+    const data = { version: 1, name: campaign.name, terrainTypes };
+    const defaultName = `${campaign.name.replace(/[^a-zA-Z0-9]/g, '-')}-terrains.json`;
+    const filePath = await window.electronAPI.saveFileDialog(defaultName);
+    if (!filePath) return;
+    await window.electronAPI.saveFile(filePath, JSON.stringify(data, null, 2));
+  };
+
+  const handleImport = async () => {
+    const filePath = await window.electronAPI.openFileDialog();
+    if (!filePath) return;
+    const result = await window.electronAPI.loadCampaign(filePath);
+    if (!result.success || !result.campaign) return;
+    const parsed = result.campaign as Record<string, unknown>;
+    const imported = parsed.terrainTypes as TerrainType[] | undefined;
+    if (!Array.isArray(imported) || imported.length === 0) return;
+    // Validate minimum fields
+    const valid = imported.every(t => t.name && t.colorHex && t.icon && typeof t.weight === 'number');
+    if (!valid) return;
+    setImportDialog({ terrainTypes: imported, count: imported.length });
+  };
+
+  const handleImportReplace = () => {
+    if (!importDialog || !campaign) return;
+    const importedNames = new Set(importDialog.terrainTypes.map(t => t.name));
+    const fallbackName = importDialog.terrainTypes[0]?.name ?? '';
+    // Reassign any hexes whose terrain name doesn't exist in the imported set
+    const hexes = { ...campaign.hexes };
+    let hexesChanged = false;
+    for (const [key, hex] of Object.entries(hexes)) {
+      if (hex.terrain && !importedNames.has(hex.terrain)) {
+        hexes[key] = { ...hex, terrain: fallbackName };
+        hexesChanged = true;
+      }
+    }
+    updateCampaignData({
+      terrainTypes: importDialog.terrainTypes,
+      ...(hexesChanged ? { hexes } : {})
+    });
+    setImportDialog(null);
+    setSelectedId(importDialog.terrainTypes[0]?.id ?? null);
+  };
+
+  const handleImportMerge = () => {
+    if (!importDialog) return;
+    const existingNames = new Set(terrainTypes.map(t => t.name));
+    const newTypes = importDialog.terrainTypes.filter(t => !existingNames.has(t.name));
+    if (newTypes.length > 0) {
+      updateCampaignData({ terrainTypes: [...terrainTypes, ...newTypes] });
+    }
+    setImportDialog(null);
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="terrain-editor-modal-title">
       <div className="modal terrain-editor-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
@@ -86,9 +164,17 @@ function TerrainEditorModal({ onClose }: TerrainEditorModalProps) {
           <div className="terrain-list-panel">
             <div className="panel-header">
               <h4>Types</h4>
-              <button className="btn btn-small btn-primary" onClick={handleAdd}>
-                + Add
-              </button>
+              <div className="terrain-header-actions">
+                <button className="btn btn-small btn-secondary" onClick={handleImport} title="Import terrain types from file">
+                  Import
+                </button>
+                <button className="btn btn-small btn-secondary" onClick={handleExport} title="Export terrain types to file">
+                  Export
+                </button>
+                <button className="btn btn-small btn-primary" onClick={handleAdd}>
+                  + Add
+                </button>
+              </div>
             </div>
             <div className="terrain-list-items">
               {terrainTypes.length === 0 ? (
@@ -96,28 +182,35 @@ function TerrainEditorModal({ onClose }: TerrainEditorModalProps) {
                   No terrain types
                 </div>
               ) : (
-                terrainTypes.map(terrain => (
-                  <div
-                    key={terrain.id}
-                    className={`terrain-list-item ${terrain.id === selectedId ? 'selected' : ''}`}
-                    onClick={() => setSelectedId(terrain.id)}
-                  >
-                    <span className="terrain-swatch" style={{ backgroundColor: terrain.colorHex }} />
-                    <Icon name={terrain.icon as IconName} size={14} />
-                    <span className="terrain-name">{terrain.name || 'Unnamed'}</span>
-                    {terrain.isDefault && (
-                      <span className="terrain-badge">default</span>
+                groupedTerrains.map(([category, types]) => (
+                  <div key={category}>
+                    {groupedTerrains.length > 1 && (
+                      <div className="terrain-category-header">{category}</div>
                     )}
-                    {!terrain.isDefault && terrainTypes.length > 1 && (
-                      <button
-                        className="terrain-delete-btn"
-                        onClick={(e) => { e.stopPropagation(); handleDeleteClick(terrain.id); }}
-                        title="Delete terrain type"
-                        aria-label="Delete terrain type"
+                    {types.map(terrain => (
+                      <div
+                        key={terrain.id}
+                        className={`terrain-list-item ${terrain.id === selectedId ? 'selected' : ''}`}
+                        onClick={() => setSelectedId(terrain.id)}
                       >
-                        <Icon name="trash" size={12} />
-                      </button>
-                    )}
+                        <span className="terrain-swatch" style={{ backgroundColor: terrain.colorHex }} />
+                        <Icon name={terrain.icon as IconName} size={14} />
+                        <span className="terrain-name">{terrain.name || 'Unnamed'}</span>
+                        {terrain.isDefault && (
+                          <span className="terrain-badge">default</span>
+                        )}
+                        {!terrain.isDefault && terrainTypes.length > 1 && (
+                          <button
+                            className="terrain-delete-btn"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteClick(terrain.id); }}
+                            title="Delete terrain type"
+                            aria-label="Delete terrain type"
+                          >
+                            <Icon name="trash" size={12} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 ))
               )}
@@ -129,6 +222,7 @@ function TerrainEditorModal({ onClose }: TerrainEditorModalProps) {
             {selectedTerrain ? (
               <TerrainEditor
                 terrain={selectedTerrain}
+                terrainTypes={terrainTypes}
                 onUpdate={(updates) => updateTerrainType(selectedTerrain.id, updates)}
                 onRename={(newName) => renameTerrainType(selectedTerrain.id, newName)}
               />
@@ -169,6 +263,27 @@ function TerrainEditorModal({ onClose }: TerrainEditorModalProps) {
             </div>
           </div>
         )}
+
+        {/* Import merge dialog */}
+        {importDialog && (
+          <div className="terrain-import-dialog-overlay" onClick={() => setImportDialog(null)}>
+            <div className="terrain-import-dialog" onClick={(e) => e.stopPropagation()}>
+              <h4>Import Terrain Types</h4>
+              <p>Found {importDialog.count} terrain type{importDialog.count !== 1 ? 's' : ''} in file.</p>
+              <div className="terrain-import-dialog-actions">
+                <button className="btn btn-secondary" onClick={() => setImportDialog(null)}>
+                  Cancel
+                </button>
+                <button className="btn btn-secondary" onClick={handleImportMerge}>
+                  Add New Only
+                </button>
+                <button className="btn btn-primary" onClick={handleImportReplace}>
+                  Replace All
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -176,11 +291,12 @@ function TerrainEditorModal({ onClose }: TerrainEditorModalProps) {
 
 interface TerrainEditorProps {
   terrain: TerrainType;
+  terrainTypes: TerrainType[];
   onUpdate: (updates: Partial<TerrainType>) => void;
   onRename: (newName: string) => void;
 }
 
-function TerrainEditor({ terrain, onUpdate, onRename }: TerrainEditorProps) {
+function TerrainEditor({ terrain, terrainTypes, onUpdate, onRename }: TerrainEditorProps) {
   const [editName, setEditName] = useState(terrain.name);
   const [nameKey, setNameKey] = useState(terrain.id);
 
@@ -198,6 +314,15 @@ function TerrainEditor({ terrain, onUpdate, onRename }: TerrainEditorProps) {
       setEditName(terrain.name);
     }
   };
+
+  // Unique categories for datalist
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of terrainTypes) {
+      if (t.category) set.add(t.category);
+    }
+    return Array.from(set).sort();
+  }, [terrainTypes]);
 
   return (
     <div>
@@ -254,6 +379,20 @@ function TerrainEditor({ terrain, onUpdate, onRename }: TerrainEditorProps) {
       </div>
 
       <div className="field-group">
+        <label>Category</label>
+        <input
+          type="text"
+          value={terrain.category ?? ''}
+          onChange={(e) => onUpdate({ category: e.target.value })}
+          placeholder="e.g. Temperate, Aquatic, Arctic"
+          list="terrain-categories"
+        />
+        <datalist id="terrain-categories">
+          {categories.map(c => <option key={c} value={c} />)}
+        </datalist>
+      </div>
+
+      <div className="field-group">
         <label>Generation Weight <span className="field-hint">(frequency 1-10)</span></label>
         <input
           type="number"
@@ -285,6 +424,63 @@ function TerrainEditor({ terrain, onUpdate, onRename }: TerrainEditorProps) {
           onChange={(e) => onUpdate({ elevation: Math.max(0, Math.min(5, parseInt(e.target.value) || 0)) })}
         />
       </div>
+
+      <div className="field-group">
+        <label>Moisture <span className="field-hint">(biome humidity 0-5)</span></label>
+        <input
+          type="number"
+          min={0}
+          max={5}
+          value={terrain.moisture ?? 2}
+          onChange={(e) => onUpdate({ moisture: Math.max(0, Math.min(5, parseInt(e.target.value) || 0)) })}
+        />
+      </div>
+
+      <div className="field-group">
+        <label>Temperature <span className="field-hint">(biome warmth 0-5)</span></label>
+        <input
+          type="number"
+          min={0}
+          max={5}
+          value={terrain.temperature ?? 3}
+          onChange={(e) => onUpdate({ temperature: Math.max(0, Math.min(5, parseInt(e.target.value) || 0)) })}
+        />
+      </div>
+
+      <div className="field-group">
+        <label>Hazard Level <span className="field-hint">(0=safe, 5=lethal)</span></label>
+        <input
+          type="number"
+          min={0}
+          max={5}
+          value={terrain.hazardLevel ?? 0}
+          onChange={(e) => onUpdate({ hazardLevel: Math.max(0, Math.min(5, parseInt(e.target.value) || 0)) })}
+        />
+      </div>
+
+      {(terrain.hazardLevel ?? 0) > 0 && (
+        <>
+          <div className="field-group">
+            <label>Hazard Type</label>
+            <input
+              type="text"
+              value={terrain.hazardType ?? ''}
+              onChange={(e) => onUpdate({ hazardType: e.target.value })}
+              placeholder="e.g. Extreme Cold, Toxic Spores"
+            />
+          </div>
+
+          <div className="field-group">
+            <label>Hazard Description</label>
+            <textarea
+              value={terrain.hazardDescription ?? ''}
+              onChange={(e) => onUpdate({ hazardDescription: e.target.value })}
+              placeholder="Detailed hazard description for hex detail panel"
+              rows={3}
+            />
+          </div>
+        </>
+      )}
 
       {terrain.isDefault && (
         <div className="terrain-default-notice">
