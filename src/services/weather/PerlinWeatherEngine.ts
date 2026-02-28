@@ -29,7 +29,16 @@ const TERRAIN_MODIFIERS: Record<string, { tempMod: number; humidMod: number; win
   Grassland: { tempMod: 0, humidMod: 0, windMod: 0.05 }
 };
 
-const DEFAULT_MOD = { tempMod: 0, humidMod: 0, windMod: 0 };
+function deriveModifiers(hex: SimHex): { tempMod: number; humidMod: number; windMod: number } {
+  const temp = hex.temperature ?? 3;
+  const moist = hex.moisture ?? 2;
+  const elev = hex.elevation ?? 1;
+  return {
+    tempMod: (temp - 3) * 3,        // 0→-9, 3→0, 5→6
+    humidMod: (moist - 2.5) * 0.14, // 0→-0.35, 5→0.35
+    windMod: (elev - 1) * 0.075     // 0→-0.075, 5→0.3
+  };
+}
 
 /** Hex 6-neighbor offsets for odd-q vertical layout (inline to avoid DOM imports in worker) */
 function hexNeighborKeys(q: number, r: number): string[] {
@@ -167,8 +176,8 @@ export class PerlinWeatherEngine implements WeatherSimulator {
       const nx = q * 0.15;
       const ny = r * 0.15;
 
-      // Terrain modifiers
-      const mod = TERRAIN_MODIFIERS[terrain] || DEFAULT_MOD;
+      // Terrain modifiers (fall back to derived values for custom terrains)
+      const mod = TERRAIN_MODIFIERS[terrain] || deriveModifiers(hex);
 
       // Pressure: base 1013 hPa, vary ±25 with noise
       const pressureRaw = this.pressureNoise.fbm(nx, ny + t * 0.3, 3);

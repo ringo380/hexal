@@ -160,9 +160,15 @@ export interface TerrainType {
   colorHex: string;
   icon: string;
   weight: number;
-  moveCost?: number;    // 1-5, default 1 (used by road pathfinding)
-  elevation?: number;   // 0-5, default 1 (used by river generation)
-  isDefault?: boolean;  // true for built-in terrains
+  moveCost?: number;         // 1-5, default 1 (used by road pathfinding)
+  elevation?: number;        // 0-5, default 1 (used by river generation)
+  isDefault?: boolean;       // true for built-in terrains
+  hazardLevel?: number;      // 0-5, 0=safe (default)
+  hazardType?: string;       // e.g. "Extreme Cold", "Toxic Spores"
+  hazardDescription?: string; // Longer description for hex detail
+  category?: string;         // "Temperate", "Aquatic", "Arctic", etc.
+  moisture?: number;         // 0-5 (biome humidity, replaces hardcoded weather lookups)
+  temperature?: number;      // 0-5 (biome warmth, replaces hardcoded weather lookups)
 }
 
 export interface EncounterTable {
@@ -333,16 +339,16 @@ export function createContentItem(title: string = ''): ContentItem {
 
 // Default data (ported from Swift)
 export const DEFAULT_TERRAIN_TYPES: TerrainType[] = [
-  { id: crypto.randomUUID(), name: 'Plains', colorHex: '#90EE90', icon: 'leaf', weight: 3, moveCost: 1, elevation: 1, isDefault: true },
-  { id: crypto.randomUUID(), name: 'Forest', colorHex: '#228B22', icon: 'tree', weight: 2, moveCost: 2, elevation: 2, isDefault: true },
-  { id: crypto.randomUUID(), name: 'Hills', colorHex: '#DEB887', icon: 'triangle', weight: 2, moveCost: 2, elevation: 3, isDefault: true },
-  { id: crypto.randomUUID(), name: 'Mountains', colorHex: '#A0A0A0', icon: 'mountain', weight: 1, moveCost: 4, elevation: 5, isDefault: true },
-  { id: crypto.randomUUID(), name: 'Swamp', colorHex: '#556B2F', icon: 'drop', weight: 1, moveCost: 3, elevation: 0, isDefault: true },
-  { id: crypto.randomUUID(), name: 'Desert', colorHex: '#F4A460', icon: 'sun', weight: 1, moveCost: 1, elevation: 1, isDefault: true },
-  { id: crypto.randomUUID(), name: 'Coast', colorHex: '#87CEEB', icon: 'water', weight: 1, moveCost: 5, elevation: 0, isDefault: true },
-  { id: crypto.randomUUID(), name: 'Jungle', colorHex: '#006400', icon: 'leaf', weight: 1, moveCost: 3, elevation: 2, isDefault: true },
-  { id: crypto.randomUUID(), name: 'Tundra', colorHex: '#E0FFFF', icon: 'snowflake', weight: 1, moveCost: 2, elevation: 2, isDefault: true },
-  { id: crypto.randomUUID(), name: 'Grassland', colorHex: '#7CFC00', icon: 'wind', weight: 2, moveCost: 1, elevation: 1, isDefault: true }
+  { id: crypto.randomUUID(), name: 'Plains', colorHex: '#90EE90', icon: 'leaf', weight: 3, moveCost: 1, elevation: 1, isDefault: true, hazardLevel: 0, category: 'Temperate', moisture: 2, temperature: 3 },
+  { id: crypto.randomUUID(), name: 'Forest', colorHex: '#228B22', icon: 'tree', weight: 2, moveCost: 2, elevation: 2, isDefault: true, hazardLevel: 0, category: 'Temperate', moisture: 3, temperature: 2 },
+  { id: crypto.randomUUID(), name: 'Hills', colorHex: '#DEB887', icon: 'triangle', weight: 2, moveCost: 2, elevation: 3, isDefault: true, hazardLevel: 0, category: 'Temperate', moisture: 2, temperature: 2 },
+  { id: crypto.randomUUID(), name: 'Mountains', colorHex: '#A0A0A0', icon: 'mountain', weight: 1, moveCost: 4, elevation: 5, isDefault: true, hazardLevel: 2, hazardType: 'Altitude', category: 'Highland', moisture: 1, temperature: 0 },
+  { id: crypto.randomUUID(), name: 'Swamp', colorHex: '#556B2F', icon: 'drop', weight: 1, moveCost: 3, elevation: 0, isDefault: true, hazardLevel: 1, hazardType: 'Difficult Terrain', category: 'Aquatic', moisture: 5, temperature: 3 },
+  { id: crypto.randomUUID(), name: 'Desert', colorHex: '#F4A460', icon: 'sun', weight: 1, moveCost: 1, elevation: 1, isDefault: true, hazardLevel: 1, hazardType: 'Extreme Heat', category: 'Arid', moisture: 0, temperature: 5 },
+  { id: crypto.randomUUID(), name: 'Coast', colorHex: '#87CEEB', icon: 'water', weight: 1, moveCost: 5, elevation: 0, isDefault: true, hazardLevel: 0, category: 'Aquatic', moisture: 5, temperature: 3 },
+  { id: crypto.randomUUID(), name: 'Jungle', colorHex: '#006400', icon: 'leaf', weight: 1, moveCost: 3, elevation: 2, isDefault: true, hazardLevel: 1, hazardType: 'Dense Undergrowth', category: 'Tropical', moisture: 5, temperature: 4 },
+  { id: crypto.randomUUID(), name: 'Tundra', colorHex: '#E0FFFF', icon: 'snowflake', weight: 1, moveCost: 2, elevation: 2, isDefault: true, hazardLevel: 1, hazardType: 'Extreme Cold', category: 'Arctic', moisture: 1, temperature: 0 },
+  { id: crypto.randomUUID(), name: 'Grassland', colorHex: '#7CFC00', icon: 'wind', weight: 2, moveCost: 1, elevation: 1, isDefault: true, hazardLevel: 0, category: 'Temperate', moisture: 2, temperature: 3 }
 ];
 
 export const DEFAULT_ENCOUNTER_TABLES: EncounterTable[] = [
@@ -794,22 +800,56 @@ const DEFAULT_TERRAIN_MOVE_COST: Record<string, number> = {
   Mountains: 4, Swamp: 3, Jungle: 3, Hills: 2, Forest: 2, Tundra: 2,
   Plains: 1, Grassland: 1, Desert: 1, Coast: 5
 };
+const DEFAULT_TERRAIN_HAZARD_LEVEL: Record<string, number> = {
+  Mountains: 2, Swamp: 1, Desert: 1, Jungle: 1, Tundra: 1,
+  Plains: 0, Forest: 0, Hills: 0, Coast: 0, Grassland: 0
+};
+const DEFAULT_TERRAIN_HAZARD_TYPE: Record<string, string> = {
+  Mountains: 'Altitude', Swamp: 'Difficult Terrain', Desert: 'Extreme Heat',
+  Jungle: 'Dense Undergrowth', Tundra: 'Extreme Cold'
+};
+const DEFAULT_TERRAIN_CATEGORY: Record<string, string> = {
+  Plains: 'Temperate', Forest: 'Temperate', Hills: 'Temperate', Grassland: 'Temperate',
+  Mountains: 'Highland', Swamp: 'Aquatic', Coast: 'Aquatic',
+  Desert: 'Arid', Jungle: 'Tropical', Tundra: 'Arctic'
+};
+const DEFAULT_TERRAIN_MOISTURE: Record<string, number> = {
+  Plains: 2, Forest: 3, Hills: 2, Mountains: 1, Swamp: 5,
+  Desert: 0, Coast: 5, Jungle: 5, Tundra: 1, Grassland: 2
+};
+const DEFAULT_TERRAIN_TEMPERATURE: Record<string, number> = {
+  Plains: 3, Forest: 2, Hills: 2, Mountains: 0, Swamp: 3,
+  Desert: 5, Coast: 3, Jungle: 4, Tundra: 0, Grassland: 3
+};
 const DEFAULT_TERRAIN_NAMES = new Set(Object.keys(DEFAULT_TERRAIN_ELEVATION));
 
-/** Migrate terrain types: backfill isDefault, moveCost, elevation */
+/** Migrate terrain types: backfill isDefault, moveCost, elevation, hazard, category, moisture, temperature */
 function migrateTerrainTypes(terrainTypes: TerrainType[]): { types: TerrainType[]; changed: boolean } {
   let changed = false;
   const types = terrainTypes.map(t => {
-    const needsIsDefault = t.isDefault === undefined && DEFAULT_TERRAIN_NAMES.has(t.name);
+    const isKnown = DEFAULT_TERRAIN_NAMES.has(t.name);
+    const needsIsDefault = t.isDefault === undefined && isKnown;
     const needsMoveCost = t.moveCost === undefined && DEFAULT_TERRAIN_MOVE_COST[t.name] !== undefined;
     const needsElevation = t.elevation === undefined && DEFAULT_TERRAIN_ELEVATION[t.name] !== undefined;
-    if (!needsIsDefault && !needsMoveCost && !needsElevation) return t;
+    const needsHazardLevel = t.hazardLevel === undefined && isKnown;
+    const needsHazardType = t.hazardType === undefined && DEFAULT_TERRAIN_HAZARD_TYPE[t.name] !== undefined;
+    const needsCategory = t.category === undefined && isKnown;
+    const needsMoisture = t.moisture === undefined && isKnown;
+    const needsTemperature = t.temperature === undefined && isKnown;
+    if (!needsIsDefault && !needsMoveCost && !needsElevation &&
+        !needsHazardLevel && !needsHazardType && !needsCategory &&
+        !needsMoisture && !needsTemperature) return t;
     changed = true;
     return {
       ...t,
       ...(needsIsDefault ? { isDefault: true } : {}),
       ...(needsMoveCost ? { moveCost: DEFAULT_TERRAIN_MOVE_COST[t.name] } : {}),
-      ...(needsElevation ? { elevation: DEFAULT_TERRAIN_ELEVATION[t.name] } : {})
+      ...(needsElevation ? { elevation: DEFAULT_TERRAIN_ELEVATION[t.name] } : {}),
+      ...(needsHazardLevel ? { hazardLevel: DEFAULT_TERRAIN_HAZARD_LEVEL[t.name] ?? 0 } : {}),
+      ...(needsHazardType ? { hazardType: DEFAULT_TERRAIN_HAZARD_TYPE[t.name] } : {}),
+      ...(needsCategory ? { category: DEFAULT_TERRAIN_CATEGORY[t.name] ?? '' } : {}),
+      ...(needsMoisture ? { moisture: DEFAULT_TERRAIN_MOISTURE[t.name] ?? 2 } : {}),
+      ...(needsTemperature ? { temperature: DEFAULT_TERRAIN_TEMPERATURE[t.name] ?? 3 } : {})
     };
   });
   return { types, changed };

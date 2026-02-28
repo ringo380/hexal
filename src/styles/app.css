@@ -3726,6 +3726,96 @@ label {
   background-color: #d32f2f;
 }
 
+/* Terrain category headers in list panel */
+.terrain-category-header {
+  padding: 6px 10px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+/* Header action buttons (Import/Export/Add) */
+.terrain-header-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+/* Import merge strategy dialog */
+.terrain-import-dialog-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: 8px;
+}
+
+.terrain-import-dialog {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 20px;
+  min-width: 320px;
+}
+
+.terrain-import-dialog h4 {
+  margin: 0 0 8px;
+  color: var(--text-primary);
+}
+
+.terrain-import-dialog p {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.terrain-import-dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Hazard indicator in HexDetail */
+.hazard-indicator {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-left: 3px solid #e6a817;
+  background-color: rgba(230, 168, 23, 0.08);
+  border-radius: 0 4px 4px 0;
+}
+
+.hazard-indicator .hazard-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.hazard-indicator .hazard-level-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  padding: 1px 6px;
+  border-radius: 10px;
+  margin-left: auto;
+}
+
+.hazard-indicator .hazard-description {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
 /* ============ NPC SYSTEM ============ */
 
 /* NPC Badge styles (alignment, attitude, faction, relationship) */

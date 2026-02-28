@@ -77,13 +77,18 @@ function TimeWeatherBar({ onOpenTimeControls, onOpenWeatherSettings }: TimeWeath
 
     if (newEnabled && !weatherSim.isRunning) {
       // Start the simulation
-      const hexes = Object.entries(campaign.hexes).map(([key, hex]) => ({
-        key,
-        terrain: hex.terrain,
-        elevation: campaign.terrainTypes.find(t => t.name === hex.terrain)?.elevation ?? 1,
-        isCoast: hex.terrain === 'Coast',
-        hasRiver: !!(hex.connections?.rivers?.length)
-      }));
+      const hexes = Object.entries(campaign.hexes).map(([key, hex]) => {
+        const terrainType = campaign.terrainTypes.find(t => t.name === hex.terrain);
+        return {
+          key,
+          terrain: hex.terrain,
+          elevation: terrainType?.elevation ?? 1,
+          isCoast: (terrainType?.elevation ?? 1) === 0 && (terrainType?.moisture ?? 0) >= 4,
+          hasRiver: !!(hex.connections?.rivers?.length),
+          moisture: terrainType?.moisture,
+          temperature: terrainType?.temperature
+        };
+      });
       weatherSim.startSimulation(
         { width: campaign.gridWidth, height: campaign.gridHeight, hexes },
         campaign.weatherSimulation.seed || String(Date.now()),

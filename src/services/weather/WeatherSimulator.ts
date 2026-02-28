@@ -17,6 +17,8 @@ export interface SimHex {
   elevation: number;
   isCoast: boolean;
   hasRiver: boolean;
+  moisture?: number;    // 0-5, from TerrainType
+  temperature?: number; // 0-5, from TerrainType
 }
 
 /** Grid definition for initializing the simulation */
