@@ -7,9 +7,13 @@ CLAUDE.md
 .claude-dev-helper/
 .plugin-config/
 
+# Worktrees
+.worktrees/
+
 # Build output
 dist/
 dist-electron/
+dist-web-player/
 
 # IDE
 .idea/

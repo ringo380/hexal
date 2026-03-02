@@ -20,10 +20,16 @@ export interface GeneralSettings {
   autoSaveInterval: number;
 }
 
+export interface ServerSettings {
+  port: number;
+  autoStart: boolean;
+}
+
 export interface AppSettings {
   ai: AISettings;
   cloud: CloudSettings;
   general: GeneralSettings;
+  server: ServerSettings;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -41,12 +47,16 @@ const DEFAULT_SETTINGS: AppSettings = {
     userName: '',
     autoSaveInterval: 2000,
   },
+  server: {
+    port: 7680,
+    autoStart: false,
+  },
 };
 
 interface SettingsContextValue {
   settings: AppSettings;
   loading: boolean;
-  updateSettings: (section: keyof AppSettings, values: Partial<AISettings | CloudSettings | GeneralSettings>) => Promise<void>;
+  updateSettings: (section: keyof AppSettings, values: Partial<AISettings | CloudSettings | GeneralSettings | ServerSettings>) => Promise<void>;
   setSetting: (key: string, value: unknown) => Promise<void>;
   getSetting: (key: string) => unknown;
 }
@@ -70,7 +80,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   // Update an entire settings section
   const updateSettings = useCallback(async (
     section: keyof AppSettings,
-    values: Partial<AISettings | CloudSettings | GeneralSettings>
+    values: Partial<AISettings | CloudSettings | GeneralSettings | ServerSettings>
   ) => {
     const updated = { ...settings[section], ...values };
     await window.electronAPI.setSetting(section, updated);

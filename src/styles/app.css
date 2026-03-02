@@ -5102,6 +5102,119 @@ label {
   cursor: pointer;
 }
 
+/* ============ SETTINGS: PLAYER SERVER TAB ============ */
+
+.settings-server-controls {
+  margin-top: 8px;
+}
+
+.settings-server-info {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-server-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.settings-server-label {
+  color: var(--text-secondary);
+  min-width: 72px;
+}
+
+.settings-server-value {
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.settings-server-pin {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 4px;
+}
+
+/* ============ WEB SERVER TOOLBAR STATUS ============ */
+
+.web-server-status {
+  position: relative;
+}
+
+.web-server-status-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.web-server-status-btn:hover {
+  background: var(--bg-hover);
+}
+
+.web-server-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success-color);
+}
+
+.web-server-popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.web-server-popover-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.web-server-popover-label {
+  color: var(--text-secondary);
+  min-width: 32px;
+}
+
+.web-server-popover-row code {
+  flex: 1;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.web-server-pin {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 3px;
+}
+
+.web-server-stop-btn {
+  margin-top: 4px;
+}
+
 /* ============ QUEST & STORY ARC SYSTEM ============ */
 
 .quest-manager-modal {

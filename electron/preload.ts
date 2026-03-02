@@ -45,6 +45,14 @@ export type MenuCommand =
 
 export type ExportFormat = 'png' | 'jpeg' | 'pdf';
 
+export interface WebServerStatusInfo {
+  running: boolean;
+  port: number;
+  pin: string;
+  url: string;
+  clientCount: number;
+}
+
 // Expose protected methods to renderer via contextBridge
 contextBridge.exposeInMainWorld('electronAPI', {
   // Campaign file operations
@@ -136,7 +144,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('get-setting', key),
 
   setSetting: (key: string, value: unknown): Promise<{ success: boolean; error?: string }> =>
-    ipcRenderer.invoke('set-setting', { key, value })
+    ipcRenderer.invoke('set-setting', { key, value }),
+
+  // Web server operations
+  startWebServer: (options?: { port?: number }): Promise<{ success: boolean; status?: WebServerStatusInfo; error?: string }> =>
+    ipcRenderer.invoke('start-web-server', options),
+
+  stopWebServer: (): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('stop-web-server'),
+
+  getWebServerStatus: (): Promise<WebServerStatusInfo> =>
+    ipcRenderer.invoke('get-web-server-status')
 });
 
 // Type declaration for window.electronAPI
@@ -166,6 +184,10 @@ declare global {
       setSettings: (settings: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
       getSetting: (key: string) => Promise<unknown>;
       setSetting: (key: string, value: unknown) => Promise<{ success: boolean; error?: string }>;
+      // Web server
+      startWebServer: (options?: { port?: number }) => Promise<{ success: boolean; status?: WebServerStatusInfo; error?: string }>;
+      stopWebServer: () => Promise<{ success: boolean; error?: string }>;
+      getWebServerStatus: () => Promise<WebServerStatusInfo>;
     };
   }
 }

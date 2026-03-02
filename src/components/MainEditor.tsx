@@ -31,6 +31,7 @@ import SettingsModal from './modals/SettingsModal';
 import LoginModal from './auth/LoginModal';
 import ProfileMenu from './auth/ProfileMenu';
 import ConnectionStatus from './ui/ConnectionStatus';
+import WebServerStatus from './player/WebServerStatus';
 import CreateRegionFromSelectionModal from './modals/CreateRegionFromSelectionModal';
 import CommandPalette from './CommandPalette';
 import Icon from './icons/Icon';
@@ -411,6 +412,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
             <Icon name="export" size={16} /> Export Data
           </button>
           <ConnectionStatus />
+          <WebServerStatus />
           <ProfileMenu onOpenLogin={() => setShowLogin(true)} />
           <button className="btn btn-icon" onClick={() => setShowSettings(true)} title="Settings" aria-label="Settings">
             <Icon name="settings" size={18} />
