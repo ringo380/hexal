@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
-import { useSelection } from '../../stores/SelectionContext';
+import { useHexSelection } from '../../stores/HexSelectionContext';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import type { Region } from '../../types/Campaign';
 import { REGION_COLORS } from '../../types/Campaign';
@@ -13,7 +13,7 @@ interface RegionManagerModalProps {
 
 function RegionManagerModal({ onClose }: RegionManagerModalProps) {
   const { regions, addRegion, updateRegion, deleteRegion } = useCampaign();
-  const { setRegionPaintMode } = useSelection();
+  const { setRegionPaintMode } = useHexSelection();
   const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(regions[0]?.id ?? null);
 

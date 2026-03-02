@@ -1,4 +1,5 @@
 // ContentItemRow - Single content item display
+import { memo } from 'react';
 import type { ContentItem } from '../../types';
 import Icon from '../icons/Icon';
 import { onActivate } from '../../utils/keyboard';
@@ -42,4 +43,8 @@ function ContentItemRow({ item, onToggleResolved, onEdit, onDelete }: ContentIte
   );
 }
 
-export default ContentItemRow;
+function areEqual(prev: ContentItemRowProps, next: ContentItemRowProps) {
+  return prev.item === next.item;
+}
+
+export default memo(ContentItemRow, areEqual);

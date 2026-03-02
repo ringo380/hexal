@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { QuestStatus } from '../../types/Quest';
 import { QUEST_STATUS_INFO } from '../../types/Quest';
 import Icon from '../icons/Icon';
@@ -20,4 +21,4 @@ function QuestStatusBadge({ status, size = 'normal' }: QuestStatusBadgeProps) {
   );
 }
 
-export default QuestStatusBadge;
+export default memo(QuestStatusBadge);

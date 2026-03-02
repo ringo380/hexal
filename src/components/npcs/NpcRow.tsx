@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { Npc, Faction } from '../../types/Campaign';
 import Icon from '../icons/Icon';
 import AlignmentBadge from './AlignmentBadge';
@@ -56,4 +57,8 @@ function NpcRow({ npc, faction, onToggleResolved, onEdit, onDelete }: NpcRowProp
   );
 }
 
-export default NpcRow;
+function areEqual(prev: NpcRowProps, next: NpcRowProps) {
+  return prev.npc === next.npc && prev.faction === next.faction;
+}
+
+export default memo(NpcRow, areEqual);

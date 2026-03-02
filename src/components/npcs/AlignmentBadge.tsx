@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { ALIGNMENT_LABELS, ALIGNMENT_COLORS, type NpcAlignment } from '../../types/Campaign';
 
 interface AlignmentBadgeProps {
@@ -22,4 +23,4 @@ function AlignmentBadge({ alignment, size = 'normal' }: AlignmentBadgeProps) {
   );
 }
 
-export default AlignmentBadge;
+export default memo(AlignmentBadge);

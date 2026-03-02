@@ -1,7 +1,8 @@
 // HexGrid - Canvas-based hex grid with selection and zoom
 import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { useCampaign } from '../stores/CampaignContext';
-import { useSelection } from '../stores/SelectionContext';
+import { useHexSelection } from '../stores/HexSelectionContext';
+import { useLayerVisibility } from '../stores/LayerVisibilityContext';
 import { useAnnounce } from '../stores/AnnouncerContext';
 import {
   HEX_SIZE,
@@ -193,7 +194,8 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { campaign, getHex, removeMarker, moveMarker, moveMarkerToPosition, addMarkerAtPosition, regions, addHexToRegion, removeHexFromRegion } = useCampaign();
-  const { selectedCoordinate, selectedMarker, selectHex, selectMarker, clearSelection, regionPaintMode, setRegionPaintMode, multiSelectedKeys, toggleMultiSelectHex, setMultiSelection, clearMultiSelection, layerVisibility, weatherAudioEnabled, weatherAudioVolume } = useSelection();
+  const { selectedCoordinate, selectedMarker, selectHex, selectMarker, clearSelection, regionPaintMode, setRegionPaintMode, multiSelectedKeys, toggleMultiSelectHex, setMultiSelection, clearMultiSelection } = useHexSelection();
+  const { layerVisibility, weatherAudioEnabled, weatherAudioVolume } = useLayerVisibility();
   const announce = useAnnounce();
 
   // Weather simulation overlay with layer visibility applied
@@ -314,6 +316,9 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
     return terrainType?.colorHex ?? '#666666';
   }, [campaign]);
 
+  // Memoize hex-to-region lookup map (avoids rebuilding every canvas frame)
+  const hexRegionMap = useMemo(() => createHexRegionMap(regions), [regions]);
+
   // Draw the grid
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -342,9 +347,6 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
     ctx.save();
     ctx.translate(panOffset.x, panOffset.y);
     ctx.scale(zoomLevel, zoomLevel);
-
-    // Build hex-to-region lookup map
-    const hexRegionMap = createHexRegionMap(regions);
 
     // Neighbor-to-edge index mapping for border rendering
     const NEIGHBOR_TO_EDGE = [5, 0, 1, 2, 3, 4];
@@ -740,7 +742,7 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
         tilt
       );
     }
-  }, [campaign, getHex, selectedCoordinate, getTerrainColor, zoomLevel, panOffset, markerDrag.isDragging, markerDrag.state, regions, multiSelectedKeys, renderWeatherOverlay, layerVisibility, updateAudio]);
+  }, [campaign, getHex, selectedCoordinate, getTerrainColor, zoomLevel, panOffset, markerDrag.isDragging, markerDrag.state, regions, hexRegionMap, multiSelectedKeys, renderWeatherOverlay, layerVisibility, updateAudio]);
 
   // Track container size for responsive canvas
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });

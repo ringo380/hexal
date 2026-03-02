@@ -1,7 +1,10 @@
 // MainEditor - Three-column layout for campaign editing
 import { useState, useEffect, useRef } from 'react';
 import { useCampaign } from '../stores/CampaignContext';
-import { useSelection } from '../stores/SelectionContext';
+import { useHexSelection } from '../stores/HexSelectionContext';
+import { useFilter } from '../stores/FilterContext';
+import { useLayerVisibility } from '../stores/LayerVisibilityContext';
+import { useCommandPalette } from '../stores/CommandPaletteContext';
 import { DEFAULT_LAYER_VISIBILITY } from '../types';
 import Sidebar from './Sidebar';
 import HexGrid from './HexGrid';
@@ -40,7 +43,8 @@ interface MainEditorProps {
 }
 
 function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) {
-  const { campaign, saveStatus, saveCampaign, closeCampaign, hasUnsavedChanges, undo, redo, canUndo, canRedo, regions, updateCampaignData } = useCampaign();
+  const { campaign, saveStatus, saveError, saveCampaign, closeCampaign, hasUnsavedChanges, undo, redo, canUndo, canRedo, regions, updateCampaignData } = useCampaign();
+  const { selectHex, multiSelectedKeys, clearMultiSelection } = useHexSelection();
   const {
     searchQuery, setSearchQuery, clearFilters,
     filterTerrain, setFilterTerrain, filterStatus, setFilterStatus,
@@ -49,11 +53,9 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
     filterBookmarked, setFilterBookmarked,
     filterRegion, setFilterRegion,
     activeFilterCount,
-    isCommandPaletteOpen, openCommandPalette, closeCommandPalette,
-    selectHex,
-    multiSelectedKeys, clearMultiSelection,
-    setLayerVisibility
-  } = useSelection();
+  } = useFilter();
+  const { setLayerVisibility } = useLayerVisibility();
+  const { isCommandPaletteOpen, openCommandPalette, closeCommandPalette } = useCommandPalette();
   const weatherSim = useWeatherSimulation();
   const [showGenerator, setShowGenerator] = useState(false);
   const [showExport, setShowExport] = useState(false);
@@ -199,6 +201,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
   };
 
   const getSaveStatusContent = () => {
+    if (saveError) return <><Icon name="alert-triangle" size={12} /> Save failed</>;
     switch (saveStatus) {
       case 'saved': return <><Icon name="check" size={12} /> Saved</>;
       case 'saving': return 'Saving...';
@@ -207,6 +210,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
   };
 
   const getSaveStatusClass = () => {
+    if (saveError) return 'status-error';
     switch (saveStatus) {
       case 'saved': return 'status-saved';
       case 'saving': return 'status-saving';

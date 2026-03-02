@@ -61,8 +61,8 @@ vi.mock('../stores/CampaignContext', () => ({
   })
 }));
 
-vi.mock('../stores/SelectionContext', () => ({
-  useSelection: () => ({
+vi.mock('../stores/HexSelectionContext', () => ({
+  useHexSelection: () => ({
     selectHex: mockSelectHex,
     recentHexes: mockRecentHexes
   })

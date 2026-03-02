@@ -76,7 +76,11 @@ export type IconName =
   // Map Layer Icons
   | 'layers'
   // Audio Icons
-  | 'speaker';
+  | 'speaker'
+  // Status Icons
+  | 'spinner'
+  | 'alert-triangle'
+  | 'info';
 
 const icons: Record<IconName, JSX.Element> = {
   'arrow-left': (
@@ -1472,6 +1476,62 @@ const icons: Record<IconName, JSX.Element> = {
         strokeLinecap="round"
         fill="none"
       />
+    </>
+  ),
+
+  // ============ Status Icons ============
+
+  'spinner': (
+    <>
+      {/* Secondary - track */}
+      <circle cx="12" cy="12" r="10" stroke="var(--icon-secondary)" strokeWidth="2" fill="none" />
+      {/* Primary - spinning arc */}
+      <path
+        d="M12 2a10 10 0 0 1 10 10"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        fill="none"
+      />
+    </>
+  ),
+  'alert-triangle': (
+    <>
+      {/* Secondary - triangle fill */}
+      <path
+        d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+        fill="var(--icon-secondary)"
+      />
+      {/* Primary - triangle outline */}
+      <path
+        d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      {/* Exclamation */}
+      <path d="M12 9v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="12" cy="17" r="1" fill="currentColor" />
+    </>
+  ),
+  'info': (
+    <>
+      {/* Secondary - circle fill */}
+      <circle cx="12" cy="12" r="9" fill="var(--icon-secondary)" />
+      {/* Primary - circle outline */}
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="2"
+        fill="none"
+      />
+      {/* Info symbol */}
+      <path d="M12 16v-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="12" cy="8" r="1" fill="currentColor" />
     </>
   ),
 };
