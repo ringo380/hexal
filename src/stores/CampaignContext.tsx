@@ -811,7 +811,7 @@ export function CampaignProvider({ children, adapter }: { children: React.ReactN
       }
     } catch (error) {
       console.error('Save failed:', error);
-      dispatch({ type: 'MARK_CHANGED' });
+      dispatch({ type: 'SAVE_FAILED' });
       throw error;
     }
   }, [state.campaign, state.currentFilePath, adapter]);
@@ -833,7 +833,7 @@ export function CampaignProvider({ children, adapter }: { children: React.ReactN
       }
     } catch (error) {
       console.error('Save As failed:', error);
-      dispatch({ type: 'MARK_CHANGED' });
+      dispatch({ type: 'SAVE_FAILED' });
       throw error;
     }
   }, [state.campaign]);
