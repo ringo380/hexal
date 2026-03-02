@@ -58,6 +58,13 @@ files:
   - dist/**/*
   - dist-electron/**/*
 
+# Bundle web player build for remote player view
+extraResources:
+  - from: dist-web-player
+    to: web-player
+    filter:
+      - "**/*"
+
 # Directories
 directories:
   output: release

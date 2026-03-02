@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog, Menu, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import Store from 'electron-store';
+import { startServer, stopServer, getStatus as getWebServerStatus, broadcastState, broadcastCampaignClosed } from './webServer';
 
 // Set app name for macOS menu bar (must be before app.whenReady)
 if (process.platform === 'darwin') {
@@ -259,6 +260,13 @@ function createPlayerViewWindow(): BrowserWindow {
 app.whenReady().then(() => {
   createApplicationMenu();
   createWindow();
+
+  // Auto-start web player server if configured
+  const autoStart = settingsStore.get('server.autoStart') as boolean;
+  if (autoStart) {
+    const port = (settingsStore.get('server.port') as number) || 7680;
+    startServer({ port });
+  }
 });
 
 app.on('window-all-closed', () => {
@@ -442,22 +450,25 @@ ipcMain.handle('open-player-view', async () => {
   return { success: true };
 });
 
-// Relay campaign state from DM to all player view windows
+// Relay campaign state from DM to all player view windows + web clients
 ipcMain.on('sync-player-view', (_event, data) => {
   Array.from(playerViewWindows).forEach(win => {
     if (!win.isDestroyed()) {
       win.webContents.send('player-view-update', data);
     }
   });
+  // Also broadcast to web player clients
+  broadcastState(data);
 });
 
-// Relay campaign-closed event from DM to all player view windows
+// Relay campaign-closed event from DM to all player view windows + web clients
 ipcMain.on('player-view-campaign-closed', () => {
   Array.from(playerViewWindows).forEach(win => {
     if (!win.isDestroyed()) {
       win.webContents.send('player-view-campaign-closed');
     }
   });
+  broadcastCampaignClosed();
 });
 
 // ============ SETTINGS IPC HANDLERS ============
@@ -478,6 +489,10 @@ const settingsStore = new Store({
     general: {
       userName: '',
       autoSaveInterval: 2000,
+    },
+    server: {
+      port: 7680,
+      autoStart: false,
     },
   },
 });
@@ -513,4 +528,29 @@ ipcMain.handle('set-setting', async (_event, { key, value }: { key: string; valu
   } catch (error) {
     return { success: false, error: String(error) };
   }
+});
+
+// ============ WEB SERVER IPC HANDLERS ============
+
+ipcMain.handle('start-web-server', async (_event, options?: { port?: number }) => {
+  try {
+    const port = options?.port ?? (settingsStore.get('server.port') as number) ?? 7680;
+    const status = startServer({ port });
+    return { success: true, status };
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
+});
+
+ipcMain.handle('stop-web-server', async () => {
+  try {
+    stopServer();
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
+});
+
+ipcMain.handle('get-web-server-status', async () => {
+  return getWebServerStatus();
 });

@@ -67,9 +67,21 @@ interface ElectronAPI {
   setSettings: (settings: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
   getSetting: (key: string) => Promise<unknown>;
   setSetting: (key: string, value: unknown) => Promise<{ success: boolean; error?: string }>;
+  // Web server
+  startWebServer: (options?: { port?: number }) => Promise<{ success: boolean; status?: WebServerStatus; error?: string }>;
+  stopWebServer: () => Promise<{ success: boolean; error?: string }>;
+  getWebServerStatus: () => Promise<WebServerStatus>;
 }
 
 declare global {
+  interface WebServerStatus {
+    running: boolean;
+    port: number;
+    pin: string;
+    url: string;
+    clientCount: number;
+  }
+
   interface Window {
     electronAPI: ElectronAPI;
   }
