@@ -25,10 +25,10 @@ function WebPlayerApp() {
   const [campaign, setCampaign] = useState<PlayerCampaign | null>(null);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
-  const [reconnectAttempt, setReconnectAttempt] = useState(0);
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectAttemptRef = useRef(0);
   const pinRef = useRef(''); // Stores the last successful PIN for auto-reconnect
 
   const cleanup = useCallback(() => {
@@ -70,7 +70,7 @@ function WebPlayerApp() {
       switch (msg.type) {
         case 'auth-ok':
           setState('waiting');
-          setReconnectAttempt(0);
+          reconnectAttemptRef.current = 0;
           setPinError('');
           break;
 
@@ -99,11 +99,12 @@ function WebPlayerApp() {
 
     ws.onclose = () => {
       if (wsRef.current === ws) {
-        // Unexpected close — schedule reconnection
-        const delay = RECONNECT_DELAYS[Math.min(reconnectAttempt, RECONNECT_DELAYS.length - 1)];
+        // Unexpected close — schedule reconnection with exponential backoff
+        const attempt = reconnectAttemptRef.current;
+        const delay = RECONNECT_DELAYS[Math.min(attempt, RECONNECT_DELAYS.length - 1)];
         setState('error');
         reconnectTimerRef.current = setTimeout(() => {
-          setReconnectAttempt(prev => prev + 1);
+          reconnectAttemptRef.current = attempt + 1;
           connect(pinRef.current || undefined);
         }, delay);
       }
@@ -112,7 +113,7 @@ function WebPlayerApp() {
     ws.onerror = () => {
       // onclose will fire after this
     };
-  }, [cleanup, reconnectAttempt]);
+  }, [cleanup]);
 
   // Initial connection
   useEffect(() => {
@@ -130,7 +131,7 @@ function WebPlayerApp() {
   };
 
   const handleRetry = () => {
-    setReconnectAttempt(0);
+    reconnectAttemptRef.current = 0;
     connect(pinRef.current || undefined);
   };
 

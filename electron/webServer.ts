@@ -32,6 +32,7 @@ let currentPin = '';
 let currentPort = 0;
 let clients: AuthenticatedClient[] = [];
 let latestState: string | null = null; // JSON-stringified PlayerCampaign
+let pingIntervalHandle: ReturnType<typeof setInterval> | null = null;
 
 // ---------- Helpers ----------
 
@@ -128,8 +129,10 @@ export function startServer(options: { port: number; pin?: string }): WebServerS
 
     // Also serve audio files from public/audio/ in dev
     if (urlPath.startsWith('/audio/')) {
+      const audioBase = path.join(process.cwd(), 'public') + path.sep;
       const audioPath = path.join(process.cwd(), 'public', urlPath);
-      if (fs.existsSync(audioPath)) {
+      // Security: prevent path traversal outside public/
+      if (audioPath.startsWith(audioBase) && fs.existsSync(audioPath)) {
         const ext = path.extname(audioPath);
         res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'application/octet-stream' });
         fs.createReadStream(audioPath).pipe(res);
@@ -139,8 +142,8 @@ export function startServer(options: { port: number; pin?: string }): WebServerS
 
     const filePath = path.join(staticDir, urlPath);
 
-    // Security: prevent path traversal
-    if (!filePath.startsWith(staticDir)) {
+    // Security: prevent path traversal (trailing sep prevents sibling dir name bypass)
+    if (!filePath.startsWith(staticDir + path.sep)) {
       res.writeHead(403);
       res.end('Forbidden');
       return;
@@ -228,11 +231,7 @@ export function startServer(options: { port: number; pin?: string }): WebServerS
   });
 
   // Keepalive: ping every 30s
-  const pingInterval = setInterval(() => {
-    if (!wss) {
-      clearInterval(pingInterval);
-      return;
-    }
+  pingIntervalHandle = setInterval(() => {
     Array.from(clients).forEach(client => {
       if (client.authenticated && client.ws.readyState === WebSocket.OPEN) {
         sendJson(client.ws, { type: 'ping' });
@@ -246,6 +245,10 @@ export function startServer(options: { port: number; pin?: string }): WebServerS
 }
 
 export function stopServer(): void {
+  if (pingIntervalHandle) {
+    clearInterval(pingIntervalHandle);
+    pingIntervalHandle = null;
+  }
   if (wss) {
     Array.from(clients).forEach(client => {
       if (client.authTimeout) clearTimeout(client.authTimeout);

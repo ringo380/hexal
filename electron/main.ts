@@ -260,6 +260,13 @@ function createPlayerViewWindow(): BrowserWindow {
 app.whenReady().then(() => {
   createApplicationMenu();
   createWindow();
+
+  // Auto-start web player server if configured
+  const autoStart = settingsStore.get('server.autoStart') as boolean;
+  if (autoStart) {
+    const port = (settingsStore.get('server.port') as number) || 7680;
+    startServer({ port });
+  }
 });
 
 app.on('window-all-closed', () => {
