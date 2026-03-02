@@ -1,7 +1,7 @@
 // MarkerPalette - Collapsible panel for placing markers on hexes
 import { useState, useEffect, useCallback } from 'react';
 import { useCampaign } from '../stores/CampaignContext';
-import { useSelection } from '../stores/SelectionContext';
+import { useHexSelection } from '../stores/HexSelectionContext';
 import { groupMarkersByCategory, MARKER_CATEGORY_INFO } from '../types/Markers';
 import { generateFigurineSVG, getGlyphIdForMarker, FIGURINE_SIZES } from '../services/markerFigurines';
 import type { MarkerType, MarkerCategory } from '../types';
@@ -42,7 +42,7 @@ function FigurinePreview({ markerType }: { markerType: MarkerType }) {
 
 function MarkerPalette({ onMarkerSelected, selectedMarkerType }: MarkerPaletteProps) {
   const { markerTypes, addMarker } = useCampaign();
-  const { selectedCoordinate } = useSelection();
+  const { selectedCoordinate } = useHexSelection();
   const [isExpanded, setIsExpanded] = useState(true);
   const [expandedCategories, setExpandedCategories] = useState<Set<MarkerCategory>>(
     new Set(['settlement', 'player', 'custom'])

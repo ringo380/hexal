@@ -1,7 +1,7 @@
 // CommandPalette - Unified search, coordinate jump, recent & bookmarked hexes
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useCampaign } from '../stores/CampaignContext';
-import { useSelection } from '../stores/SelectionContext';
+import { useHexSelection } from '../stores/HexSelectionContext';
 import { searchCampaign, getMatchHint } from '../services/search';
 import { parseHexKey } from '../types/Campaign';
 import Icon from './icons/Icon';
@@ -22,7 +22,7 @@ const COORD_PATTERN = /^\s*(\d+)\s*,\s*(\d+)\s*$/;
 
 function CommandPalette({ onClose }: CommandPaletteProps) {
   const { campaign, bookmarkedHexes } = useCampaign();
-  const { selectHex, recentHexes } = useSelection();
+  const { selectHex, recentHexes } = useHexSelection();
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);

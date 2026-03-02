@@ -7,6 +7,7 @@ import { WeatherSimulationProvider } from './stores/WeatherSimulationContext';
 import UnsavedChangesDialog from './components/modals/UnsavedChangesDialog';
 import AlertDialog from './components/modals/AlertDialog';
 import { filterCampaignForPlayer } from './services/playerViewFilter';
+import ErrorBoundary from './components/ErrorBoundary';
 
 type PendingAction = {
   type: 'open' | 'open-new-window' | 'new-campaign';
@@ -221,12 +222,14 @@ function App() {
   return (
     <div className="app">
       {campaign ? (
-        <WeatherSimulationProvider>
-          <MainEditor
-            onRegisterExport={registerExportHandler}
-            onRegisterMapExport={registerMapExportHandler}
-          />
-        </WeatherSimulationProvider>
+        <ErrorBoundary>
+          <WeatherSimulationProvider>
+            <MainEditor
+              onRegisterExport={registerExportHandler}
+              onRegisterMapExport={registerMapExportHandler}
+            />
+          </WeatherSimulationProvider>
+        </ErrorBoundary>
       ) : (
         <CampaignBrowser />
       )}

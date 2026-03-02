@@ -43,6 +43,7 @@ interface CampaignState {
   campaign: Campaign | null;
   currentFilePath: string | null;
   saveStatus: SaveStatus;
+  saveError: boolean;
   hasUnsavedChanges: boolean;
   past: Campaign[];    // Previous states for undo
   future: Campaign[];  // States for redo
@@ -56,6 +57,7 @@ type CampaignAction =
   | { type: 'MARK_SAVED'; filePath?: string }
   | { type: 'MARK_SAVING' }
   | { type: 'MARK_CHANGED' }
+  | { type: 'SAVE_FAILED' }
   | { type: 'CLOSE_CAMPAIGN' }
   | { type: 'UNDO' }
   | { type: 'REDO' }
@@ -85,6 +87,7 @@ const initialState: CampaignState = {
   campaign: null,
   currentFilePath: null,
   saveStatus: 'saved',
+  saveError: false,
   hasUnsavedChanges: false,
   past: [],
   future: []
@@ -149,6 +152,7 @@ function campaignReducer(state: CampaignState, action: CampaignAction): Campaign
         ...state,
         currentFilePath: action.filePath ?? state.currentFilePath,
         saveStatus: 'saved',
+        saveError: false,
         hasUnsavedChanges: false
       };
 
@@ -162,6 +166,14 @@ function campaignReducer(state: CampaignState, action: CampaignAction): Campaign
       return {
         ...state,
         saveStatus: 'unsaved',
+        hasUnsavedChanges: true
+      };
+
+    case 'SAVE_FAILED':
+      return {
+        ...state,
+        saveStatus: 'unsaved',
+        saveError: true,
         hasUnsavedChanges: true
       };
 
@@ -632,6 +644,7 @@ interface CampaignContextValue {
   // Campaign data
   campaign: Campaign | null;
   saveStatus: SaveStatus;
+  saveError: boolean;
   hasUnsavedChanges: boolean;
   currentFilePath: string | null;
 
@@ -742,7 +755,7 @@ export function CampaignProvider({ children, adapter }: { children: React.ReactN
             }
           } catch (error) {
             console.error('Autosave failed:', error);
-            dispatch({ type: 'MARK_CHANGED' });
+            dispatch({ type: 'SAVE_FAILED' });
           }
         }
       }, 2000);
@@ -798,7 +811,7 @@ export function CampaignProvider({ children, adapter }: { children: React.ReactN
       }
     } catch (error) {
       console.error('Save failed:', error);
-      dispatch({ type: 'MARK_CHANGED' });
+      dispatch({ type: 'SAVE_FAILED' });
       throw error;
     }
   }, [state.campaign, state.currentFilePath, adapter]);
@@ -820,7 +833,7 @@ export function CampaignProvider({ children, adapter }: { children: React.ReactN
       }
     } catch (error) {
       console.error('Save As failed:', error);
-      dispatch({ type: 'MARK_CHANGED' });
+      dispatch({ type: 'SAVE_FAILED' });
       throw error;
     }
   }, [state.campaign]);
@@ -1231,6 +1244,7 @@ export function CampaignProvider({ children, adapter }: { children: React.ReactN
     canRedo,
     campaign: state.campaign,
     saveStatus: state.saveStatus,
+    saveError: state.saveError,
     hasUnsavedChanges: state.hasUnsavedChanges,
     currentFilePath: state.currentFilePath,
 

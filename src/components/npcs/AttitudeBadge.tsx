@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { ATTITUDE_INFO, type NpcAttitude } from '../../types/Campaign';
 
 interface AttitudeBadgeProps {
@@ -20,4 +21,4 @@ function AttitudeBadge({ attitude, size = 'normal' }: AttitudeBadgeProps) {
   );
 }
 
-export default AttitudeBadge;
+export default memo(AttitudeBadge);

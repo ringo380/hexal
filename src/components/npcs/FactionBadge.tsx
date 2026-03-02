@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { Faction } from '../../types/Campaign';
 
 interface FactionBadgeProps {
@@ -18,4 +19,4 @@ function FactionBadge({ faction, size = 'normal' }: FactionBadgeProps) {
   );
 }
 
-export default FactionBadge;
+export default memo(FactionBadge);

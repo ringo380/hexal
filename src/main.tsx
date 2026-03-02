@@ -10,6 +10,7 @@ import PlayerApp from './components/player/PlayerApp';
 import { SettingsProvider } from './stores/SettingsContext';
 import { AuthProvider } from './stores/AuthContext';
 import { AnnouncerProvider } from './stores/AnnouncerContext';
+import { ToastProvider } from './stores/ToastContext';
 import { createPersistenceAdapter } from './services/persistence';
 import './styles/app.css';
 import './styles/auth.css';
@@ -30,7 +31,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <CampaignProvider adapter={persistenceAdapter}>
               <SelectionProvider>
                 <AnnouncerProvider>
-                  <App />
+                  <ToastProvider>
+                    <App />
+                  </ToastProvider>
                 </AnnouncerProvider>
               </SelectionProvider>
             </CampaignProvider>

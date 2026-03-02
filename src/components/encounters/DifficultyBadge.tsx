@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { DIFFICULTY_COLORS } from '../../types/Campaign';
 
 interface DifficultyBadgeProps {
@@ -14,10 +15,11 @@ function DifficultyBadge({ difficulty, size = 'normal' }: DifficultyBadgeProps) 
     <span
       className={`difficulty-badge ${size === 'small' ? 'difficulty-badge--small' : ''}`}
       style={{ backgroundColor: `${color}22`, color, borderColor: `${color}44` }}
+      title={`Difficulty: ${difficulty}`}
     >
       {difficulty}
     </span>
   );
 }
 
-export default DifficultyBadge;
+export default memo(DifficultyBadge);

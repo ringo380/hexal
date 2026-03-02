@@ -1,20 +1,20 @@
 // GeneratorModal - Content generation dialog with biome-aware terrain,
 // seeded RNG, landmark generation, and river/road networks
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
-import { useSelection } from '../../stores/SelectionContext';
+import { useHexSelection } from '../../stores/HexSelectionContext';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useAnnounce } from '../../stores/AnnouncerContext';
 import {
   populateHex,
   generateBiomeTerrain,
   neighborAwareTerrain,
-  generateRivers,
-  generateRoads,
 } from '../../services/generator';
 import { SeededRNG, stringToSeed } from '../../services/rng';
+import type { GeneratorOutMessage } from '../../services/generatorWorkerProtocol';
 import type { Hex, GenerationConfig } from '../../types';
 import { createHex, createDefaultGenerationConfig } from '../../types';
+import Icon from '../icons/Icon';
 
 type GeneratorTarget = 'selected' | 'allEmpty';
 
@@ -24,7 +24,7 @@ interface GeneratorModalProps {
 
 function GeneratorModal({ onClose }: GeneratorModalProps) {
   const { campaign, getHex, updateHex, updateCampaignData } = useCampaign();
-  const { selectedCoordinate } = useSelection();
+  const { selectedCoordinate } = useHexSelection();
   const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
   const announce = useAnnounce();
 
@@ -35,6 +35,17 @@ function GeneratorModal({ onClose }: GeneratorModalProps) {
   const [generateRiversEnabled, setGenerateRiversEnabled] = useState(false);
   const [generateRoadsEnabled, setGenerateRoadsEnabled] = useState(false);
   const [preview, setPreview] = useState<string[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [progressStep, setProgressStep] = useState('');
+  const [progressPercent, setProgressPercent] = useState(0);
+  const workerRef = useRef<Worker | null>(null);
+
+  // Clean up worker on unmount
+  useEffect(() => {
+    return () => {
+      workerRef.current?.terminate();
+    };
+  }, []);
 
   // Generation config state
   const savedConfig = campaign?.generationConfig ?? createDefaultGenerationConfig();
@@ -135,6 +146,9 @@ function GeneratorModal({ onClose }: GeneratorModalProps) {
 
   const handleApply = () => {
     if (!campaign) return;
+    setIsGenerating(true);
+    setProgressStep('Starting...');
+    setProgressPercent(0);
 
     const rng = createRng();
     const config = currentConfig();
@@ -173,60 +187,65 @@ function GeneratorModal({ onClose }: GeneratorModalProps) {
       );
 
       updateHex(populated);
+      setIsGenerating(false);
+      announce('Content generation complete', 'assertive');
+      onClose();
     } else if (target === 'allEmpty') {
-      // Step 1: Generate biome terrain (whole grid, single batch)
-      let hexes = generateTerrainEnabled
-        ? generateBiomeTerrain(campaign.hexes, campaign.terrainTypes, campaign.gridWidth, campaign.gridHeight, config, rng)
-        : { ...campaign.hexes };
+      // Run generation in a web worker to keep the UI responsive
+      const worker = new Worker(
+        new URL('../../services/generatorWorker.ts', import.meta.url),
+        { type: 'module' }
+      );
+      workerRef.current = worker;
 
-      // Step 2: Populate encounters and landmarks
-      if (generateEncounterEnabled || generateLandmarkEnabled) {
-        const contentRng = rng.fork('content');
-        for (let q = 0; q < campaign.gridWidth; q++) {
-          for (let r = 0; r < campaign.gridHeight; r++) {
-            const key = `${q},${r}`;
-            const hex = hexes[key];
-            if (!hex || !hex.terrain) continue;
-            // Only populate hexes that were empty before
-            if (campaign.hexes[key]?.encounters.length || campaign.hexes[key]?.locations.length) continue;
-
-            hexes[key] = populateHex(
-              hex,
-              campaign.terrainTypes,
-              campaign.encounterTables,
-              {
-                generateTerrain: false,
-                generateEncounter: generateEncounterEnabled,
-                generateLandmark: generateLandmarkEnabled,
-                encounterDensity,
-                landmarkDensity,
-              },
-              contentRng,
-              campaign.landmarkTables
-            );
-          }
+      worker.onmessage = (e: MessageEvent<GeneratorOutMessage>) => {
+        const msg = e.data;
+        switch (msg.type) {
+          case 'PROGRESS':
+            setProgressStep(msg.step);
+            setProgressPercent(msg.percent);
+            break;
+          case 'COMPLETE':
+            updateCampaignData({ hexes: msg.hexes });
+            setIsGenerating(false);
+            worker.terminate();
+            workerRef.current = null;
+            announce('Content generation complete', 'assertive');
+            onClose();
+            break;
+          case 'ERROR':
+            console.error('Generation worker error:', msg.message);
+            setIsGenerating(false);
+            worker.terminate();
+            workerRef.current = null;
+            break;
         }
-      }
+      };
 
-      // Step 3: Generate rivers
-      if (generateRiversEnabled) {
-        hexes = generateRivers(hexes, campaign.gridWidth, campaign.gridHeight, rng.fork('rivers'), undefined, campaign.terrainTypes);
-      }
-
-      // Step 4: Generate roads
-      if (generateRoadsEnabled) {
-        hexes = generateRoads(hexes, campaign.gridWidth, campaign.gridHeight, rng.fork('roads'), undefined, campaign.terrainTypes);
-      }
-
-      // Single batch update — one undo state, one autosave
-      updateCampaignData({ hexes });
+      worker.postMessage({
+        type: 'GENERATE_ALL_EMPTY',
+        payload: {
+          hexes: campaign.hexes,
+          terrainTypes: campaign.terrainTypes,
+          encounterTables: campaign.encounterTables,
+          landmarkTables: campaign.landmarkTables,
+          gridWidth: campaign.gridWidth,
+          gridHeight: campaign.gridHeight,
+          config,
+          seed: seed || Math.random().toString(36).substring(2, 10),
+          generateTerrain: generateTerrainEnabled,
+          generateEncounters: generateEncounterEnabled,
+          generateLandmarks: generateLandmarkEnabled,
+          generateRivers: generateRiversEnabled,
+          generateRoads: generateRoadsEnabled,
+          encounterDensity,
+          landmarkDensity,
+        },
+      });
     }
-
-    announce('Content generation complete', 'assertive');
-    onClose();
   };
 
-  const canApply = target === 'allEmpty' || (target === 'selected' && selectedCoordinate);
+  const canApply = !isGenerating && (target === 'allEmpty' || (target === 'selected' && selectedCoordinate));
 
   return (
     <div
@@ -299,6 +318,7 @@ function GeneratorModal({ onClose }: GeneratorModalProps) {
                   step={0.05}
                   value={clusterStrength}
                   onChange={(e) => setClusterStrength(parseFloat(e.target.value))}
+                  title="Controls how much similar terrain types group together. Higher values create larger, more cohesive biomes."
                 />
                 <p className="hint">Higher = larger terrain clusters</p>
               </div>
@@ -315,6 +335,7 @@ function GeneratorModal({ onClose }: GeneratorModalProps) {
                   step={0.05}
                   value={terrainVariety}
                   onChange={(e) => setTerrainVariety(parseFloat(e.target.value))}
+                  title="Controls the distribution of terrain types. Higher values spread types more evenly; lower values favor dominant terrains."
                 />
                 <p className="hint">Higher = more evenly distributed terrain types</p>
               </div>
@@ -345,6 +366,7 @@ function GeneratorModal({ onClose }: GeneratorModalProps) {
                 step={0.05}
                 value={encounterDensity}
                 onChange={(e) => setEncounterDensity(parseFloat(e.target.value))}
+                title="Probability that each hex receives a random encounter. Higher values mean more hexes will have encounters."
               />
             </div>
           )}
@@ -373,6 +395,7 @@ function GeneratorModal({ onClose }: GeneratorModalProps) {
                 step={0.05}
                 value={landmarkDensity}
                 onChange={(e) => setLandmarkDensity(parseFloat(e.target.value))}
+                title="Probability that each hex receives a landmark. Higher values mean more hexes will have notable locations."
               />
             </div>
           )}
@@ -409,16 +432,30 @@ function GeneratorModal({ onClose }: GeneratorModalProps) {
               <pre>{preview.join('\n')}</pre>
             </div>
           )}
+
+          {isGenerating && (
+            <div className="generation-progress">
+              <div className="generation-progress-label">
+                <Icon name="spinner" size={14} /> {progressStep}
+              </div>
+              <div className="generation-progress-bar">
+                <div
+                  className="generation-progress-fill"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
         <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={handlePreview}>
+          <button className="btn btn-secondary" onClick={handlePreview} disabled={isGenerating}>
             Preview
           </button>
-          <button className="btn btn-secondary" onClick={onClose}>
+          <button className="btn btn-secondary" onClick={onClose} disabled={isGenerating}>
             Cancel
           </button>
           <button className="btn btn-primary" onClick={handleApply} disabled={!canApply}>
-            Apply
+            {isGenerating ? <><Icon name="spinner" size={14} /> Generating...</> : 'Apply'}
           </button>
         </div>
       </div>

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { OUTCOME_INFO } from '../../types/Campaign';
 import type { EncounterOutcome } from '../../types/Campaign';
 
@@ -15,10 +16,11 @@ function OutcomeBadge({ outcome, size = 'normal' }: OutcomeBadgeProps) {
     <span
       className={`outcome-badge ${size === 'small' ? 'outcome-badge--small' : ''}`}
       style={{ backgroundColor: `${info.color}22`, color: info.color, borderColor: `${info.color}44` }}
+      title={`Outcome: ${info.label}`}
     >
       {info.label}
     </span>
   );
 }
 
-export default OutcomeBadge;
+export default memo(OutcomeBadge);

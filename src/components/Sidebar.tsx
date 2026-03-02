@@ -1,7 +1,8 @@
 // Sidebar - List of hexes with filtering
 import { useMemo, useEffect, useRef } from 'react';
 import { useCampaign } from '../stores/CampaignContext';
-import { useSelection } from '../stores/SelectionContext';
+import { useHexSelection } from '../stores/HexSelectionContext';
+import { useFilter } from '../stores/FilterContext';
 import { useAnnounce } from '../stores/AnnouncerContext';
 import type { Hex, ContentCategory } from '../types';
 import { hexHasUnresolvedContent, hexKey } from '../types';
@@ -13,9 +14,8 @@ import { onActivate } from '../utils/keyboard';
 function Sidebar() {
   const announce = useAnnounce();
   const { campaign, bookmarkedHexes, regions } = useCampaign();
+  const { selectedCoordinate, selectHex } = useHexSelection();
   const {
-    selectedCoordinate,
-    selectHex,
     searchQuery,
     filterTerrain,
     filterStatus,
@@ -23,7 +23,7 @@ function Sidebar() {
     filterContentTypes,
     filterBookmarked,
     filterRegion
-  } = useSelection();
+  } = useFilter();
 
   // Build hex-to-region lookup
   const hexRegionMap = useMemo(() => createHexRegionMap(regions), [regions]);
@@ -131,7 +131,11 @@ function Sidebar() {
       </div>
       <ul className="hex-list">
         {filteredHexes.length === 0 ? (
-          <li className="empty-state">No hexes match filters</li>
+          <li className="empty-state">
+            <Icon name="search" size={24} />
+            <p>No hexes match filters</p>
+            <p className="empty-state-hint">Try adjusting your search or filters to see results.</p>
+          </li>
         ) : (
           filteredHexes.map((hex) => {
             const key = hexKey(hex.coordinate);

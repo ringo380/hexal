@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { Quest, StoryArc } from '../../types/Quest';
 import QuestStatusBadge from './QuestStatusBadge';
 import { onActivate } from '../../utils/keyboard';
@@ -38,4 +39,8 @@ function QuestRow({ quest, arc, isSelected, onClick }: QuestRowProps) {
   );
 }
 
-export default QuestRow;
+function areEqual(prev: QuestRowProps, next: QuestRowProps) {
+  return prev.quest === next.quest && prev.arc === next.arc && prev.isSelected === next.isSelected;
+}
+
+export default memo(QuestRow, areEqual);

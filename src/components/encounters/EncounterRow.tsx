@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { Encounter } from '../../types/Campaign';
 import Icon from '../icons/Icon';
 import EncounterTypeBadge from './EncounterTypeBadge';
@@ -55,4 +56,8 @@ function EncounterRow({ encounter, onToggleResolved, onEdit, onDelete }: Encount
   );
 }
 
-export default EncounterRow;
+function areEqual(prev: EncounterRowProps, next: EncounterRowProps) {
+  return prev.encounter === next.encounter;
+}
+
+export default memo(EncounterRow, areEqual);

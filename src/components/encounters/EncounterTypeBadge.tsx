@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { ENCOUNTER_TYPE_INFO } from '../../types/Campaign';
 import type { EncounterType } from '../../types/Campaign';
 import Icon from '../icons/Icon';
@@ -14,6 +15,7 @@ function EncounterTypeBadge({ type, size = 'normal' }: EncounterTypeBadgeProps) 
     <span
       className={`encounter-type-badge ${size === 'small' ? 'encounter-type-badge--small' : ''}`}
       style={{ backgroundColor: `${info.color}22`, color: info.color, borderColor: `${info.color}44` }}
+      title={`Encounter type: ${info.label}`}
     >
       <Icon name={info.icon} size={size === 'small' ? 10 : 12} />
       {info.label}
@@ -21,4 +23,4 @@ function EncounterTypeBadge({ type, size = 'normal' }: EncounterTypeBadgeProps) 
   );
 }
 
-export default EncounterTypeBadge;
+export default memo(EncounterTypeBadge);

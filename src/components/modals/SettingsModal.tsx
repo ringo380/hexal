@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useSettings } from '../../stores/SettingsContext';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useToast } from '../../stores/ToastContext';
 import type { AISettings, CloudSettings, GeneralSettings } from '../../stores/SettingsContext';
 
 interface SettingsModalProps {
@@ -14,6 +15,7 @@ type SettingsTab = 'general' | 'ai' | 'cloud';
 function SettingsModal({ onClose }: SettingsModalProps) {
   const { settings, updateSettings } = useSettings();
   const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
 
   // Local state for editing (commit on blur/save)
@@ -31,6 +33,7 @@ function SettingsModal({ onClose }: SettingsModalProps) {
       onClose();
     } catch (err) {
       console.error('Failed to save settings:', err);
+      toast('Failed to save settings', { variant: 'error' });
     } finally {
       setSaving(false);
     }

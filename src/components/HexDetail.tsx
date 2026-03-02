@@ -1,7 +1,7 @@
 // HexDetail - Right panel for viewing/editing hex content
 import { useState, useEffect, useCallback } from 'react';
 import { useCampaign } from '../stores/CampaignContext';
-import { useSelection } from '../stores/SelectionContext';
+import { useHexSelection } from '../stores/HexSelectionContext';
 import type { Hex, ContentItem, DiscoveryStatus, HexMarker, MarkerType, Npc } from '../types';
 import { createContentItem, createNpc, createHex } from '../types';
 import type { Encounter, EncounterTemplate } from '../types/Campaign';
@@ -78,7 +78,7 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
     sessions,
     sessionLog
   } = useCampaign();
-  const { selectedCoordinate, selectedMarker, selectMarker, regionPaintMode } = useSelection();
+  const { selectedCoordinate, selectedMarker, selectMarker, regionPaintMode } = useHexSelection();
   const weatherSim = useWeatherSimulation();
 
   const [hex, setHex] = useState<Hex | null>(null);
@@ -104,32 +104,32 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
     setHex(updatedHex);
   }, [updateHex]);
 
-  const handleTerrainChange = (terrain: string) => {
+  const handleTerrainChange = useCallback((terrain: string) => {
     if (!hex || !selectedCoordinate) return;
     const updated = { ...getOrCreateHex(selectedCoordinate), terrain };
     saveHex(updated);
-  };
+  }, [hex, selectedCoordinate, getOrCreateHex, saveHex]);
 
-  const handleStatusChange = (status: DiscoveryStatus) => {
+  const handleStatusChange = useCallback((status: DiscoveryStatus) => {
     if (!hex || !selectedCoordinate) return;
     const updated = { ...getOrCreateHex(selectedCoordinate), status };
     saveHex(updated);
-  };
+  }, [hex, selectedCoordinate, getOrCreateHex, saveHex]);
 
-  const handleNotesChange = (notes: string) => {
+  const handleNotesChange = useCallback((notes: string) => {
     if (!hex || !selectedCoordinate) return;
     const updated = { ...getOrCreateHex(selectedCoordinate), notes };
     saveHex(updated);
-  };
+  }, [hex, selectedCoordinate, getOrCreateHex, saveHex]);
 
-  const handleTagsChange = (tagsStr: string) => {
+  const handleTagsChange = useCallback((tagsStr: string) => {
     if (!hex || !selectedCoordinate) return;
     const tags = tagsStr.split(',').map(t => t.trim()).filter(t => t);
     const updated = { ...getOrCreateHex(selectedCoordinate), tags };
     saveHex(updated);
-  };
+  }, [hex, selectedCoordinate, getOrCreateHex, saveHex]);
 
-  const addItem = (category: ContentCategory) => {
+  const addItem = useCallback((category: ContentCategory) => {
     if (!selectedCoordinate) return;
     const currentHex = getOrCreateHex(selectedCoordinate);
     if (category === 'encounters') {
@@ -159,9 +159,9 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
     };
     saveHex(updated);
     setEditingItem({ item: newItem, category });
-  };
+  }, [selectedCoordinate, getOrCreateHex, saveHex]);
 
-  const addEncounterFromTemplate = (template: EncounterTemplate) => {
+  const addEncounterFromTemplate = useCallback((template: EncounterTemplate) => {
     if (!selectedCoordinate) return;
     const currentHex = getOrCreateHex(selectedCoordinate);
     const encounter = instantiateFromTemplate(template);
@@ -171,9 +171,9 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
     };
     saveHex(updated);
     setShowTemplatePicker(false);
-  };
+  }, [selectedCoordinate, getOrCreateHex, saveHex]);
 
-  const saveEncounter = (updated: Encounter) => {
+  const saveEncounter = useCallback((updated: Encounter) => {
     if (!hex || !selectedCoordinate) return;
     const currentHex = getOrCreateHex(selectedCoordinate);
     const updatedHex = {
@@ -184,9 +184,9 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
     };
     saveHex(updatedHex);
     setEditingEncounter(null);
-  };
+  }, [hex, selectedCoordinate, getOrCreateHex, saveHex]);
 
-  const saveNpc = (updated: Npc) => {
+  const saveNpc = useCallback((updated: Npc) => {
     if (!hex || !selectedCoordinate) return;
     const currentHex = getOrCreateHex(selectedCoordinate);
     const updatedHex = {
@@ -197,16 +197,16 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
     };
     saveHex(updatedHex);
     setEditingNpc(null);
-  };
+  }, [hex, selectedCoordinate, getOrCreateHex, saveHex]);
 
-  const confirmDeleteNpc = (npcId: string) => {
+  const confirmDeleteNpc = useCallback((npcId: string) => {
     if (!hex) return;
     const currentHex = getOrCreateHex(selectedCoordinate!);
     const npc = currentHex.npcs.find(n => n.id === npcId);
     if (npc) setNpcToDelete({ id: npcId, title: npc.title || 'Unnamed NPC' });
-  };
+  }, [hex, selectedCoordinate, getOrCreateHex]);
 
-  const executeDeleteNpc = () => {
+  const executeDeleteNpc = useCallback(() => {
     if (!hex || !selectedCoordinate || !campaign || !npcToDelete) return;
     const currentHex = getOrCreateHex(selectedCoordinate);
     const updatedHex = {
@@ -214,16 +214,15 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
       npcs: currentHex.npcs.filter(n => n.id !== npcToDelete.id)
     };
     saveHex(updatedHex);
-    const hexKey = `${selectedCoordinate.q},${selectedCoordinate.r}`;
-    const cleanup = deleteNpcCleanup(campaign, npcToDelete.id, hexKey);
+    const hKey = `${selectedCoordinate.q},${selectedCoordinate.r}`;
+    const cleanup = deleteNpcCleanup(campaign, npcToDelete.id, hKey);
     updateCampaignData(cleanup);
     const questCleanup = removeNpcFromQuests(campaign, npcToDelete.id);
     updateCampaignData(questCleanup);
     setNpcToDelete(null);
-  };
+  }, [hex, selectedCoordinate, campaign, npcToDelete, getOrCreateHex, saveHex, updateCampaignData]);
 
-
-  const updateItem = (category: ContentCategory, updatedItem: ContentItem) => {
+  const updateItem = useCallback((category: ContentCategory, updatedItem: ContentItem) => {
     if (!hex || !selectedCoordinate) return;
     const currentHex = getOrCreateHex(selectedCoordinate);
     const updated = {
@@ -233,9 +232,9 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
       )
     };
     saveHex(updated);
-  };
+  }, [hex, selectedCoordinate, getOrCreateHex, saveHex]);
 
-  const deleteItem = (category: ContentCategory, itemId: string) => {
+  const deleteItem = useCallback((category: ContentCategory, itemId: string) => {
     if (!hex || !selectedCoordinate) return;
     const currentHex = getOrCreateHex(selectedCoordinate);
     const updated = {
@@ -250,9 +249,9 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
         updateCampaignData(removeClueFromQuests(campaign, itemId));
       }
     }
-  };
+  }, [hex, selectedCoordinate, campaign, getOrCreateHex, saveHex, updateCampaignData]);
 
-  const toggleResolved = (category: ContentCategory, itemId: string) => {
+  const toggleResolved = useCallback((category: ContentCategory, itemId: string) => {
     if (!hex || !selectedCoordinate) return;
     const currentHex = getOrCreateHex(selectedCoordinate);
     const updated = {
@@ -262,7 +261,7 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
       )
     };
     saveHex(updated);
-  };
+  }, [hex, selectedCoordinate, getOrCreateHex, saveHex]);
 
   if (!selectedCoordinate || !hex) {
     return (
@@ -270,6 +269,7 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
         <div className="empty-state">
           <span className="empty-icon"><Icon name="hexagon" size={48} /></span>
           <p>Select a hex to view details</p>
+          <p className="empty-state-hint">Click any hex on the map or in the sidebar to view and edit its content.</p>
         </div>
       </div>
     );
@@ -572,6 +572,7 @@ function EncounterSection({
       </div>
       {isExpanded && (
         <div id="hex-encounters-content" className="section-content">
+          {encounters.length === 0 && <p className="section-empty-hint">No encounters yet. Add one below.</p>}
           {encounters.map((encounter) => (
             <EncounterRow
               key={encounter.id}
@@ -641,6 +642,7 @@ function NpcSection({ npcs, factions, onAdd, onToggleResolved, onEdit, onDelete 
       </div>
       {isExpanded && (
         <div id="hex-npcs-content" className="section-content">
+          {npcs.length === 0 && <p className="section-empty-hint">No NPCs yet. Add one below.</p>}
           {npcs.map((npc) => (
             <NpcRow
               key={npc.id}
@@ -684,6 +686,7 @@ function ContentSection({ category, items, onAdd, onToggleResolved, onEdit, onDe
       </div>
       {isExpanded && (
         <div id={`hex-${category}-content`} className="section-content">
+          {items.length === 0 && <p className="section-empty-hint">None yet. Add one below.</p>}
           {items.map((item) => (
             <ContentItemRow
               key={item.id}

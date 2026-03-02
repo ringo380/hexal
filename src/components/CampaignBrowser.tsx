@@ -11,6 +11,7 @@ import ConfirmDialog from './modals/ConfirmDialog';
 import LoginModal from './auth/LoginModal';
 import ProfileMenu from './auth/ProfileMenu';
 import Icon from './icons/Icon';
+import { useToast } from '../stores/ToastContext';
 
 interface CampaignInfo {
   name: string;
@@ -30,13 +31,13 @@ function CampaignBrowser() {
   const { loadCampaign, listCampaigns: listCampaignsFn, deleteCampaignFile } = useCampaign();
   const { user, isAuthenticated } = useAuth();
   const { settings } = useSettings();
+  const toast = useToast();
   const [campaigns, setCampaigns] = useState<CampaignInfo[]>([]);
   const [cloudCampaigns, setCloudCampaigns] = useState<CloudCampaignInfo[]>([]);
   const [showNewModal, setShowNewModal] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [cloudLoading, setCloudLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ path: string; name: string } | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
   const [syncTarget, setSyncTarget] = useState<string | null>(null);
@@ -97,17 +98,16 @@ function CampaignBrowser() {
         await loadCampaign(filePath);
       }
     } catch (err) {
-      setError('Failed to open campaign');
+      toast('Failed to open campaign', { variant: 'error' });
       console.error(err);
     }
   };
 
   const handleLoadCampaign = async (path: string) => {
     try {
-      setError(null);
       await loadCampaign(path);
     } catch (err) {
-      setError('Failed to load campaign');
+      toast('Failed to load campaign', { variant: 'error' });
       console.error(err);
     }
   };
@@ -122,7 +122,7 @@ function CampaignBrowser() {
       await deleteCampaignFile(deleteConfirm.path);
       await loadLocalCampaigns();
     } catch (err) {
-      setError('Failed to delete campaign');
+      toast('Failed to delete campaign', { variant: 'error' });
       console.error(err);
     } finally {
       setDeleteConfirm(null);
@@ -137,26 +137,25 @@ function CampaignBrowser() {
     try {
       setSyncStatus('uploading');
       setSyncTarget(path);
-      setError(null);
 
       // Load the local campaign file
       const result = await window.electronAPI.loadCampaign(path);
       if (!result.campaign) {
-        setError('Failed to read local campaign');
+        toast('Failed to read local campaign', { variant: 'error' });
         return;
       }
 
       // Upload to cloud
       const { error: uploadError } = await saveCloudCampaign(client, result.campaign as Campaign, user.id);
       if (uploadError) {
-        setError(`Upload failed: ${uploadError}`);
+        toast(`Upload failed: ${uploadError}`, { variant: 'error' });
         return;
       }
 
       // Refresh cloud list
       await loadCloudCampaignsList();
     } catch (err) {
-      setError('Failed to upload campaign');
+      toast('Failed to upload campaign', { variant: 'error' });
       console.error(err);
     } finally {
       setSyncStatus('idle');
@@ -171,26 +170,25 @@ function CampaignBrowser() {
     try {
       setSyncStatus('downloading');
       setSyncTarget(campaignId);
-      setError(null);
 
       // Load from cloud
       const { campaign, error: loadError } = await loadCloudCampaign(client, campaignId);
       if (loadError || !campaign) {
-        setError(`Download failed: ${loadError ?? 'Campaign not found'}`);
+        toast(`Download failed: ${loadError ?? 'Campaign not found'}`, { variant: 'error' });
         return;
       }
 
       // Save locally via Electron IPC
       const saveResult = await window.electronAPI.saveCampaign(campaign);
       if (!saveResult.success) {
-        setError(`Local save failed: ${saveResult.error ?? 'Unknown error'}`);
+        toast(`Local save failed: ${saveResult.error ?? 'Unknown error'}`, { variant: 'error' });
         return;
       }
 
       // Refresh local list
       await loadLocalCampaigns();
     } catch (err) {
-      setError('Failed to download campaign');
+      toast('Failed to download campaign', { variant: 'error' });
       console.error(err);
     } finally {
       setSyncStatus('idle');
@@ -204,13 +202,12 @@ function CampaignBrowser() {
     if (!client) return;
 
     try {
-      setError(null);
       setSyncStatus('downloading');
       setSyncTarget(campaignId);
 
       const { campaign, error: loadError } = await loadCloudCampaign(client, campaignId);
       if (loadError || !campaign) {
-        setError(`Failed to load: ${loadError ?? 'Campaign not found'}`);
+        toast(`Failed to load: ${loadError ?? 'Campaign not found'}`, { variant: 'error' });
         return;
       }
 
@@ -220,7 +217,7 @@ function CampaignBrowser() {
         await loadCampaign(saveResult.path);
       }
     } catch (err) {
-      setError('Failed to load cloud campaign');
+      toast('Failed to load cloud campaign', { variant: 'error' });
       console.error(err);
     } finally {
       setSyncStatus('idle');
@@ -267,20 +264,18 @@ function CampaignBrowser() {
         </button>
       </div>
 
-      {error && (
-        <div className="error-message">{error}</div>
-      )}
-
       {/* Local Campaigns */}
       <div className="campaign-list-section">
         <h2>
           <Icon name="hexagon" size={16} /> Local Campaigns
         </h2>
         {loading ? (
-          <div className="loading">Loading...</div>
+          <div className="loading"><Icon name="spinner" size={16} /> Loading campaigns...</div>
         ) : campaigns.length === 0 ? (
           <div className="empty-state">
-            No local campaigns yet. Create one to get started!
+            <span className="empty-icon"><Icon name="hexagon" size={36} /></span>
+            <p>No local campaigns yet</p>
+            <p className="empty-state-hint">Click <strong>+ New Campaign</strong> to create your first hex crawl, or <strong>Open...</strong> to import an existing file.</p>
           </div>
         ) : (
           <ul className="campaign-list">
@@ -338,10 +333,12 @@ function CampaignBrowser() {
             <Icon name="sparkle" size={16} /> Cloud Campaigns
           </h2>
           {cloudLoading ? (
-            <div className="loading">Loading cloud campaigns...</div>
+            <div className="loading"><Icon name="spinner" size={16} /> Loading cloud campaigns...</div>
           ) : cloudCampaigns.length === 0 ? (
             <div className="empty-state">
-              No cloud campaigns yet. Upload a local campaign to get started!
+              <span className="empty-icon"><Icon name="sparkle" size={36} /></span>
+              <p>No cloud campaigns</p>
+              <p className="empty-state-hint">Upload a local campaign using the <strong>Upload</strong> button to sync it to the cloud.</p>
             </div>
           ) : (
             <ul className="campaign-list">

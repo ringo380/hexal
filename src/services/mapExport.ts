@@ -1,6 +1,6 @@
 // Map Export Service - Handles PNG, JPEG, and PDF export of hex maps
 
-import { jsPDF } from 'jspdf';
+import type { jsPDF } from 'jspdf';
 import type { Campaign } from '../types';
 import type {
   MapExportOptions,
@@ -175,8 +175,11 @@ export async function exportAsPDF(
   // Calculate map dimensions
   const mapDims = calculateExportDimensions(campaign, options);
 
+  // Dynamically import jsPDF to keep it out of the main bundle
+  const { jsPDF: JsPDF } = await import('jspdf');
+
   // Create PDF document
-  const pdf = new jsPDF({
+  const pdf = new JsPDF({
     orientation: options.orientation,
     unit: 'mm',
     format: options.paperSize
