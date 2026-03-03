@@ -5991,3 +5991,120 @@ label {
 .error-boundary-actions .btn-secondary:hover {
   background: #3a3a3a;
 }
+
+/* ============ NEW CAMPAIGN MODAL - TEMPLATE GALLERY ============ */
+
+.new-campaign-modal-gallery {
+  min-width: 680px;
+  max-width: 720px;
+}
+
+.new-campaign-modal-gallery .modal-body {
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
+.template-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.template-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: inherit;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.template-card:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-muted);
+}
+
+.template-card:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
+}
+
+.template-card-blank {
+  border-left-color: var(--text-muted);
+}
+
+.template-card-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--text-muted);
+}
+
+.template-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.template-card-name {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 3px;
+}
+
+.template-card-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.template-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.template-tag {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--bg-hover);
+  color: var(--text-muted);
+}
+
+/* Template summary on configure step */
+.template-summary {
+  padding: 10px 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.template-summary-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.template-summary-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}

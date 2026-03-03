@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useReducer, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Campaign, Hex, HexCoordinate, HexMarker, MarkerType, Npc, EncounterTemplate, Region, Faction, Session, SessionLogEntry, TerrainType, Quest, StoryArc } from '../types';
-import { createCampaign, createHex, coordinateKey, createDefaultTimeWeather, createRegion, hexKey } from '../types';
+import { createCampaign, createCampaignFromTemplate, createHex, coordinateKey, createDefaultTimeWeather, createRegion, hexKey } from '../types';
 import { migrateCampaign } from '../types/Campaign';
 import type { PersistenceAdapter } from '../services/persistence';
 import { createMarker, createCustomMarkerType, DEFAULT_MARKER_TYPES } from '../types/Markers';
@@ -627,7 +627,7 @@ function campaignReducer(state: CampaignState, action: CampaignAction): Campaign
 interface CampaignContextValue {
   state: CampaignState;
   // Campaign operations
-  newCampaign: (name: string, width: number, height: number) => void;
+  newCampaign: (name: string, width: number, height: number, templateId?: string) => void;
   loadCampaign: (filePath: string) => Promise<void>;
   saveCampaign: () => Promise<void>;
   saveAs: () => Promise<void>;
@@ -769,8 +769,10 @@ export function CampaignProvider({ children, adapter }: { children: React.ReactN
   }, [state.hasUnsavedChanges, state.campaign, state.currentFilePath, adapter]);
 
   // Create new campaign
-  const newCampaign = useCallback((name: string, width: number, height: number) => {
-    const campaign = createCampaign(name, width, height);
+  const newCampaign = useCallback((name: string, width: number, height: number, templateId?: string) => {
+    const campaign = templateId
+      ? createCampaignFromTemplate(templateId, name, width, height)
+      : createCampaign(name, width, height);
     dispatch({ type: 'SET_CAMPAIGN', campaign });
   }, []);
 
