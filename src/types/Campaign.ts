@@ -5,6 +5,8 @@ import { CALENDAR_PRESETS } from '../data/calendars';
 import { HexMarker, MarkerType, DEFAULT_MARKER_TYPES } from './Markers';
 import { DEFAULT_EXPANDED_ENCOUNTER_TABLES, DEFAULT_LANDMARK_TABLES } from '../data/generatorTables';
 import type { Quest, StoryArc } from './Quest';
+import { getTemplateById } from '../data/campaignTemplates';
+import { getDefaultStartYear } from '../data/calendars';
 
 /** Current campaign schema version. Increment when making breaking data model changes. */
 export const CAMPAIGN_SCHEMA_VERSION = 2;
@@ -922,6 +924,98 @@ export function migrateCampaign(campaign: Campaign): Campaign {
       ...ws,
       config: { ...ws.config, timeMode: ws.config.timeMode ?? 'realtime' }
     }
+  };
+}
+
+// ============ TEMPLATE FACTORY ============
+
+/** Create a campaign pre-configured from a template */
+export function createCampaignFromTemplate(
+  templateId: string,
+  name: string,
+  width: number,
+  height: number
+): Campaign {
+  const template = getTemplateById(templateId);
+  if (!template) {
+    return createCampaign(name, width, height);
+  }
+
+  // Start with a base campaign
+  const base = createCampaign(name, width, height);
+
+  // Build terrain types with fresh UUIDs
+  const terrainTypes: TerrainType[] = template.terrainTypes.map(t => ({
+    ...t,
+    id: crypto.randomUUID(),
+    isDefault: false,
+  }));
+
+  // Build encounter tables with fresh UUIDs
+  const encounterTables: EncounterTable[] = template.encounterTables.map(table => ({
+    ...table,
+    id: crypto.randomUUID(),
+    entries: table.entries.map(entry => ({
+      ...entry,
+      id: crypto.randomUUID(),
+    })),
+  }));
+
+  // Build landmark tables with fresh UUIDs
+  const landmarkTables: LandmarkTable[] = template.landmarkTables.map(table => ({
+    ...table,
+    id: crypto.randomUUID(),
+    entries: table.entries.map(entry => ({
+      ...entry,
+      id: crypto.randomUUID(),
+    })),
+  }));
+
+  // Build factions with fresh UUIDs
+  const factions: Faction[] = template.factions.map(f => ({
+    id: crypto.randomUUID(),
+    name: f.name,
+    description: f.description,
+    color: f.color,
+    goals: f.goals,
+    tags: [...f.tags],
+    isKnownToPlayers: false,
+  }));
+
+  // Build regions with fresh UUIDs (no hex assignments)
+  const regions: Region[] = template.regions.map(r => ({
+    id: crypto.randomUUID(),
+    name: r.name,
+    color: r.color,
+    description: r.description,
+    hexKeys: [],
+    tags: [...r.tags],
+    isDiscovered: false,
+    notes: '',
+  }));
+
+  // Build generation config
+  const generationConfig: GenerationConfig = {
+    ...createDefaultGenerationConfig(),
+    ...template.generationConfig,
+  };
+
+  // Build calendar/time
+  const calendarPreset = template.calendarPreset;
+  const calendar = CALENDAR_PRESETS[calendarPreset];
+  const timeWeather = createDefaultTimeWeather(calendar);
+  const startYear = template.startYear ?? getDefaultStartYear(calendarPreset);
+  timeWeather.currentTime = { ...timeWeather.currentTime, year: startYear };
+
+  return {
+    ...base,
+    terrainTypes,
+    encounterTables,
+    landmarkTables,
+    factions,
+    regions,
+    generationConfig,
+    timeWeather,
   };
 }
 
