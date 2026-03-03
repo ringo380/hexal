@@ -944,10 +944,11 @@ export function createCampaignFromTemplate(
   // Start with a base campaign
   const base = createCampaign(name, width, height);
 
-  // Build terrain types with fresh UUIDs, keeping a name->newId map
+  // Build terrain types with fresh UUIDs
   const terrainTypes: TerrainType[] = template.terrainTypes.map(t => ({
     ...t,
     id: crypto.randomUUID(),
+    isDefault: false,
   }));
 
   // Build encounter tables with fresh UUIDs

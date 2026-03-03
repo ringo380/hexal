@@ -6029,7 +6029,9 @@ label {
 
 .template-card:hover {
   background: var(--bg-hover);
-  border-color: var(--text-muted);
+  border-top-color: var(--text-muted);
+  border-right-color: var(--text-muted);
+  border-bottom-color: var(--text-muted);
 }
 
 .template-card:focus-visible {
