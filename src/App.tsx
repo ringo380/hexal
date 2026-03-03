@@ -21,6 +21,7 @@ function App() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const exportRef = useRef<(() => void) | null>(null);
   const mapExportRef = useRef<(() => void) | null>(null);
+  const exportTemplateRef = useRef<(() => void) | null>(null);
 
   // Register export handler from MainEditor
   const registerExportHandler = useCallback((handler: () => void) => {
@@ -30,6 +31,11 @@ function App() {
   // Register map export handler from MainEditor
   const registerMapExportHandler = useCallback((handler: () => void) => {
     mapExportRef.current = handler;
+  }, []);
+
+  // Register export template handler from MainEditor
+  const registerExportTemplateHandler = useCallback((handler: () => void) => {
+    exportTemplateRef.current = handler;
   }, []);
 
   // Handle menu commands
@@ -75,6 +81,12 @@ function App() {
         case 'export-map':
           if (campaign && mapExportRef.current) {
             mapExportRef.current();
+          }
+          break;
+
+        case 'export-template':
+          if (campaign && exportTemplateRef.current) {
+            exportTemplateRef.current();
           }
           break;
 
@@ -227,6 +239,7 @@ function App() {
             <MainEditor
               onRegisterExport={registerExportHandler}
               onRegisterMapExport={registerMapExportHandler}
+              onRegisterExportTemplate={registerExportTemplateHandler}
             />
           </WeatherSimulationProvider>
         </ErrorBoundary>

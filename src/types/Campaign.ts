@@ -7,6 +7,7 @@ import { DEFAULT_EXPANDED_ENCOUNTER_TABLES, DEFAULT_LANDMARK_TABLES } from '../d
 import type { Quest, StoryArc } from './Quest';
 import { getTemplateById } from '../data/campaignTemplates';
 import { getDefaultStartYear } from '../data/calendars';
+import type { CampaignTemplate } from './CampaignTemplate';
 
 /** Current campaign schema version. Increment when making breaking data model changes. */
 export const CAMPAIGN_SCHEMA_VERSION = 2;
@@ -929,29 +930,21 @@ export function migrateCampaign(campaign: Campaign): Campaign {
 
 // ============ TEMPLATE FACTORY ============
 
-/** Create a campaign pre-configured from a template */
-export function createCampaignFromTemplate(
-  templateId: string,
+/** Internal: builds a campaign from a resolved template object */
+function buildCampaignFromTemplate(
+  template: CampaignTemplate,
   name: string,
   width: number,
   height: number
 ): Campaign {
-  const template = getTemplateById(templateId);
-  if (!template) {
-    return createCampaign(name, width, height);
-  }
-
-  // Start with a base campaign
   const base = createCampaign(name, width, height);
 
-  // Build terrain types with fresh UUIDs
   const terrainTypes: TerrainType[] = template.terrainTypes.map(t => ({
     ...t,
     id: crypto.randomUUID(),
     isDefault: false,
   }));
 
-  // Build encounter tables with fresh UUIDs
   const encounterTables: EncounterTable[] = template.encounterTables.map(table => ({
     ...table,
     id: crypto.randomUUID(),
@@ -961,7 +954,6 @@ export function createCampaignFromTemplate(
     })),
   }));
 
-  // Build landmark tables with fresh UUIDs
   const landmarkTables: LandmarkTable[] = template.landmarkTables.map(table => ({
     ...table,
     id: crypto.randomUUID(),
@@ -971,7 +963,6 @@ export function createCampaignFromTemplate(
     })),
   }));
 
-  // Build factions with fresh UUIDs
   const factions: Faction[] = template.factions.map(f => ({
     id: crypto.randomUUID(),
     name: f.name,
@@ -982,7 +973,6 @@ export function createCampaignFromTemplate(
     isKnownToPlayers: false,
   }));
 
-  // Build regions with fresh UUIDs (no hex assignments)
   const regions: Region[] = template.regions.map(r => ({
     id: crypto.randomUUID(),
     name: r.name,
@@ -994,13 +984,11 @@ export function createCampaignFromTemplate(
     notes: '',
   }));
 
-  // Build generation config
   const generationConfig: GenerationConfig = {
     ...createDefaultGenerationConfig(),
     ...template.generationConfig,
   };
 
-  // Build calendar/time
   const calendarPreset = template.calendarPreset;
   const calendar = CALENDAR_PRESETS[calendarPreset];
   const timeWeather = createDefaultTimeWeather(calendar);
@@ -1017,6 +1005,31 @@ export function createCampaignFromTemplate(
     generationConfig,
     timeWeather,
   };
+}
+
+/** Create a campaign pre-configured from a built-in template ID */
+export function createCampaignFromTemplate(
+  templateId: string,
+  name: string,
+  width: number,
+  height: number
+): Campaign {
+  const template = getTemplateById(templateId);
+  if (!template) {
+    return createCampaign(name, width, height);
+  }
+  return buildCampaignFromTemplate(template, name, width, height);
+}
+
+/** Create a campaign from an arbitrary template object (user/community templates).
+ *  Callers should apply customizations before passing the template. */
+export function createCampaignFromTemplateObject(
+  template: CampaignTemplate,
+  name: string,
+  width: number,
+  height: number
+): Campaign {
+  return buildCampaignFromTemplate(template, name, width, height);
 }
 
 // Aliases for CampaignContext

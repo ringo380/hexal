@@ -39,6 +39,7 @@ export type MenuCommand =
   | 'save-as'
   | 'export'
   | 'export-map'
+  | 'export-template'
   | 'undo'
   | 'redo'
   | 'open-player-view';
@@ -146,6 +147,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setSetting: (key: string, value: unknown): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke('set-setting', { key, value }),
 
+  // Template operations
+  listUserTemplates: (): Promise<{ fileName: string; filePath: string; modifiedAt: string; content: string | null }[]> =>
+    ipcRenderer.invoke('list-user-templates'),
+
+  saveUserTemplate: (envelope: string, fileName: string): Promise<{ success: boolean; filePath?: string; error?: string }> =>
+    ipcRenderer.invoke('save-user-template', { envelope, fileName }),
+
+  deleteUserTemplate: (filePath: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('delete-user-template', filePath),
+
+  importTemplateDialog: (): Promise<string | null> =>
+    ipcRenderer.invoke('import-template-dialog'),
+
+  exportTemplateDialog: (defaultName: string): Promise<string | null> =>
+    ipcRenderer.invoke('export-template-dialog', defaultName),
+
   // Web server operations
   startWebServer: (options?: { port?: number }): Promise<{ success: boolean; status?: WebServerStatusInfo; error?: string }> =>
     ipcRenderer.invoke('start-web-server', options),
@@ -179,6 +196,12 @@ declare global {
       notifyPlayerViewCampaignClosed: () => void;
       onPlayerViewUpdate: (callback: (data: unknown) => void) => () => void;
       onPlayerViewCampaignClosed: (callback: () => void) => () => void;
+      // Templates
+      listUserTemplates: () => Promise<{ fileName: string; filePath: string; modifiedAt: string }[]>;
+      saveUserTemplate: (envelope: string, fileName: string) => Promise<{ success: boolean; filePath?: string; error?: string }>;
+      deleteUserTemplate: (filePath: string) => Promise<{ success: boolean; error?: string }>;
+      importTemplateDialog: () => Promise<string | null>;
+      exportTemplateDialog: (defaultName: string) => Promise<string | null>;
       // Settings
       getSettings: () => Promise<Record<string, unknown>>;
       setSettings: (settings: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;

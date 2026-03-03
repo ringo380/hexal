@@ -2,8 +2,10 @@
 // Direct port from Swift CampaignStore using React Context + useReducer
 
 import React, { createContext, useContext, useReducer, useCallback, useMemo, useEffect, useRef } from 'react';
-import type { Campaign, Hex, HexCoordinate, HexMarker, MarkerType, Npc, EncounterTemplate, Region, Faction, Session, SessionLogEntry, TerrainType, Quest, StoryArc } from '../types';
-import { createCampaign, createCampaignFromTemplate, createHex, coordinateKey, createDefaultTimeWeather, createRegion, hexKey } from '../types';
+import type { Campaign, Hex, HexCoordinate, HexMarker, MarkerType, Npc, EncounterTemplate, Region, Faction, Session, SessionLogEntry, TerrainType, Quest, StoryArc, CampaignTemplate, TemplateCustomizations } from '../types';
+import { createCampaign, createCampaignFromTemplate, createCampaignFromTemplateObject, createHex, coordinateKey, createDefaultTimeWeather, createRegion, hexKey } from '../types';
+import { getTemplateById } from '../data/campaignTemplates';
+import { applyCustomizations } from '../services/templateService';
 import { migrateCampaign } from '../types/Campaign';
 import type { PersistenceAdapter } from '../services/persistence';
 import { createMarker, createCustomMarkerType, DEFAULT_MARKER_TYPES } from '../types/Markers';
@@ -627,7 +629,7 @@ function campaignReducer(state: CampaignState, action: CampaignAction): Campaign
 interface CampaignContextValue {
   state: CampaignState;
   // Campaign operations
-  newCampaign: (name: string, width: number, height: number, templateId?: string) => void;
+  newCampaign: (name: string, width: number, height: number, templateOrId?: string | CampaignTemplate, customizations?: TemplateCustomizations) => void;
   loadCampaign: (filePath: string) => Promise<void>;
   saveCampaign: () => Promise<void>;
   saveAs: () => Promise<void>;
@@ -769,10 +771,36 @@ export function CampaignProvider({ children, adapter }: { children: React.ReactN
   }, [state.hasUnsavedChanges, state.campaign, state.currentFilePath, adapter]);
 
   // Create new campaign
-  const newCampaign = useCallback((name: string, width: number, height: number, templateId?: string) => {
-    const campaign = templateId
-      ? createCampaignFromTemplate(templateId, name, width, height)
-      : createCampaign(name, width, height);
+  const newCampaign = useCallback((
+    name: string,
+    width: number,
+    height: number,
+    templateOrId?: string | CampaignTemplate,
+    customizations?: TemplateCustomizations
+  ) => {
+    let campaign: Campaign;
+    if (!templateOrId) {
+      campaign = createCampaign(name, width, height);
+    } else if (typeof templateOrId === 'string') {
+      // Built-in template by ID — apply customizations if provided
+      if (customizations) {
+        const tpl = getTemplateById(templateOrId);
+        if (tpl) {
+          const customized = applyCustomizations(tpl, customizations);
+          campaign = createCampaignFromTemplateObject(customized, name, width, height);
+        } else {
+          campaign = createCampaign(name, width, height);
+        }
+      } else {
+        campaign = createCampaignFromTemplate(templateOrId, name, width, height);
+      }
+    } else {
+      // Template object directly — apply customizations if provided
+      const effective = customizations
+        ? applyCustomizations(templateOrId, customizations)
+        : templateOrId;
+      campaign = createCampaignFromTemplateObject(effective, name, width, height);
+    }
     dispatch({ type: 'SET_CAMPAIGN', campaign });
   }, []);
 

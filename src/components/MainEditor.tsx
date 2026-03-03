@@ -33,6 +33,7 @@ import ProfileMenu from './auth/ProfileMenu';
 import ConnectionStatus from './ui/ConnectionStatus';
 import WebServerStatus from './player/WebServerStatus';
 import CreateRegionFromSelectionModal from './modals/CreateRegionFromSelectionModal';
+import ExportTemplateModal from './modals/ExportTemplateModal';
 import CommandPalette from './CommandPalette';
 import Icon from './icons/Icon';
 import { CATEGORY_INFO, type ContentCategory, parseHexKey } from '../types/Campaign';
@@ -41,9 +42,10 @@ import { useWeatherSimulation } from '../stores/WeatherSimulationContext';
 interface MainEditorProps {
   onRegisterExport?: (handler: () => void) => void;
   onRegisterMapExport?: (handler: () => void) => void;
+  onRegisterExportTemplate?: (handler: () => void) => void;
 }
 
-function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) {
+function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTemplate }: MainEditorProps) {
   const { campaign, saveStatus, saveError, saveCampaign, closeCampaign, hasUnsavedChanges, undo, redo, canUndo, canRedo, regions, updateCampaignData } = useCampaign();
   const { selectHex, multiSelectedKeys, clearMultiSelection } = useHexSelection();
   const {
@@ -78,6 +80,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
   const [showSettings, setShowSettings] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [showCreateRegion, setShowCreateRegion] = useState(false);
+  const [showExportTemplate, setShowExportTemplate] = useState(false);
 
   // Clear session-only UI state and stop weather simulation when campaign changes
   useEffect(() => {
@@ -122,6 +125,13 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
       onRegisterMapExport(() => setShowMapExport(true));
     }
   }, [onRegisterMapExport]);
+
+  // Register export template handler for menu command
+  useEffect(() => {
+    if (onRegisterExportTemplate) {
+      onRegisterExportTemplate(() => setShowExportTemplate(true));
+    }
+  }, [onRegisterExportTemplate]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -527,6 +537,9 @@ function MainEditor({ onRegisterExport, onRegisterMapExport }: MainEditorProps) 
             clearMultiSelection();
           }}
         />
+      )}
+      {showExportTemplate && (
+        <ExportTemplateModal onClose={() => setShowExportTemplate(false)} />
       )}
       {isCommandPaletteOpen && (
         <CommandPalette onClose={closeCommandPalette} />

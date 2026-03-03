@@ -37,6 +37,7 @@ type MenuCommand =
   | 'save-as'
   | 'export'
   | 'export-map'
+  | 'export-template'
   | 'undo'
   | 'redo'
   | 'open-player-view';
@@ -62,6 +63,12 @@ interface ElectronAPI {
   notifyPlayerViewCampaignClosed: () => void;
   onPlayerViewUpdate: (callback: (data: unknown) => void) => () => void;
   onPlayerViewCampaignClosed: (callback: () => void) => () => void;
+  // Templates
+  listUserTemplates: () => Promise<{ fileName: string; filePath: string; modifiedAt: string; content: string | null }[]>;
+  saveUserTemplate: (envelope: string, fileName: string) => Promise<{ success: boolean; filePath?: string; error?: string }>;
+  deleteUserTemplate: (filePath: string) => Promise<{ success: boolean; error?: string }>;
+  importTemplateDialog: () => Promise<string | null>;
+  exportTemplateDialog: (defaultName: string) => Promise<string | null>;
   // Settings
   getSettings: () => Promise<Record<string, unknown>>;
   setSettings: (settings: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
