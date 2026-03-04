@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import Icon from '../icons/Icon';
+import { useToast } from '../../stores/ToastContext';
 import { onActivate } from '../../utils/keyboard';
 import {
   DEFAULT_EXPORT_OPTIONS,
@@ -27,6 +28,7 @@ interface MapExportModalProps {
 function MapExportModal({ onClose, initialSelection }: MapExportModalProps) {
   const { campaign } = useCampaign();
   const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
+  const toast = useToast();
 
   // Export options state
   const [options, setOptions] = useState<MapExportOptions>(() => {
@@ -126,6 +128,7 @@ function MapExportModal({ onClose, initialSelection }: MapExportModalProps) {
 
       if (result.success) {
         setSuccess(true);
+        toast('Map exported successfully', { variant: 'success' });
         setTimeout(() => onClose(), 1500);
       } else {
         if (result.error !== 'Export cancelled') {
@@ -134,10 +137,12 @@ function MapExportModal({ onClose, initialSelection }: MapExportModalProps) {
         setIsExporting(false);
       }
     } catch (err) {
-      setError(`Export failed: ${err}`);
+      const message = `Export failed: ${err}`;
+      setError(message);
+      toast(message, { variant: 'error' });
       setIsExporting(false);
     }
-  }, [campaign, options, onClose]);
+  }, [campaign, options, onClose, toast]);
 
   // Handle Ctrl+Enter / Cmd+Enter to export
   useEffect(() => {
@@ -655,6 +660,11 @@ function MapExportModal({ onClose, initialSelection }: MapExportModalProps) {
           </div>
 
           {/* Status messages */}
+          {isExporting && (
+            <div className="progress-bar">
+              <div className="progress-fill progress-fill--indeterminate" />
+            </div>
+          )}
           {error && <div className="error-message">{error}</div>}
           {success && <div className="success-message">Export successful!</div>}
         </div>

@@ -41,6 +41,7 @@ function CampaignBrowser() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ path: string; name: string } | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
   const [syncTarget, setSyncTarget] = useState<string | null>(null);
+  const [loadingPath, setLoadingPath] = useState<string | null>(null);
 
   useEffect(() => {
     loadLocalCampaigns();
@@ -95,20 +96,26 @@ function CampaignBrowser() {
     try {
       const filePath = await window.electronAPI.openFileDialog();
       if (filePath) {
+        setLoadingPath(filePath);
         await loadCampaign(filePath);
       }
     } catch (err) {
       toast('Failed to open campaign', { variant: 'error' });
       console.error(err);
+    } finally {
+      setLoadingPath(null);
     }
   };
 
   const handleLoadCampaign = async (path: string) => {
+    setLoadingPath(path);
     try {
       await loadCampaign(path);
     } catch (err) {
       toast('Failed to load campaign', { variant: 'error' });
       console.error(err);
+    } finally {
+      setLoadingPath(null);
     }
   };
 
@@ -279,12 +286,16 @@ function CampaignBrowser() {
           </div>
         ) : (
           <ul className="campaign-list">
-            {campaigns.map((campaign) => (
-              <li key={campaign.path} className="campaign-item">
+            {campaigns.map((campaign) => {
+              const isItemLoading = loadingPath === campaign.path;
+              return (
+              <li key={campaign.path} className={`campaign-item ${isItemLoading ? 'campaign-item--loading' : ''}`}>
                 <button
                   className="campaign-button"
                   onClick={() => handleLoadCampaign(campaign.path)}
+                  disabled={loadingPath !== null}
                 >
+                  {isItemLoading && <span className="loading-spinner" />}
                   <span className="campaign-name">{campaign.name}</span>
                   <span className="campaign-meta">
                     <span className={`campaign-badge campaign-badge--local ${isAuthenticated && isUploadedToCloud(campaign.path, campaign.name) ? 'campaign-badge--synced' : ''}`}>
@@ -321,7 +332,8 @@ function CampaignBrowser() {
                   </button>
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </div>

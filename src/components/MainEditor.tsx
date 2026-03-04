@@ -38,6 +38,8 @@ import CommandPalette from './CommandPalette';
 import Icon from './icons/Icon';
 import { CATEGORY_INFO, type ContentCategory, parseHexKey } from '../types/Campaign';
 import { useWeatherSimulation } from '../stores/WeatherSimulationContext';
+import { useToast } from '../stores/ToastContext';
+import { useTimeSince } from '../hooks/useTimeSince';
 
 interface MainEditorProps {
   onRegisterExport?: (handler: () => void) => void;
@@ -46,7 +48,9 @@ interface MainEditorProps {
 }
 
 function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTemplate }: MainEditorProps) {
-  const { campaign, saveStatus, saveError, saveCampaign, closeCampaign, hasUnsavedChanges, undo, redo, canUndo, canRedo, regions, updateCampaignData } = useCampaign();
+  const { campaign, saveStatus, saveError, lastSavedAt, saveCampaign, closeCampaign, hasUnsavedChanges, undo, redo, canUndo, canRedo, regions, updateCampaignData } = useCampaign();
+  const toast = useToast();
+  const timeSince = useTimeSince(lastSavedAt);
   const { selectHex, multiSelectedKeys, clearMultiSelection } = useHexSelection();
   const {
     searchQuery, setSearchQuery, clearFilters,
@@ -113,6 +117,15 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
     }, 10000);
     return () => clearInterval(interval);
   }, [weatherSim.isRunning, campaign?.weatherSimulation?.config]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Toast on save error
+  const prevSaveError = useRef(false);
+  useEffect(() => {
+    if (saveError && !prevSaveError.current) {
+      toast('Failed to save campaign — check disk space or permissions', { variant: 'error' });
+    }
+    prevSaveError.current = saveError;
+  }, [saveError, toast]);
 
   // Register export handler for menu command
   useEffect(() => {
@@ -216,8 +229,8 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
   const getSaveStatusContent = () => {
     if (saveError) return <><Icon name="alert-triangle" size={12} /> Save failed</>;
     switch (saveStatus) {
-      case 'saved': return <><Icon name="check" size={12} /> Saved</>;
-      case 'saving': return 'Saving...';
+      case 'saved': return <><Icon name="check" size={12} /> {timeSince ? `Saved ${timeSince}` : 'Saved'}</>;
+      case 'saving': return <><span className="loading-spinner loading-spinner--sm" /> Saving...</>;
       case 'unsaved': return <><Icon name="circle-filled" size={10} /> Unsaved</>;
     }
   };
