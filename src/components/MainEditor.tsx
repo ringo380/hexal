@@ -81,10 +81,12 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
   const [showLogin, setShowLogin] = useState(false);
   const [showCreateRegion, setShowCreateRegion] = useState(false);
   const [showExportTemplate, setShowExportTemplate] = useState(false);
+  const [exportSelection, setExportSelection] = useState<Set<string> | null>(null);
 
   // Clear session-only UI state and stop weather simulation when campaign changes
   useEffect(() => {
     clearMultiSelection();
+    setExportSelection(null);
     setLayerVisibility(DEFAULT_LAYER_VISIBILITY);
     if (weatherSim.isRunning) {
       weatherSim.stopSimulation();
@@ -443,7 +445,13 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
           <Sidebar />
         </div>
         <div className="grid-panel" id="main-content" tabIndex={-1}>
-          <HexGrid onCreateRegionFromSelection={() => setShowCreateRegion(true)} />
+          <HexGrid
+            onCreateRegionFromSelection={() => setShowCreateRegion(true)}
+            onExportSelection={() => {
+              setExportSelection(new Set(multiSelectedKeys));
+              setShowMapExport(true);
+            }}
+          />
         </div>
         <div className="detail-panel">
           <HexDetail onOpenQuestManager={() => setShowQuestManager(true)} />
@@ -458,7 +466,10 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
         <ExportModal onClose={() => setShowExport(false)} />
       )}
       {showMapExport && (
-        <MapExportModal onClose={() => setShowMapExport(false)} />
+        <MapExportModal
+          onClose={() => { setShowMapExport(false); setExportSelection(null); }}
+          initialSelection={exportSelection}
+        />
       )}
       {showTimeControls && (
         <TimeControlsModal onClose={() => setShowTimeControls(false)} />

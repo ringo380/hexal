@@ -5,10 +5,11 @@ interface HexContextMenuProps {
   y: number;
   selectionCount: number;
   onCreateRegion: () => void;
+  onExportSelected: () => void;
   onClose: () => void;
 }
 
-function HexContextMenu({ x, y, selectionCount, onCreateRegion, onClose }: HexContextMenuProps) {
+function HexContextMenu({ x, y, selectionCount, onCreateRegion, onExportSelected, onClose }: HexContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close on outside click — check event target against our ref
@@ -36,6 +37,15 @@ function HexContextMenu({ x, y, selectionCount, onCreateRegion, onClose }: HexCo
         }}
       >
         Create Region from {selectionCount} hex{selectionCount !== 1 ? 'es' : ''}
+      </button>
+      <button
+        className="hex-context-menu-item"
+        onClick={() => {
+          onExportSelected();
+          onClose();
+        }}
+      >
+        Export {selectionCount} hex{selectionCount !== 1 ? 'es' : ''} as image...
       </button>
     </div>
   );

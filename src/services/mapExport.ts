@@ -15,9 +15,9 @@ import {
 import {
   createRenderConfig,
   calculateExportDimensions,
-  renderExportCanvas
+  renderExportCanvas,
+  resolveExportRegion
 } from './hexRenderer';
-import { canvasSize } from './hexGeometry';
 
 // Re-export for convenience
 export { DEFAULT_EXPORT_OPTIONS, EXPORT_PRESETS };
@@ -81,8 +81,9 @@ export function estimateFileSize(
   campaign: Campaign,
   options: MapExportOptions
 ): { min: string; max: string } {
-  const baseSize = canvasSize(campaign.gridWidth, campaign.gridHeight);
-  const pixels = baseSize.width * baseSize.height * options.scale * options.scale;
+  const regionHexKeys = resolveExportRegion(options.region, campaign.gridWidth, campaign.gridHeight);
+  const dims = calculateExportDimensions(campaign, options, regionHexKeys);
+  const pixels = dims.width * dims.height * options.scale * options.scale;
 
   // Rough estimates based on format and compression
   let bytesPerPixel: { min: number; max: number };
@@ -133,8 +134,9 @@ export async function exportAsImage(
   // Create render config
   const config = createRenderConfig(options);
 
-  // Calculate dimensions
-  const dims = calculateExportDimensions(campaign, options);
+  // Resolve region and calculate dimensions
+  const regionHexKeys = resolveExportRegion(options.region, campaign.gridWidth, campaign.gridHeight);
+  const dims = calculateExportDimensions(campaign, options, regionHexKeys);
 
   // Create offscreen canvas at scaled resolution
   const canvas = document.createElement('canvas');
@@ -172,8 +174,9 @@ export async function exportAsPDF(
   const printableWidth = pageDims.width - options.margins * 2;
   const printableHeight = pageDims.height - options.margins * 2;
 
-  // Calculate map dimensions
-  const mapDims = calculateExportDimensions(campaign, options);
+  // Calculate map dimensions (region-aware)
+  const regionHexKeys = resolveExportRegion(options.region, campaign.gridWidth, campaign.gridHeight);
+  const mapDims = calculateExportDimensions(campaign, options, regionHexKeys);
 
   // Dynamically import jsPDF to keep it out of the main bundle
   const { jsPDF: JsPDF } = await import('jspdf');
@@ -230,7 +233,7 @@ async function exportAsPDFMultiPage(
   pageDims: { width: number; height: number },
   printableWidth: number,
   printableHeight: number,
-  mapDims: { width: number; height: number; mapWidth: number; mapHeight: number; offsetX: number; offsetY: number }
+  mapDims: { width: number; height: number; mapWidth: number; mapHeight: number; offsetX: number; offsetY: number; regionOffsetX: number; regionOffsetY: number }
 ): Promise<void> {
   // Calculate how many pages we need
   // Use 1:1 scale (1 pixel = 0.264583mm at 96 DPI)
@@ -326,8 +329,9 @@ export function generatePreview(
   maxWidth: number,
   maxHeight: number
 ): HTMLCanvasElement {
-  // Calculate preview dimensions
-  const mapDims = calculateExportDimensions(campaign, options);
+  // Calculate preview dimensions (region-aware)
+  const regionHexKeys = resolveExportRegion(options.region, campaign.gridWidth, campaign.gridHeight);
+  const mapDims = calculateExportDimensions(campaign, options, regionHexKeys);
 
   // Calculate scale to fit in preview area
   const scaleX = maxWidth / mapDims.width;

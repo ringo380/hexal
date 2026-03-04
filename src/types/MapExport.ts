@@ -25,16 +25,19 @@ export type PageOrientation = 'portrait' | 'landscape';
 
 /**
  * Export region selection.
- * NOTE: Custom region filtering is not yet implemented - exports always use 'full'.
- * This interface is reserved for future region-based export functionality.
+ * - 'full': Export the entire grid
+ * - 'custom': Export a rectangular region defined by coordinate bounds
+ * - 'selection': Export only the specified hex keys
  */
 export interface ExportRegion {
-  type: 'full' | 'custom';
-  // For custom region (inclusive bounds) - reserved for future implementation
+  type: 'full' | 'custom' | 'selection';
+  // For custom region (inclusive coordinate bounds)
   minQ?: number;
   maxQ?: number;
   minR?: number;
   maxR?: number;
+  // For selection-based export (explicit hex keys)
+  hexKeys?: string[];
 }
 
 // Main export options interface
@@ -67,7 +70,7 @@ export interface MapExportOptions {
   customTitle?: string;         // Override campaign name
   scaleText?: string;           // e.g., "1 hex = 6 miles"
 
-  /** Region to export. NOTE: Custom regions not yet implemented - always exports full grid. */
+  /** Region to export (full grid, custom bounds, or explicit hex selection). */
   region: ExportRegion;
 
   // PDF-specific settings
