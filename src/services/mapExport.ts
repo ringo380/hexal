@@ -233,7 +233,7 @@ async function exportAsPDFMultiPage(
   pageDims: { width: number; height: number },
   printableWidth: number,
   printableHeight: number,
-  mapDims: { width: number; height: number; mapWidth: number; mapHeight: number; offsetX: number; offsetY: number }
+  mapDims: { width: number; height: number; mapWidth: number; mapHeight: number; offsetX: number; offsetY: number; regionOffsetX: number; regionOffsetY: number }
 ): Promise<void> {
   // Calculate how many pages we need
   // Use 1:1 scale (1 pixel = 0.264583mm at 96 DPI)

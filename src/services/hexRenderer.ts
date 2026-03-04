@@ -222,6 +222,10 @@ export function resolveExportRegion(
 export function calculateRegionBounds(
   hexKeys: Set<string>
 ): { minX: number; minY: number; maxX: number; maxY: number } {
+  if (hexKeys.size === 0) {
+    return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+  }
+
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;

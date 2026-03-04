@@ -2158,7 +2158,7 @@ label {
   overflow: hidden;
 }
 
-.section-header {
+.export-section .section-header {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2168,22 +2168,22 @@ label {
   transition: background-color 0.15s;
 }
 
-.section-header:hover {
+.export-section .section-header:hover {
   background-color: var(--bg-hover);
 }
 
-.section-icon {
+.export-section .section-icon {
   font-size: 10px;
   color: var(--text-muted);
 }
 
-.section-title {
+.export-section .section-title {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
 }
 
-.section-content {
+.export-section .section-content {
   padding: 12px 14px;
   padding-top: 0;
   display: flex;

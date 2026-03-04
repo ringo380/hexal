@@ -86,6 +86,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
   // Clear session-only UI state and stop weather simulation when campaign changes
   useEffect(() => {
     clearMultiSelection();
+    setExportSelection(null);
     setLayerVisibility(DEFAULT_LAYER_VISIBILITY);
     if (weatherSim.isRunning) {
       weatherSim.stopSimulation();

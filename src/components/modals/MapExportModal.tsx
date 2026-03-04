@@ -82,7 +82,7 @@ function MapExportModal({ onClose, initialSelection }: MapExportModalProps) {
   const handlePresetSelect = (presetId: string) => {
     const preset = EXPORT_PRESETS.find(p => p.id === presetId);
     if (preset) {
-      setOptions({ ...DEFAULT_EXPORT_OPTIONS, ...preset.options });
+      setOptions(prev => ({ ...DEFAULT_EXPORT_OPTIONS, ...preset.options, region: prev.region }));
       setActivePreset(presetId);
     }
   };
@@ -245,58 +245,66 @@ function MapExportModal({ onClose, initialSelection }: MapExportModalProps) {
                 {options.region.type === 'custom' && (
                   <div className="option-row coord-inputs">
                     <div className="coord-field">
-                      <label>Min Q</label>
+                      <label htmlFor="export-minQ">Min Q</label>
                       <input
+                        id="export-minQ"
                         type="number"
                         min={0}
                         max={campaign.gridWidth - 1}
                         value={options.region.minQ ?? 0}
-                        onChange={(e) => updateOption('region', {
-                          ...options.region,
-                          minQ: Math.max(0, Math.min(parseInt(e.target.value) || 0, campaign.gridWidth - 1))
-                        } as ExportRegion)}
+                        onChange={(e) => {
+                          const v = Math.max(0, Math.min(parseInt(e.target.value) || 0, campaign.gridWidth - 1));
+                          const maxQ = options.region.maxQ ?? campaign.gridWidth - 1;
+                          updateOption('region', { ...options.region, minQ: v, maxQ: Math.max(v, maxQ) } as ExportRegion);
+                        }}
                         className="coord-input"
                       />
                     </div>
                     <div className="coord-field">
-                      <label>Max Q</label>
+                      <label htmlFor="export-maxQ">Max Q</label>
                       <input
+                        id="export-maxQ"
                         type="number"
                         min={0}
                         max={campaign.gridWidth - 1}
                         value={options.region.maxQ ?? campaign.gridWidth - 1}
-                        onChange={(e) => updateOption('region', {
-                          ...options.region,
-                          maxQ: Math.max(0, Math.min(parseInt(e.target.value) || 0, campaign.gridWidth - 1))
-                        } as ExportRegion)}
+                        onChange={(e) => {
+                          const v = Math.max(0, Math.min(parseInt(e.target.value) || 0, campaign.gridWidth - 1));
+                          const minQ = options.region.minQ ?? 0;
+                          updateOption('region', { ...options.region, maxQ: v, minQ: Math.min(v, minQ) } as ExportRegion);
+                        }}
                         className="coord-input"
                       />
                     </div>
                     <div className="coord-field">
-                      <label>Min R</label>
+                      <label htmlFor="export-minR">Min R</label>
                       <input
+                        id="export-minR"
                         type="number"
                         min={0}
                         max={campaign.gridHeight - 1}
                         value={options.region.minR ?? 0}
-                        onChange={(e) => updateOption('region', {
-                          ...options.region,
-                          minR: Math.max(0, Math.min(parseInt(e.target.value) || 0, campaign.gridHeight - 1))
-                        } as ExportRegion)}
+                        onChange={(e) => {
+                          const v = Math.max(0, Math.min(parseInt(e.target.value) || 0, campaign.gridHeight - 1));
+                          const maxR = options.region.maxR ?? campaign.gridHeight - 1;
+                          updateOption('region', { ...options.region, minR: v, maxR: Math.max(v, maxR) } as ExportRegion);
+                        }}
                         className="coord-input"
                       />
                     </div>
                     <div className="coord-field">
-                      <label>Max R</label>
+                      <label htmlFor="export-maxR">Max R</label>
                       <input
+                        id="export-maxR"
                         type="number"
                         min={0}
                         max={campaign.gridHeight - 1}
                         value={options.region.maxR ?? campaign.gridHeight - 1}
-                        onChange={(e) => updateOption('region', {
-                          ...options.region,
-                          maxR: Math.max(0, Math.min(parseInt(e.target.value) || 0, campaign.gridHeight - 1))
-                        } as ExportRegion)}
+                        onChange={(e) => {
+                          const v = Math.max(0, Math.min(parseInt(e.target.value) || 0, campaign.gridHeight - 1));
+                          const minR = options.region.minR ?? 0;
+                          updateOption('region', { ...options.region, maxR: v, minR: Math.min(v, minR) } as ExportRegion);
+                        }}
                         className="coord-input"
                       />
                     </div>
