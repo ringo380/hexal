@@ -196,12 +196,18 @@ export function resolveExportRegion(
           }
         }
       }
-      return keys;
+      return keys.size > 0 ? keys : null;
     }
 
     case 'selection': {
       if (!region.hexKeys || region.hexKeys.length === 0) return null;
-      return new Set(region.hexKeys);
+      const valid = region.hexKeys.filter(k => {
+        const [qStr, rStr] = k.split(',');
+        const q = parseInt(qStr, 10);
+        const r = parseInt(rStr, 10);
+        return !isNaN(q) && !isNaN(r) && q >= 0 && q < gridWidth && r >= 0 && r < gridHeight;
+      });
+      return valid.length > 0 ? new Set(valid) : null;
     }
 
     default:
