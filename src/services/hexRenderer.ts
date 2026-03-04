@@ -2,7 +2,7 @@
 // Extracted from HexGrid.tsx to enable reuse across live view and export
 
 import type { Campaign, Hex, HexCoordinate, ContentCategory, HexMarker, MarkerType, MarkerPosition } from '../types';
-import type { RenderConfig, ColorMode, MapExportOptions } from '../types/MapExport';
+import type { RenderConfig, ColorMode, MapExportOptions, ExportRegion } from '../types/MapExport';
 import { getMarkerColor, getMarkerIcon } from '../types/Markers';
 import { hexToRgba, lightenColor, colorToGrayscale } from './colorUtils';
 
@@ -167,17 +167,110 @@ export function truncateForHex(text: string, fontSize: number, zoomLevel: number
 }
 
 // ============================================================================
+// Region Resolution & Bounds
+// ============================================================================
+
+/**
+ * Resolve an ExportRegion to a set of hex keys to include.
+ * Returns null for 'full' (all hexes), or a Set<string> for filtered exports.
+ */
+export function resolveExportRegion(
+  region: ExportRegion,
+  gridWidth: number,
+  gridHeight: number
+): Set<string> | null {
+  switch (region.type) {
+    case 'full':
+      return null;
+
+    case 'custom': {
+      const minQ = region.minQ ?? 0;
+      const maxQ = region.maxQ ?? gridWidth - 1;
+      const minR = region.minR ?? 0;
+      const maxR = region.maxR ?? gridHeight - 1;
+      const keys = new Set<string>();
+      for (let q = minQ; q <= maxQ; q++) {
+        for (let r = minR; r <= maxR; r++) {
+          if (q >= 0 && q < gridWidth && r >= 0 && r < gridHeight) {
+            keys.add(`${q},${r}`);
+          }
+        }
+      }
+      return keys;
+    }
+
+    case 'selection': {
+      if (!region.hexKeys || region.hexKeys.length === 0) return null;
+      return new Set(region.hexKeys);
+    }
+
+    default:
+      return null;
+  }
+}
+
+/**
+ * Calculate pixel bounds for a set of hex keys.
+ * Uses hexCenter() for each key and pads by HEX_SIZE to cover full hex area.
+ */
+export function calculateRegionBounds(
+  hexKeys: Set<string>
+): { minX: number; minY: number; maxX: number; maxY: number } {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  hexKeys.forEach(key => {
+    const parts = key.split(',');
+    const q = parseInt(parts[0], 10);
+    const r = parseInt(parts[1], 10);
+    if (isNaN(q) || isNaN(r)) return;
+
+    const center = hexCenter({ q, r });
+    if (center.x - HEX_SIZE < minX) minX = center.x - HEX_SIZE;
+    if (center.y - HEX_SIZE < minY) minY = center.y - HEX_SIZE;
+    if (center.x + HEX_SIZE > maxX) maxX = center.x + HEX_SIZE;
+    if (center.y + HEX_SIZE > maxY) maxY = center.y + HEX_SIZE;
+  });
+
+  return { minX, minY, maxX, maxY };
+}
+
+// ============================================================================
 // Dimension Calculations
 // ============================================================================
 
 /**
- * Calculate dimensions for export canvas including margins for title/legend
+ * Calculate dimensions for export canvas including margins for title/legend.
+ * When regionHexKeys is provided (non-null), dimensions are scoped to those hexes.
  */
 export function calculateExportDimensions(
   campaign: Campaign,
-  options: MapExportOptions
-): { width: number; height: number; mapWidth: number; mapHeight: number; offsetX: number; offsetY: number } {
-  const baseSize = canvasSize(campaign.gridWidth, campaign.gridHeight);
+  options: MapExportOptions,
+  regionHexKeys?: Set<string> | null
+): {
+  width: number; height: number;
+  mapWidth: number; mapHeight: number;
+  offsetX: number; offsetY: number;
+  regionOffsetX: number; regionOffsetY: number;
+} {
+  let mapWidth: number;
+  let mapHeight: number;
+  let regionOffsetX = 0;
+  let regionOffsetY = 0;
+
+  if (regionHexKeys) {
+    const bounds = calculateRegionBounds(regionHexKeys);
+    mapWidth = bounds.maxX - bounds.minX;
+    mapHeight = bounds.maxY - bounds.minY;
+    regionOffsetX = -bounds.minX;
+    regionOffsetY = -bounds.minY;
+  } else {
+    const baseSize = canvasSize(campaign.gridWidth, campaign.gridHeight);
+    mapWidth = baseSize.width;
+    mapHeight = baseSize.height;
+  }
 
   let offsetX = 0;
   let offsetY = 0;
@@ -201,12 +294,14 @@ export function calculateExportDimensions(
   }
 
   return {
-    width: baseSize.width + extraWidth,
-    height: baseSize.height + extraHeight,
-    mapWidth: baseSize.width,
-    mapHeight: baseSize.height,
+    width: mapWidth + extraWidth,
+    height: mapHeight + extraHeight,
+    mapWidth,
+    mapHeight,
     offsetX,
-    offsetY
+    offsetY,
+    regionOffsetX,
+    regionOffsetY
   };
 }
 
@@ -215,7 +310,8 @@ export function calculateExportDimensions(
 // ============================================================================
 
 /**
- * Render the complete hex grid to a canvas context
+ * Render the complete hex grid to a canvas context.
+ * When regionHexKeys is provided (non-null), only hexes in the set are rendered.
  */
 export function renderHexGrid(
   ctx: CanvasRenderingContext2D,
@@ -223,17 +319,20 @@ export function renderHexGrid(
   config: RenderConfig,
   getTerrainColor: (terrain: string) => string,
   offsetX: number = 0,
-  offsetY: number = 0
+  offsetY: number = 0,
+  regionHexKeys?: Set<string> | null
 ): void {
   // Apply offset transform
   ctx.save();
   ctx.translate(offsetX, offsetY);
 
-  // Draw all hexes
+  // Draw all hexes (filtered by region if provided)
   for (let q = 0; q < campaign.gridWidth; q++) {
     for (let r = 0; r < campaign.gridHeight; r++) {
-      const coord: HexCoordinate = { q, r };
       const key = `${q},${r}`;
+      if (regionHexKeys && !regionHexKeys.has(key)) continue;
+
+      const coord: HexCoordinate = { q, r };
       const hex = campaign.hexes[key] || null;
 
       renderSingleHex(ctx, hex, coord, getTerrainColor, config);
@@ -244,6 +343,8 @@ export function renderHexGrid(
   for (let q = 0; q < campaign.gridWidth; q++) {
     for (let r = 0; r < campaign.gridHeight; r++) {
       const key = `${q},${r}`;
+      if (regionHexKeys && !regionHexKeys.has(key)) continue;
+
       const hex = campaign.hexes[key];
       if (hex) {
         renderConnections(ctx, hex, hexCenter({ q, r }));
@@ -941,7 +1042,14 @@ export function renderExportCanvas(
   options: MapExportOptions,
   config: RenderConfig
 ): void {
-  const dims = calculateExportDimensions(campaign, options);
+  // Resolve region to a set of hex keys (null = full grid)
+  const regionHexKeys = resolveExportRegion(
+    options.region,
+    campaign.gridWidth,
+    campaign.gridHeight
+  );
+
+  const dims = calculateExportDimensions(campaign, options, regionHexKeys);
 
   // Get terrain color function
   const getTerrainColor = (terrain: string): string => {
@@ -959,8 +1067,10 @@ export function renderExportCanvas(
     renderTitle(ctx, title, dims.width, 10, config);
   }
 
-  // Render hex grid
-  renderHexGrid(ctx, campaign, config, getTerrainColor, dims.offsetX, dims.offsetY);
+  // Render hex grid with region offset + title/legend offset combined
+  const totalOffsetX = dims.offsetX + dims.regionOffsetX;
+  const totalOffsetY = dims.offsetY + dims.regionOffsetY;
+  renderHexGrid(ctx, campaign, config, getTerrainColor, totalOffsetX, totalOffsetY, regionHexKeys);
 
   // Render legend
   if (options.showLegend) {
