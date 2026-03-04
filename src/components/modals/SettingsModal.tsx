@@ -115,7 +115,7 @@ function SettingsModal({ onClose }: SettingsModalProps) {
       >
         <div className="modal-header">
           <h3 id="settings-modal-title">Settings</h3>
-          <button className="modal-close" onClick={onClose} aria-label="Close">×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
         </div>
 
         <div className="settings-tabs">

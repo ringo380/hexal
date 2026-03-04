@@ -9,6 +9,7 @@ import { createEncounter, instantiateFromTemplate } from '../types/Campaign';
 import { deleteNpcCleanup } from '../services/npcService';
 import { getQuestsForHex, removeNpcFromQuests, removeEncounterFromQuests, removeClueFromQuests } from '../services/questService';
 import { getEntriesForHex } from '../services/sessionLog';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import ConfirmDialog from './modals/ConfirmDialog';
 import { getMarkerType, getMarkerColor, getMarkerIcon } from '../types/Markers';
 import ContentItemRow from './ui/ContentItemRow';
@@ -714,6 +715,7 @@ interface ContentItemEditorProps {
 }
 
 function ContentItemEditor({ item, category, onSave, onClose }: ContentItemEditorProps) {
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
   const [title, setTitle] = useState(item.title);
   const [description, setDescription] = useState(item.description);
   const [difficulty, setDifficulty] = useState(item.difficulty ?? '');
@@ -728,10 +730,10 @@ function ContentItemEditor({ item, category, onSave, onClose }: ContentItemEdito
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="content-item-editor-title">
+      <div ref={focusTrapRef} className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Edit {categoryConfig[category].title.slice(0, -1)}</h3>
+          <h3 id="content-item-editor-title">Edit {categoryConfig[category].title.slice(0, -1)}</h3>
           <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="modal-body">
