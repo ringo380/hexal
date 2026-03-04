@@ -352,8 +352,9 @@ function GenerationTab({ template, customizations, onChange }: TemplateCustomize
   return (
     <div>
       <div className="gen-config-row">
-        <label>Biome Clustering</label>
+        <label htmlFor="gen-biome-clustering">Biome Clustering</label>
         <input
+          id="gen-biome-clustering"
           type="range"
           min="0"
           max="1"
@@ -366,8 +367,9 @@ function GenerationTab({ template, customizations, onChange }: TemplateCustomize
         </span>
       </div>
       <div className="gen-config-row">
-        <label>Encounter Density</label>
+        <label htmlFor="gen-encounter-density">Encounter Density</label>
         <input
+          id="gen-encounter-density"
           type="range"
           min="0"
           max="1"
@@ -380,8 +382,9 @@ function GenerationTab({ template, customizations, onChange }: TemplateCustomize
         </span>
       </div>
       <div className="gen-config-row">
-        <label>Landmark Density</label>
+        <label htmlFor="gen-landmark-density">Landmark Density</label>
         <input
+          id="gen-landmark-density"
           type="range"
           min="0"
           max="1"
@@ -394,8 +397,9 @@ function GenerationTab({ template, customizations, onChange }: TemplateCustomize
         </span>
       </div>
       <div className="gen-config-row">
-        <label>Terrain Variety</label>
+        <label htmlFor="gen-terrain-variety">Terrain Variety</label>
         <input
+          id="gen-terrain-variety"
           type="range"
           min="0"
           max="1"
@@ -408,8 +412,9 @@ function GenerationTab({ template, customizations, onChange }: TemplateCustomize
         </span>
       </div>
       <div className="gen-config-row">
-        <label>Seed</label>
+        <label htmlFor="gen-seed">Seed</label>
         <input
+          id="gen-seed"
           type="text"
           placeholder="Random"
           value={genConfig.seed ?? ''}
@@ -417,8 +422,9 @@ function GenerationTab({ template, customizations, onChange }: TemplateCustomize
         />
       </div>
       <div className="gen-config-row">
-        <label>Calendar</label>
+        <label htmlFor="gen-calendar">Calendar</label>
         <select
+          id="gen-calendar"
           value={customizations.calendarPreset ?? template.calendarPreset}
           onChange={(e) => onChange({ ...customizations, calendarPreset: e.target.value as CalendarPreset })}
         >

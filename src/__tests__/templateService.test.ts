@@ -178,6 +178,20 @@ describe('templateService', () => {
       expect(result.terrainTypes[0].name).toBe('Savanna');
     });
 
+    it('preserves and renames encounter/landmark tables when terrain is renamed', () => {
+      const template = buildTestTemplate();
+      const customizations = createDefaultCustomizations();
+      customizations.terrainNameOverrides['tt-1'] = 'Savanna';
+
+      const result = applyCustomizations(template, customizations);
+      // Encounter table for Plains should still exist, renamed to Savanna
+      expect(result.encounterTables).toHaveLength(1);
+      expect(result.encounterTables[0].terrain).toBe('Savanna');
+      // Landmark table for Plains should still exist, renamed to Savanna
+      expect(result.landmarkTables).toHaveLength(1);
+      expect(result.landmarkTables[0].terrain).toBe('Savanna');
+    });
+
     it('filters disabled factions', () => {
       const template = buildTestTemplate();
       const customizations = createDefaultCustomizations();

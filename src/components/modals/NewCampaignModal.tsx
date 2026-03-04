@@ -367,11 +367,14 @@ function TemplateGallery({ onSelect }: TemplateGalleryProps) {
           ) : (
             <div className="template-gallery">
               {userTemplates.map(item => (
-                <button
+                <div
                   key={item.filePath}
                   className="template-card template-card-user"
                   style={{ borderLeftColor: item.template.accentColor }}
                   onClick={() => onSelect(item.template, 'user')}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(item.template, 'user'); } }}
+                  role="button"
+                  tabIndex={0}
                   aria-label={item.template.name}
                 >
                   <div className="template-card-icon" style={{ color: item.template.accentColor }}>
@@ -393,7 +396,7 @@ function TemplateGallery({ onSelect }: TemplateGalleryProps) {
                   >
                     ×
                   </button>
-                </button>
+                </div>
               ))}
             </div>
           )}
@@ -496,6 +499,7 @@ function CommunityTab({ onSelect }: { onSelect: (template: CampaignTemplate) => 
           placeholder="Search by name or tags..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          aria-label="Search community templates"
         />
       </div>
       <div className="template-gallery">

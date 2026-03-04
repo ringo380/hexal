@@ -197,7 +197,7 @@ declare global {
       onPlayerViewUpdate: (callback: (data: unknown) => void) => () => void;
       onPlayerViewCampaignClosed: (callback: () => void) => () => void;
       // Templates
-      listUserTemplates: () => Promise<{ fileName: string; filePath: string; modifiedAt: string }[]>;
+      listUserTemplates: () => Promise<{ fileName: string; filePath: string; modifiedAt: string; content: string | null }[]>;
       saveUserTemplate: (envelope: string, fileName: string) => Promise<{ success: boolean; filePath?: string; error?: string }>;
       deleteUserTemplate: (filePath: string) => Promise<{ success: boolean; error?: string }>;
       importTemplateDialog: () => Promise<string | null>;

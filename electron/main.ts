@@ -487,7 +487,10 @@ ipcMain.handle('save-user-template', async (_event, { envelope, fileName }: { en
   try {
     const folder = getTemplatesFolder();
     const safeName = fileName.endsWith('.hexal-template') ? fileName : `${fileName}.hexal-template`;
-    const filePath = path.join(folder, safeName);
+    const filePath = path.resolve(folder, safeName);
+    if (!filePath.startsWith(folder + path.sep)) {
+      return { success: false, error: 'Invalid file name' };
+    }
     fs.writeFileSync(filePath, envelope, 'utf-8');
     return { success: true, filePath };
   } catch (err: any) {
@@ -500,7 +503,7 @@ ipcMain.handle('delete-user-template', async (_event, filePath: string) => {
   try {
     // Safety: only delete files inside the templates folder
     const folder = getTemplatesFolder();
-    if (!filePath.startsWith(folder)) {
+    if (!filePath.startsWith(folder + path.sep)) {
       return { success: false, error: 'File is not in the templates folder' };
     }
     fs.unlinkSync(filePath);
@@ -512,7 +515,7 @@ ipcMain.handle('delete-user-template', async (_event, filePath: string) => {
 
 // Open file dialog to import a .hexal-template
 ipcMain.handle('import-template-dialog', async () => {
-  const win = BrowserWindow.getFocusedWindow();
+  const win = activeWindow ?? BrowserWindow.getFocusedWindow();
   if (!win) return null;
 
   const result = await dialog.showOpenDialog(win, {
@@ -535,7 +538,7 @@ ipcMain.handle('import-template-dialog', async () => {
 
 // Save dialog for exporting a .hexal-template
 ipcMain.handle('export-template-dialog', async (_event, defaultName: string) => {
-  const win = BrowserWindow.getFocusedWindow();
+  const win = activeWindow ?? BrowserWindow.getFocusedWindow();
   if (!win) return null;
 
   const safeName = defaultName.endsWith('.hexal-template') ? defaultName : `${defaultName}.hexal-template`;

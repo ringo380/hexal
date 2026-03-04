@@ -257,15 +257,25 @@ export function applyCustomizations(
   template: CampaignTemplate,
   customizations: TemplateCustomizations
 ): CampaignTemplate {
-  const terrainTypes = template.terrainTypes
-    .filter(t => !customizations.disabledTerrainIds.has(t.id))
-    .map(t => ({
-      ...t,
-      name: customizations.terrainNameOverrides[t.id] ?? t.name,
-    }));
+  const enabledTerrains = template.terrainTypes
+    .filter(t => !customizations.disabledTerrainIds.has(t.id));
 
-  // Build set of enabled terrain names for filtering encounter/landmark tables
-  const enabledTerrainNames = new Set(terrainTypes.map(t => t.name));
+  // Map original terrain name → new name for renaming encounter/landmark tables
+  const terrainRenameMap = new Map<string, string>();
+  for (const t of enabledTerrains) {
+    const newName = customizations.terrainNameOverrides[t.id];
+    if (newName && newName !== t.name) {
+      terrainRenameMap.set(t.name, newName);
+    }
+  }
+
+  const terrainTypes = enabledTerrains.map(t => ({
+    ...t,
+    name: customizations.terrainNameOverrides[t.id] ?? t.name,
+  }));
+
+  // Build set of enabled original terrain names for filtering encounter/landmark tables
+  const enabledOriginalTerrainNames = new Set(enabledTerrains.map(t => t.name));
 
   const factions = template.factions
     .filter((_, i) => !customizations.disabledFactionIndices.has(i))
@@ -292,15 +302,25 @@ export function applyCustomizations(
     (_, i) => !customizations.disabledRegionIndices.has(i)
   );
 
-  const encounterTables = template.encounterTables.filter(
-    t => !customizations.disabledEncounterTableIds.has(t.id)
-      && enabledTerrainNames.has(t.terrain)
-  );
+  const encounterTables = template.encounterTables
+    .filter(
+      t => !customizations.disabledEncounterTableIds.has(t.id)
+        && enabledOriginalTerrainNames.has(t.terrain)
+    )
+    .map(t => ({
+      ...t,
+      terrain: terrainRenameMap.get(t.terrain) ?? t.terrain,
+    }));
 
-  const landmarkTables = template.landmarkTables.filter(
-    t => !customizations.disabledLandmarkTableIds.has(t.id)
-      && enabledTerrainNames.has(t.terrain)
-  );
+  const landmarkTables = template.landmarkTables
+    .filter(
+      t => !customizations.disabledLandmarkTableIds.has(t.id)
+        && enabledOriginalTerrainNames.has(t.terrain)
+    )
+    .map(t => ({
+      ...t,
+      terrain: terrainRenameMap.get(t.terrain) ?? t.terrain,
+    }));
 
   const generationConfig: Partial<GenerationConfig> = {
     ...template.generationConfig,
