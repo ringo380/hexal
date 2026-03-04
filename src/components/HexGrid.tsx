@@ -188,9 +188,10 @@ interface IndicatorPosition {
 
 interface HexGridProps {
   onCreateRegionFromSelection?: () => void;
+  onExportSelection?: () => void;
 }
 
-function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
+function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { campaign, getHex, removeMarker, moveMarker, moveMarkerToPosition, addMarkerAtPosition, regions, addHexToRegion, removeHexFromRegion } = useCampaign();
@@ -1454,6 +1455,10 @@ function HexGrid({ onCreateRegionFromSelection }: HexGridProps) {
           onCreateRegion={() => {
             setContextMenu(null);
             onCreateRegionFromSelection?.();
+          }}
+          onExportSelected={() => {
+            setContextMenu(null);
+            onExportSelection?.();
           }}
           onClose={() => setContextMenu(null)}
         />
