@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "updatedAt": "2026-03-03T00:00:00Z",
+  "templates": [
+    {
+      "id": "community-pirate-isles",
+      "name": "Pirate Isles",
+      "description": "A tropical archipelago crawling with pirates, sea monsters, and buried treasure.",
+      "author": "Hexal Team",
+      "tags": ["tropical", "nautical", "pirates"],
+      "terrainCount": 7,
+      "factionCount": 3,
+      "downloadUrl": "templates/pirate-isles.json"
+    },
+    {
+      "id": "community-haunted-moor",
+      "name": "Haunted Moorlands",
+      "description": "Fog-drenched moors with ancient barrows, standing stones, and restless undead.",
+      "author": "Hexal Team",
+      "tags": ["horror", "undead", "gothic"],
+      "terrainCount": 6,
+      "factionCount": 2,
+      "downloadUrl": "templates/haunted-moor.json"
+    }
+  ]
+}

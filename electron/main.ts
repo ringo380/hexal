@@ -24,6 +24,15 @@ function getHexalFolder(): string {
   return hexalFolder;
 }
 
+// Get the templates subfolder
+function getTemplatesFolder(): string {
+  const folder = path.join(getHexalFolder(), 'templates');
+  if (!fs.existsSync(folder)) {
+    fs.mkdirSync(folder, { recursive: true });
+  }
+  return folder;
+}
+
 // Create the application menu
 function createApplicationMenu() {
   const isMac = process.platform === 'darwin';
@@ -85,6 +94,10 @@ function createApplicationMenu() {
           label: 'Export Data...',
           accelerator: 'CmdOrCtrl+E',
           click: () => activeWindow?.webContents.send('menu-command', 'export')
+        },
+        {
+          label: 'Save as Template...',
+          click: () => activeWindow?.webContents.send('menu-command', 'export-template')
         },
         { type: 'separator' },
         isMac
@@ -434,6 +447,104 @@ ipcMain.handle('export-file-dialog', async (_event, { defaultName, format }: { d
   const result = await dialog.showSaveDialog(win, {
     defaultPath: defaultName,
     filters: filters[format] || [{ name: 'All Files', extensions: ['*'] }]
+  });
+
+  if (result.canceled || !result.filePath) {
+    return null;
+  }
+  return result.filePath;
+});
+
+// ============ Template IPC handlers ============
+
+// List user templates from ~/Documents/Hexal/templates/
+ipcMain.handle('list-user-templates', async () => {
+  try {
+    const folder = getTemplatesFolder();
+    const files = fs.readdirSync(folder).filter(f => f.endsWith('.hexal-template'));
+    return files.map(f => {
+      const filePath = path.join(folder, f);
+      let content: string | null = null;
+      try {
+        content = fs.readFileSync(filePath, 'utf-8');
+      } catch {
+        // Skip unreadable files
+      }
+      return {
+        fileName: f,
+        filePath,
+        modifiedAt: fs.statSync(filePath).mtime.toISOString(),
+        content,
+      };
+    });
+  } catch (err: any) {
+    return [];
+  }
+});
+
+// Save a template envelope to the templates folder
+ipcMain.handle('save-user-template', async (_event, { envelope, fileName }: { envelope: string; fileName: string }) => {
+  try {
+    const folder = getTemplatesFolder();
+    const safeName = fileName.endsWith('.hexal-template') ? fileName : `${fileName}.hexal-template`;
+    const filePath = path.resolve(folder, safeName);
+    if (!filePath.startsWith(folder + path.sep)) {
+      return { success: false, error: 'Invalid file name' };
+    }
+    fs.writeFileSync(filePath, envelope, 'utf-8');
+    return { success: true, filePath };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// Delete a user template file
+ipcMain.handle('delete-user-template', async (_event, filePath: string) => {
+  try {
+    // Safety: only delete files inside the templates folder
+    const folder = getTemplatesFolder();
+    if (!filePath.startsWith(folder + path.sep)) {
+      return { success: false, error: 'File is not in the templates folder' };
+    }
+    fs.unlinkSync(filePath);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// Open file dialog to import a .hexal-template
+ipcMain.handle('import-template-dialog', async () => {
+  const win = activeWindow ?? BrowserWindow.getFocusedWindow();
+  if (!win) return null;
+
+  const result = await dialog.showOpenDialog(win, {
+    title: 'Import Template',
+    filters: [{ name: 'Hexal Template', extensions: ['hexal-template'] }],
+    properties: ['openFile']
+  });
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return null;
+  }
+
+  try {
+    const content = fs.readFileSync(result.filePaths[0], 'utf-8');
+    return content;
+  } catch (err: any) {
+    return null;
+  }
+});
+
+// Save dialog for exporting a .hexal-template
+ipcMain.handle('export-template-dialog', async (_event, defaultName: string) => {
+  const win = activeWindow ?? BrowserWindow.getFocusedWindow();
+  if (!win) return null;
+
+  const safeName = defaultName.endsWith('.hexal-template') ? defaultName : `${defaultName}.hexal-template`;
+  const result = await dialog.showSaveDialog(win, {
+    defaultPath: safeName,
+    filters: [{ name: 'Hexal Template', extensions: ['hexal-template'] }]
   });
 
   if (result.canceled || !result.filePath) {

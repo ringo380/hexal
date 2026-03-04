@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { CAMPAIGN_TEMPLATES, getTemplateById } from '../data/campaignTemplates';
-import { createCampaignFromTemplate } from '../types/Campaign';
+import { createCampaignFromTemplate, createCampaignFromTemplateObject } from '../types/Campaign';
+import { applyCustomizations, createDefaultCustomizations } from '../services/templateService';
 
 describe('Campaign Templates', () => {
   describe('CAMPAIGN_TEMPLATES array', () => {
@@ -106,6 +107,42 @@ describe('Campaign Templates', () => {
       expect(campaign.gridHeight).toBe(15);
       // Should have default terrain types, not template ones
       expect(campaign.terrainTypes.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('createCampaignFromTemplateObject with customizations', () => {
+    it('applies terrain customizations before creating campaign', () => {
+      const template = CAMPAIGN_TEMPLATES[0]; // Sword Coast
+      const customizations = createDefaultCustomizations();
+      // Disable the first terrain type
+      customizations.disabledTerrainIds.add(template.terrainTypes[0].id);
+
+      const customized = applyCustomizations(template, customizations);
+      const campaign = createCampaignFromTemplateObject(customized, 'Custom', 10, 10);
+
+      expect(campaign.terrainTypes.length).toBe(template.terrainTypes.length - 1);
+    });
+
+    it('applies faction customizations before creating campaign', () => {
+      const template = CAMPAIGN_TEMPLATES[0]; // Sword Coast
+      const customizations = createDefaultCustomizations();
+      customizations.disabledFactionIndices.add(0); // Disable first faction
+
+      const customized = applyCustomizations(template, customizations);
+      const campaign = createCampaignFromTemplateObject(customized, 'Custom', 10, 10);
+
+      expect(campaign.factions!.length).toBe(template.factions.length - 1);
+    });
+
+    it('applies generation config overrides', () => {
+      const template = CAMPAIGN_TEMPLATES[0];
+      const customizations = createDefaultCustomizations();
+      customizations.generationConfig = { encounterDensity: 0.9 };
+
+      const customized = applyCustomizations(template, customizations);
+      const campaign = createCampaignFromTemplateObject(customized, 'Custom', 10, 10);
+
+      expect(campaign.generationConfig!.encounterDensity).toBe(0.9);
     });
   });
 });

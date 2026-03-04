@@ -1,0 +1,63 @@
+{
+  "id": "community-pirate-isles",
+  "name": "Pirate Isles",
+  "description": "A tropical archipelago crawling with pirates, sea monsters, and buried treasure.",
+  "icon": "water",
+  "accentColor": "#00bcd4",
+  "recommendedWidth": 25,
+  "recommendedHeight": 20,
+  "calendarPreset": "simple",
+  "tags": ["tropical", "nautical", "pirates"],
+  "terrainTypes": [
+    { "id": "pi-ocean", "name": "Open Sea", "colorHex": "#1565C0", "icon": "water", "weight": 3, "moveCost": 2, "elevation": 0, "moisture": 5, "temperature": 3, "category": "Aquatic" },
+    { "id": "pi-coast", "name": "Sandy Coast", "colorHex": "#FFE082", "icon": "sun", "weight": 2, "moveCost": 1, "elevation": 0, "moisture": 4, "temperature": 4, "category": "Aquatic" },
+    { "id": "pi-jungle", "name": "Jungle", "colorHex": "#2E7D32", "icon": "tree", "weight": 2, "moveCost": 3, "elevation": 2, "moisture": 5, "temperature": 4, "hazardLevel": 1, "hazardType": "Dense Undergrowth", "category": "Tropical" },
+    { "id": "pi-reef", "name": "Coral Reef", "colorHex": "#E91E63", "icon": "sparkle", "weight": 1, "moveCost": 4, "elevation": 0, "moisture": 5, "temperature": 3, "hazardLevel": 1, "hazardType": "Shallow Waters", "category": "Aquatic" },
+    { "id": "pi-volcano", "name": "Volcano", "colorHex": "#D84315", "icon": "mountain", "weight": 1, "moveCost": 5, "elevation": 5, "moisture": 1, "temperature": 5, "hazardLevel": 3, "hazardType": "Volcanic Activity", "category": "Highland" },
+    { "id": "pi-mangrove", "name": "Mangrove Swamp", "colorHex": "#558B2F", "icon": "drop", "weight": 1, "moveCost": 3, "elevation": 0, "moisture": 5, "temperature": 4, "hazardLevel": 1, "hazardType": "Difficult Terrain", "category": "Aquatic" },
+    { "id": "pi-lagoon", "name": "Lagoon", "colorHex": "#4DD0E1", "icon": "water", "weight": 1, "moveCost": 1, "elevation": 0, "moisture": 5, "temperature": 3, "category": "Aquatic" }
+  ],
+  "encounterTables": [
+    {
+      "id": "pi-enc-sea", "name": "Open Sea Encounters", "terrain": "Open Sea",
+      "entries": [
+        { "id": "pi-e1", "title": "Pirate Ship", "description": "A black-flagged ship approaches on the horizon", "difficulty": "CR 5", "weight": 2 },
+        { "id": "pi-e2", "title": "Sea Serpent", "description": "A massive serpent surfaces near the ship", "difficulty": "CR 8", "weight": 1 },
+        { "id": "pi-e3", "title": "Floating Debris", "description": "Wreckage from a recent battle drifts past", "difficulty": "Exploration", "weight": 2 }
+      ]
+    },
+    {
+      "id": "pi-enc-jungle", "name": "Jungle Encounters", "terrain": "Jungle",
+      "entries": [
+        { "id": "pi-e4", "title": "Cannibal Tribe", "description": "Tribal warriors guard their territory", "difficulty": "CR 4", "weight": 1 },
+        { "id": "pi-e5", "title": "Hidden Temple", "description": "An ancient temple overgrown with vines", "difficulty": "Exploration", "weight": 1 },
+        { "id": "pi-e6", "title": "Giant Spiders", "description": "2d4 giant spiders lurk in the canopy", "difficulty": "CR 3", "weight": 2 }
+      ]
+    }
+  ],
+  "landmarkTables": [
+    {
+      "id": "pi-lmk-coast", "name": "Coastal Landmarks", "terrain": "Sandy Coast",
+      "entries": [
+        { "id": "pi-l1", "title": "Shipwreck Cove", "description": "A sheltered bay with several wrecked vessels", "rarity": "Uncommon", "weight": 2 },
+        { "id": "pi-l2", "title": "Treasure Map X", "description": "A weathered stone marker matches a treasure map", "rarity": "Rare", "weight": 1 }
+      ]
+    }
+  ],
+  "generationConfig": {
+    "biomeClusteringStrength": 0.7,
+    "encounterDensity": 0.5,
+    "landmarkDensity": 0.3,
+    "terrainVariety": 0.6
+  },
+  "factions": [
+    { "name": "The Crimson Fleet", "description": "The most feared pirate armada in the archipelago", "color": "#f44336", "goals": "Control all trade routes and plunder merchant vessels", "tags": ["pirate", "naval"] },
+    { "name": "Isle Wardens", "description": "A coalition of settlers defending their island homes", "color": "#4caf50", "goals": "Protect island communities from pirate raids", "tags": ["militia", "defensive"] },
+    { "name": "The Tide Cult", "description": "Fanatical worshippers of an ancient sea deity", "color": "#9c27b0", "goals": "Awaken the Leviathan that sleeps beneath the waves", "tags": ["cult", "religious"] }
+  ],
+  "regions": [
+    { "name": "Skull Archipelago", "color": "#f44336", "description": "The pirate stronghold islands", "tags": ["pirate"] },
+    { "name": "The Emerald Isles", "color": "#4caf50", "description": "Lush jungle islands with hidden temples", "tags": ["jungle", "ancient"] },
+    { "name": "The Shallows", "color": "#00bcd4", "description": "Dangerous reef-laden waters", "tags": ["nautical", "hazardous"] }
+  ]
+}

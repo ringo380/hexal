@@ -4,6 +4,61 @@ import type { IconName } from '../components/icons/Icon';
 import type { CalendarPreset } from './Weather';
 import type { TerrainType, EncounterTable, LandmarkTable, GenerationConfig } from './Campaign';
 
+// ============ FILE FORMAT ============
+
+/** File format envelope for .hexal-template files */
+export interface TemplateFileEnvelope {
+  fileType: 'hexal-template';
+  fileVersion: 1;
+  template: CampaignTemplate;
+  exportedAt: string;
+  sourceApp: string;
+  author?: string;
+}
+
+/** Runtime wrapper for template list entries */
+export interface TemplateListItem {
+  template: CampaignTemplate;
+  source: 'builtin' | 'user' | 'community';
+  filePath?: string;
+}
+
+// ============ CUSTOMIZATION ============
+
+/** Overrides applied during campaign creation from a template */
+export interface TemplateCustomizations {
+  disabledTerrainIds: Set<string>;
+  terrainNameOverrides: Record<string, string>;
+  disabledFactionIndices: Set<number>;
+  factionNameOverrides: Record<number, string>;
+  disabledRegionIndices: Set<number>;
+  disabledEncounterTableIds: Set<string>;
+  disabledLandmarkTableIds: Set<string>;
+  generationConfig: Partial<GenerationConfig>;
+  calendarPreset: CalendarPreset | null;
+}
+
+// ============ COMMUNITY REGISTRY ============
+
+/** Entry in the community template registry index */
+export interface TemplateRegistryEntry {
+  id: string;
+  name: string;
+  description: string;
+  author: string;
+  tags: string[];
+  terrainCount: number;
+  factionCount: number;
+  downloadUrl: string;
+}
+
+/** Community template registry index */
+export interface TemplateRegistry {
+  version: 1;
+  updatedAt: string;
+  templates: TemplateRegistryEntry[];
+}
+
 /** Faction stub in a template — gets a fresh UUID at campaign creation */
 export interface TemplateFaction {
   name: string;

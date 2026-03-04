@@ -1,0 +1,59 @@
+{
+  "id": "community-haunted-moor",
+  "name": "Haunted Moorlands",
+  "description": "Fog-drenched moors with ancient barrows, standing stones, and restless undead.",
+  "icon": "skull",
+  "accentColor": "#607d8b",
+  "recommendedWidth": 20,
+  "recommendedHeight": 20,
+  "calendarPreset": "simple",
+  "tags": ["horror", "undead", "gothic"],
+  "terrainTypes": [
+    { "id": "hm-moor", "name": "Moorland", "colorHex": "#6D4C41", "icon": "wind", "weight": 3, "moveCost": 2, "elevation": 1, "moisture": 3, "temperature": 1, "category": "Temperate" },
+    { "id": "hm-bog", "name": "Peat Bog", "colorHex": "#33691E", "icon": "drop", "weight": 2, "moveCost": 3, "elevation": 0, "moisture": 5, "temperature": 1, "hazardLevel": 2, "hazardType": "Sinking Ground", "category": "Aquatic" },
+    { "id": "hm-barrow", "name": "Barrow Hills", "colorHex": "#78909C", "icon": "triangle", "weight": 1, "moveCost": 2, "elevation": 2, "moisture": 2, "temperature": 1, "hazardLevel": 1, "hazardType": "Haunted", "category": "Highland" },
+    { "id": "hm-forest", "name": "Dead Forest", "colorHex": "#37474F", "icon": "tree", "weight": 1, "moveCost": 3, "elevation": 2, "moisture": 2, "temperature": 1, "hazardLevel": 1, "hazardType": "Necrotic Aura", "category": "Temperate" },
+    { "id": "hm-village", "name": "Ruined Village", "colorHex": "#8D6E63", "icon": "shield", "weight": 1, "moveCost": 1, "elevation": 1, "moisture": 2, "temperature": 1, "category": "Temperate" },
+    { "id": "hm-standing", "name": "Standing Stones", "colorHex": "#B0BEC5", "icon": "sparkle", "weight": 1, "moveCost": 1, "elevation": 2, "moisture": 2, "temperature": 1, "hazardLevel": 1, "hazardType": "Wild Magic", "category": "Highland" }
+  ],
+  "encounterTables": [
+    {
+      "id": "hm-enc-moor", "name": "Moorland Encounters", "terrain": "Moorland",
+      "entries": [
+        { "id": "hm-e1", "title": "Will-o'-Wisp", "description": "Eerie lights lead travelers astray in the fog", "difficulty": "CR 2", "weight": 2 },
+        { "id": "hm-e2", "title": "Restless Dead", "description": "2d4 zombies rise from shallow graves", "difficulty": "CR 3", "weight": 2 },
+        { "id": "hm-e3", "title": "Lost Traveler", "description": "A confused traveler who may not realize they're dead", "difficulty": "Social", "weight": 1 }
+      ]
+    },
+    {
+      "id": "hm-enc-barrow", "name": "Barrow Encounters", "terrain": "Barrow Hills",
+      "entries": [
+        { "id": "hm-e4", "title": "Barrow Wight", "description": "An ancient warrior guards their burial chamber", "difficulty": "CR 5", "weight": 1 },
+        { "id": "hm-e5", "title": "Tomb Robbers", "description": "A band of desperate looters", "difficulty": "CR 3", "weight": 2 }
+      ]
+    }
+  ],
+  "landmarkTables": [
+    {
+      "id": "hm-lmk-moor", "name": "Moorland Landmarks", "terrain": "Moorland",
+      "entries": [
+        { "id": "hm-l1", "title": "Witch's Cairn", "description": "A pile of stones marking where a witch was buried", "rarity": "Uncommon", "weight": 2 },
+        { "id": "hm-l2", "title": "Abandoned Manor", "description": "A crumbling estate shrouded in perpetual mist", "rarity": "Rare", "weight": 1 }
+      ]
+    }
+  ],
+  "generationConfig": {
+    "biomeClusteringStrength": 0.5,
+    "encounterDensity": 0.6,
+    "landmarkDensity": 0.3,
+    "terrainVariety": 0.4
+  },
+  "factions": [
+    { "name": "The Grey Wardens", "description": "Soldiers sworn to keep the dead in their graves", "color": "#607d8b", "goals": "Seal the barrows and protect the living", "tags": ["military", "protective"] },
+    { "name": "The Pale Circle", "description": "Necromancers who seek to harness the moor's power", "color": "#9c27b0", "goals": "Raise an army of undead to conquer the lowlands", "tags": ["necromancer", "cult"] }
+  ],
+  "regions": [
+    { "name": "The Bleaklands", "color": "#78909C", "description": "The central expanse of fog-shrouded moorland", "tags": ["moor", "haunted"] },
+    { "name": "Barrow Downs", "color": "#607d8b", "description": "Rolling hills dotted with ancient burial mounds", "tags": ["undead", "ancient"] }
+  ]
+}
