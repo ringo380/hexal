@@ -47,6 +47,8 @@ interface CampaignState {
   saveStatus: SaveStatus;
   saveError: boolean;
   hasUnsavedChanges: boolean;
+  isLoading: boolean;
+  lastSavedAt: number | null;
   past: Campaign[];    // Previous states for undo
   future: Campaign[];  // States for redo
 }
@@ -60,6 +62,8 @@ type CampaignAction =
   | { type: 'MARK_SAVING' }
   | { type: 'MARK_CHANGED' }
   | { type: 'SAVE_FAILED' }
+  | { type: 'LOADING_START' }
+  | { type: 'LOADING_COMPLETE' }
   | { type: 'CLOSE_CAMPAIGN' }
   | { type: 'UNDO' }
   | { type: 'REDO' }
@@ -91,6 +95,8 @@ const initialState: CampaignState = {
   saveStatus: 'saved',
   saveError: false,
   hasUnsavedChanges: false,
+  isLoading: false,
+  lastSavedAt: null,
   past: [],
   future: []
 };
@@ -155,7 +161,8 @@ function campaignReducer(state: CampaignState, action: CampaignAction): Campaign
         currentFilePath: action.filePath ?? state.currentFilePath,
         saveStatus: 'saved',
         saveError: false,
-        hasUnsavedChanges: false
+        hasUnsavedChanges: false,
+        lastSavedAt: Date.now()
       };
 
     case 'MARK_SAVING':
@@ -177,6 +184,18 @@ function campaignReducer(state: CampaignState, action: CampaignAction): Campaign
         saveStatus: 'unsaved',
         saveError: true,
         hasUnsavedChanges: true
+      };
+
+    case 'LOADING_START':
+      return {
+        ...state,
+        isLoading: true
+      };
+
+    case 'LOADING_COMPLETE':
+      return {
+        ...state,
+        isLoading: false
       };
 
     case 'CLOSE_CAMPAIGN':
@@ -648,6 +667,8 @@ interface CampaignContextValue {
   saveStatus: SaveStatus;
   saveError: boolean;
   hasUnsavedChanges: boolean;
+  isLoading: boolean;
+  lastSavedAt: number | null;
   currentFilePath: string | null;
 
   // Time/Weather operations
@@ -806,6 +827,7 @@ export function CampaignProvider({ children, adapter }: { children: React.ReactN
 
   // Load campaign from file
   const loadCampaign = useCallback(async (filePath: string) => {
+    dispatch({ type: 'LOADING_START' });
     try {
       const result = await adapter.load(filePath);
       if (result.success && result.campaign) {
@@ -820,6 +842,7 @@ export function CampaignProvider({ children, adapter }: { children: React.ReactN
       }
     } catch (error) {
       console.error('Load failed:', error);
+      dispatch({ type: 'LOADING_COMPLETE' });
       throw error;
     }
   }, [adapter]);
@@ -1276,6 +1299,8 @@ export function CampaignProvider({ children, adapter }: { children: React.ReactN
     saveStatus: state.saveStatus,
     saveError: state.saveError,
     hasUnsavedChanges: state.hasUnsavedChanges,
+    isLoading: state.isLoading,
+    lastSavedAt: state.lastSavedAt,
     currentFilePath: state.currentFilePath,
 
     // Time/Weather operations

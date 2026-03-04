@@ -28,7 +28,7 @@ function ShareCampaignModal({ campaignId: _campaignId, campaignName, onClose }: 
           <h3 id="share-campaign-modal-title">
             <Icon name="users" size={18} /> Share "{campaignName}"
           </h3>
-          <button className="modal-close" onClick={onClose} aria-label="Close">x</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
         </div>
 
         <div className="modal-body">

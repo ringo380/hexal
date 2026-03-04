@@ -82,7 +82,6 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
   const weatherSim = useWeatherSimulation();
 
   const [hex, setHex] = useState<Hex | null>(null);
-  const [editingItem, setEditingItem] = useState<{ item: ContentItem; category: ContentCategory } | null>(null);
   const [editingEncounter, setEditingEncounter] = useState<Encounter | null>(null);
   const [editingNpc, setEditingNpc] = useState<Npc | null>(null);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
@@ -158,7 +157,6 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
       [category]: [...currentHex[category], newItem]
     };
     saveHex(updated);
-    setEditingItem({ item: newItem, category });
   }, [selectedCoordinate, getOrCreateHex, saveHex]);
 
   const addEncounterFromTemplate = useCallback((template: EncounterTemplate) => {
@@ -173,6 +171,7 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
     setShowTemplatePicker(false);
   }, [selectedCoordinate, getOrCreateHex, saveHex]);
 
+  // Save encounter from full modal (closes modal)
   const saveEncounter = useCallback((updated: Encounter) => {
     if (!hex || !selectedCoordinate) return;
     const currentHex = getOrCreateHex(selectedCoordinate);
@@ -186,6 +185,20 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
     setEditingEncounter(null);
   }, [hex, selectedCoordinate, getOrCreateHex, saveHex]);
 
+  // Save encounter from inline edit (does not close modal)
+  const saveEncounterInline = useCallback((updated: Encounter) => {
+    if (!hex || !selectedCoordinate) return;
+    const currentHex = getOrCreateHex(selectedCoordinate);
+    const updatedHex = {
+      ...currentHex,
+      encounters: currentHex.encounters.map(e =>
+        e.id === updated.id ? updated : e
+      )
+    };
+    saveHex(updatedHex);
+  }, [hex, selectedCoordinate, getOrCreateHex, saveHex]);
+
+  // Save NPC from full modal (closes modal)
   const saveNpc = useCallback((updated: Npc) => {
     if (!hex || !selectedCoordinate) return;
     const currentHex = getOrCreateHex(selectedCoordinate);
@@ -197,6 +210,19 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
     };
     saveHex(updatedHex);
     setEditingNpc(null);
+  }, [hex, selectedCoordinate, getOrCreateHex, saveHex]);
+
+  // Save NPC from inline edit (does not close modal)
+  const saveNpcInline = useCallback((updated: Npc) => {
+    if (!hex || !selectedCoordinate) return;
+    const currentHex = getOrCreateHex(selectedCoordinate);
+    const updatedHex = {
+      ...currentHex,
+      npcs: currentHex.npcs.map(n =>
+        n.id === updated.id ? updated : n
+      )
+    };
+    saveHex(updatedHex);
   }, [hex, selectedCoordinate, getOrCreateHex, saveHex]);
 
   const confirmDeleteNpc = useCallback((npcId: string) => {
@@ -447,7 +473,8 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
           onAdd={() => addItem('encounters')}
           onAddFromTemplate={addEncounterFromTemplate}
           onToggleResolved={(id) => toggleResolved('encounters', id)}
-          onEdit={(encounter) => setEditingEncounter(encounter)}
+          onSave={saveEncounterInline}
+          onEditFull={(encounter) => setEditingEncounter(encounter)}
           onDelete={(id) => deleteItem('encounters', id)}
         />
 
@@ -457,7 +484,8 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
           factions={factions}
           onAdd={() => addItem('npcs')}
           onToggleResolved={(id) => toggleResolved('npcs', id)}
-          onEdit={(npc) => setEditingNpc(npc)}
+          onSave={saveNpcInline}
+          onEditFull={(npc) => setEditingNpc(npc)}
           onDelete={(id) => confirmDeleteNpc(id)}
         />
 
@@ -469,7 +497,7 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
             items={hex[category]}
             onAdd={() => addItem(category)}
             onToggleResolved={(id) => toggleResolved(category, id)}
-            onEdit={(item) => setEditingItem({ item, category })}
+            onSave={(item) => updateItem(category, item)}
             onDelete={(id) => deleteItem(category, id)}
           />
         ))}
@@ -494,19 +522,6 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
           );
         })()}
       </div>
-
-      {/* Edit Modal */}
-      {editingItem && (
-        <ContentItemEditor
-          item={editingItem.item}
-          category={editingItem.category}
-          onSave={(item) => {
-            updateItem(editingItem.category, item);
-            setEditingItem(null);
-          }}
-          onClose={() => setEditingItem(null)}
-        />
-      )}
 
       {/* Encounter Edit Modal */}
       {editingEncounter && (
@@ -552,13 +567,14 @@ interface EncounterSectionProps {
   onAdd: () => void;
   onAddFromTemplate: (template: EncounterTemplate) => void;
   onToggleResolved: (id: string) => void;
-  onEdit: (encounter: Encounter) => void;
+  onSave: (encounter: Encounter) => void;
+  onEditFull: (encounter: Encounter) => void;
   onDelete: (id: string) => void;
 }
 
 function EncounterSection({
   encounters, templates, showTemplatePicker, onToggleTemplatePicker,
-  onAdd, onAddFromTemplate, onToggleResolved, onEdit, onDelete
+  onAdd, onAddFromTemplate, onToggleResolved, onSave, onEditFull, onDelete
 }: EncounterSectionProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -578,7 +594,8 @@ function EncounterSection({
               key={encounter.id}
               encounter={encounter}
               onToggleResolved={() => onToggleResolved(encounter.id)}
-              onEdit={() => onEdit(encounter)}
+              onSave={onSave}
+              onEditFull={() => onEditFull(encounter)}
               onDelete={() => onDelete(encounter.id)}
             />
           ))}
@@ -620,11 +637,12 @@ interface NpcSectionProps {
   factions: import('../types/Campaign').Faction[];
   onAdd: () => void;
   onToggleResolved: (id: string) => void;
-  onEdit: (npc: Npc) => void;
+  onSave: (npc: Npc) => void;
+  onEditFull: (npc: Npc) => void;
   onDelete: (id: string) => void;
 }
 
-function NpcSection({ npcs, factions, onAdd, onToggleResolved, onEdit, onDelete }: NpcSectionProps) {
+function NpcSection({ npcs, factions, onAdd, onToggleResolved, onSave, onEditFull, onDelete }: NpcSectionProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
   const getFaction = (factionId?: string) => {
@@ -649,7 +667,8 @@ function NpcSection({ npcs, factions, onAdd, onToggleResolved, onEdit, onDelete 
               npc={npc}
               faction={getFaction(npc.factionId)}
               onToggleResolved={() => onToggleResolved(npc.id)}
-              onEdit={() => onEdit(npc)}
+              onSave={onSave}
+              onEditFull={() => onEditFull(npc)}
               onDelete={() => onDelete(npc.id)}
             />
           ))}
@@ -668,11 +687,11 @@ interface ContentSectionProps {
   items: ContentItem[];
   onAdd: () => void;
   onToggleResolved: (id: string) => void;
-  onEdit: (item: ContentItem) => void;
+  onSave: (item: ContentItem) => void;
   onDelete: (id: string) => void;
 }
 
-function ContentSection({ category, items, onAdd, onToggleResolved, onEdit, onDelete }: ContentSectionProps) {
+function ContentSection({ category, items, onAdd, onToggleResolved, onSave, onDelete }: ContentSectionProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const config = categoryConfig[category];
 
@@ -692,7 +711,7 @@ function ContentSection({ category, items, onAdd, onToggleResolved, onEdit, onDe
               key={item.id}
               item={item}
               onToggleResolved={() => onToggleResolved(item.id)}
-              onEdit={() => onEdit(item)}
+              onSave={onSave}
               onDelete={() => onDelete(item.id)}
             />
           ))}
@@ -701,72 +720,6 @@ function ContentSection({ category, items, onAdd, onToggleResolved, onEdit, onDe
           </button>
         </div>
       )}
-    </div>
-  );
-}
-
-// Content item editor modal
-interface ContentItemEditorProps {
-  item: ContentItem;
-  category: ContentCategory;
-  onSave: (item: ContentItem) => void;
-  onClose: () => void;
-}
-
-function ContentItemEditor({ item, category, onSave, onClose }: ContentItemEditorProps) {
-  const [title, setTitle] = useState(item.title);
-  const [description, setDescription] = useState(item.description);
-  const [difficulty, setDifficulty] = useState(item.difficulty ?? '');
-
-  const handleSave = () => {
-    onSave({
-      ...item,
-      title,
-      description,
-      difficulty: difficulty || undefined
-    });
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>Edit {categoryConfig[category].title.slice(0, -1)}</h3>
-          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
-        </div>
-        <div className="modal-body">
-          <div className="field-group">
-            <label>Title</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              autoFocus
-            />
-          </div>
-          <div className="field-group">
-            <label>Difficulty / CR</label>
-            <input
-              type="text"
-              value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value)}
-              placeholder="e.g., CR 2, Easy, etc."
-            />
-          </div>
-          <div className="field-group">
-            <label>Description</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
-            />
-          </div>
-        </div>
-        <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSave}>Save</button>
-        </div>
-      </div>
     </div>
   );
 }

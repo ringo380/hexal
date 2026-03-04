@@ -42,7 +42,7 @@ function TimeControlsModal({ onClose }: TimeControlsModalProps) {
         <div ref={focusTrapRef} className="modal time-controls-modal" onClick={(e) => e.stopPropagation()}>
           <div className="modal-header">
             <h2 id="time-setup-modal-title">Time & Weather Setup</h2>
-            <button className="btn btn-icon" onClick={onClose} aria-label="Close">×</button>
+            <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
           </div>
           <div className="modal-body">
             <p>Time and weather tracking is not enabled for this campaign.</p>
@@ -124,7 +124,7 @@ function TimeControlsModal({ onClose }: TimeControlsModalProps) {
       <div ref={focusTrapRef} className="modal time-controls-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2 id="time-controls-modal-title">Time Controls</h2>
-          <button className="btn btn-icon" onClick={onClose} aria-label="Close">×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="modal-body">
           {/* Calendar Selection */}
