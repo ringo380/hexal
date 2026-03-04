@@ -10,6 +10,7 @@ import {
   EXPORT_PRESETS,
   type MapExportOptions,
   type ExportFormat,
+  type ExportRegion,
   type PaperSize
 } from '../../types/MapExport';
 import {
@@ -20,20 +21,31 @@ import {
 
 interface MapExportModalProps {
   onClose: () => void;
+  initialSelection?: Set<string> | null;
 }
 
-function MapExportModal({ onClose }: MapExportModalProps) {
+function MapExportModal({ onClose, initialSelection }: MapExportModalProps) {
   const { campaign } = useCampaign();
   const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
 
   // Export options state
-  const [options, setOptions] = useState<MapExportOptions>({ ...DEFAULT_EXPORT_OPTIONS });
-  const [activePreset, setActivePreset] = useState<string | null>('quick');
+  const [options, setOptions] = useState<MapExportOptions>(() => {
+    const base = { ...DEFAULT_EXPORT_OPTIONS };
+    if (initialSelection && initialSelection.size > 0) {
+      base.region = { type: 'selection', hexKeys: Array.from(initialSelection) };
+    }
+    return base;
+  });
+  const [activePreset, setActivePreset] = useState<string | null>(
+    initialSelection && initialSelection.size > 0 ? null : 'quick'
+  );
 
   // Section collapse state
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(['format', 'view', 'appearance'])
-  );
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {
+    const sections = ['format', 'view', 'appearance'];
+    if (initialSelection && initialSelection.size > 0) sections.push('region');
+    return new Set(sections);
+  });
 
   // Preview state
   const previewRef = useRef<HTMLDivElement>(null);
@@ -92,7 +104,7 @@ function MapExportModal({ onClose }: MapExportModalProps) {
     if (!campaign) return;
     const estimate = estimateFileSize(campaign, options);
     setSizeEstimate(estimate);
-  }, [campaign, options.format, options.scale, options.quality]);
+  }, [campaign, options.format, options.scale, options.quality, options.region]);
 
   // Render preview canvas
   useEffect(() => {
@@ -168,6 +180,130 @@ function MapExportModal({ onClose }: MapExportModalProps) {
                 {preset.name}
               </button>
             ))}
+          </div>
+
+          {/* Export Region Section */}
+          <div className={`export-section ${expandedSections.has('region') ? 'expanded' : ''}`}>
+            <div className="section-header" role="button" tabIndex={0} aria-expanded={expandedSections.has('region')} aria-controls="export-region-content" onClick={() => toggleSection('region')} onKeyDown={onActivate(() => toggleSection('region'))}>
+              <span className="section-icon"><Icon name={expandedSections.has('region') ? 'chevron-down' : 'chevron-right'} size={12} /></span>
+              <span className="section-title">Export Region</span>
+              {options.region.type !== 'full' && (
+                <span className="section-badge">
+                  {options.region.type === 'selection' && options.region.hexKeys
+                    ? `${options.region.hexKeys.length} hexes`
+                    : 'Custom'}
+                </span>
+              )}
+            </div>
+            {expandedSections.has('region') && (
+              <div id="export-region-content" className="section-content">
+                <div className="option-row">
+                  <div className="region-options">
+                    <label className="radio-label">
+                      <input
+                        type="radio"
+                        name="regionType"
+                        checked={options.region.type === 'full'}
+                        onChange={() => updateOption('region', { type: 'full' })}
+                      />
+                      Full Map
+                    </label>
+                    <label className={`radio-label ${!initialSelection || initialSelection.size === 0 ? 'disabled' : ''}`}>
+                      <input
+                        type="radio"
+                        name="regionType"
+                        checked={options.region.type === 'selection'}
+                        disabled={!initialSelection || initialSelection.size === 0}
+                        onChange={() => updateOption('region', {
+                          type: 'selection',
+                          hexKeys: initialSelection ? Array.from(initialSelection) : []
+                        })}
+                      />
+                      Selected Hexes
+                      {initialSelection && initialSelection.size > 0 && (
+                        <span className="region-info">({initialSelection.size})</span>
+                      )}
+                    </label>
+                    <label className="radio-label">
+                      <input
+                        type="radio"
+                        name="regionType"
+                        checked={options.region.type === 'custom'}
+                        onChange={() => updateOption('region', {
+                          type: 'custom',
+                          minQ: 0,
+                          minR: 0,
+                          maxQ: campaign.gridWidth - 1,
+                          maxR: campaign.gridHeight - 1
+                        })}
+                      />
+                      Coordinate Range
+                    </label>
+                  </div>
+                </div>
+
+                {options.region.type === 'custom' && (
+                  <div className="option-row coord-inputs">
+                    <div className="coord-field">
+                      <label>Min Q</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={campaign.gridWidth - 1}
+                        value={options.region.minQ ?? 0}
+                        onChange={(e) => updateOption('region', {
+                          ...options.region,
+                          minQ: Math.max(0, Math.min(parseInt(e.target.value) || 0, campaign.gridWidth - 1))
+                        } as ExportRegion)}
+                        className="coord-input"
+                      />
+                    </div>
+                    <div className="coord-field">
+                      <label>Max Q</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={campaign.gridWidth - 1}
+                        value={options.region.maxQ ?? campaign.gridWidth - 1}
+                        onChange={(e) => updateOption('region', {
+                          ...options.region,
+                          maxQ: Math.max(0, Math.min(parseInt(e.target.value) || 0, campaign.gridWidth - 1))
+                        } as ExportRegion)}
+                        className="coord-input"
+                      />
+                    </div>
+                    <div className="coord-field">
+                      <label>Min R</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={campaign.gridHeight - 1}
+                        value={options.region.minR ?? 0}
+                        onChange={(e) => updateOption('region', {
+                          ...options.region,
+                          minR: Math.max(0, Math.min(parseInt(e.target.value) || 0, campaign.gridHeight - 1))
+                        } as ExportRegion)}
+                        className="coord-input"
+                      />
+                    </div>
+                    <div className="coord-field">
+                      <label>Max R</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={campaign.gridHeight - 1}
+                        value={options.region.maxR ?? campaign.gridHeight - 1}
+                        onChange={(e) => updateOption('region', {
+                          ...options.region,
+                          maxR: Math.max(0, Math.min(parseInt(e.target.value) || 0, campaign.gridHeight - 1))
+                        } as ExportRegion)}
+                        className="coord-input"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Format & Resolution Section */}
