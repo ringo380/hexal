@@ -125,7 +125,7 @@ function LoginModal({ onClose }: LoginModalProps) {
           <h3 id="login-modal-title">
             <Icon name="user" size={18} /> Account
           </h3>
-          <button className="modal-close" onClick={onClose} aria-label="Close">x</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
         </div>
 
         {!cloudConfigured ? (
@@ -138,13 +138,13 @@ function LoginModal({ onClose }: LoginModalProps) {
           <>
             <div className="auth-tabs">
               <button
-                className={`auth-tab ${activeTab === 'signin' ? 'active' : ''}`}
+                className={`tab-btn ${activeTab === 'signin' ? 'active' : ''}`}
                 onClick={() => switchTab('signin')}
               >
                 Sign In
               </button>
               <button
-                className={`auth-tab ${activeTab === 'signup' ? 'active' : ''}`}
+                className={`tab-btn ${activeTab === 'signup' ? 'active' : ''}`}
                 onClick={() => switchTab('signup')}
               >
                 Sign Up

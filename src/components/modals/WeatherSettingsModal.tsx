@@ -76,7 +76,7 @@ function WeatherSettingsModal({ onClose }: WeatherSettingsModalProps) {
         <div ref={focusTrapRef} className="modal weather-settings-modal" onClick={(e) => e.stopPropagation()}>
           <div className="modal-header">
             <h2 id="weather-setup-modal-title">Weather Settings</h2>
-            <button className="btn btn-icon" onClick={onClose} aria-label="Close">×</button>
+            <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
           </div>
           <div className="modal-body">
             <p>Time and weather tracking is not enabled for this campaign.</p>
@@ -170,7 +170,7 @@ function WeatherSettingsModal({ onClose }: WeatherSettingsModalProps) {
       <div ref={focusTrapRef} className="modal weather-settings-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2 id="weather-settings-modal-title">Weather Settings</h2>
-          <button className="btn btn-icon" onClick={onClose} aria-label="Close">×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="modal-body">
           {/* Current Weather Display */}
