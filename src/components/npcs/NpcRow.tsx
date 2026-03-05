@@ -14,7 +14,7 @@ interface NpcRowProps {
   faction?: Faction;
   onToggleResolved: () => void;
   onSave: (npc: Npc) => void;
-  onEditFull: () => void;
+  onEditFull: (npc: Npc) => void;
   onDelete: () => void;
 }
 
@@ -25,8 +25,9 @@ function NpcRow({ npc, faction, onToggleResolved, onSave, onEditFull, onDelete }
     return (
       <div className="inline-edit-form" ref={containerRef}>
         <div className="field-group">
-          <label>Name</label>
+          <label htmlFor={`npc-name-${draft.id}`}>Name</label>
           <input
+            id={`npc-name-${draft.id}`}
             type="text"
             value={draft.title}
             onChange={(e) => setDraft({ ...draft, title: e.target.value })}
@@ -35,8 +36,9 @@ function NpcRow({ npc, faction, onToggleResolved, onSave, onEditFull, onDelete }
         </div>
         <div className="inline-edit-row">
           <div className="field-group">
-            <label>Race</label>
+            <label htmlFor={`npc-race-${draft.id}`}>Race</label>
             <input
+              id={`npc-race-${draft.id}`}
               type="text"
               value={draft.race ?? ''}
               onChange={(e) => setDraft({ ...draft, race: e.target.value || undefined })}
@@ -44,8 +46,9 @@ function NpcRow({ npc, faction, onToggleResolved, onSave, onEditFull, onDelete }
             />
           </div>
           <div className="field-group">
-            <label>Class</label>
+            <label htmlFor={`npc-class-${draft.id}`}>Class</label>
             <input
+              id={`npc-class-${draft.id}`}
               type="text"
               value={draft.class ?? ''}
               onChange={(e) => setDraft({ ...draft, class: e.target.value || undefined })}
@@ -55,8 +58,8 @@ function NpcRow({ npc, faction, onToggleResolved, onSave, onEditFull, onDelete }
         </div>
         <div className="inline-edit-row">
           <div className="field-group">
-            <label>Attitude</label>
-            <select value={draft.attitude ?? 'unknown'} onChange={(e) => setDraft({ ...draft, attitude: e.target.value as NpcAttitude })}>
+            <label htmlFor={`npc-attitude-${draft.id}`}>Attitude</label>
+            <select id={`npc-attitude-${draft.id}`} value={draft.attitude ?? 'unknown'} onChange={(e) => setDraft({ ...draft, attitude: e.target.value as NpcAttitude })}>
               {ATTITUDE_OPTIONS.map(a => <option key={a} value={a}>{a.charAt(0).toUpperCase() + a.slice(1)}</option>)}
             </select>
           </div>
@@ -73,7 +76,7 @@ function NpcRow({ npc, faction, onToggleResolved, onSave, onEditFull, onDelete }
         </div>
         <div className="inline-edit-actions">
           <button className="btn btn-secondary btn-small" onClick={cancel}>Cancel</button>
-          <button className="btn btn-secondary btn-small" onClick={() => { save(); onEditFull(); }}>Edit Details...</button>
+          <button className="btn btn-secondary btn-small" onClick={() => { save(); onEditFull(draft); }}>Edit Details...</button>
           <button className="btn btn-primary btn-small" onClick={save}>Save</button>
         </div>
       </div>

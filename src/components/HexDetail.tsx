@@ -595,7 +595,7 @@ function EncounterSection({
               encounter={encounter}
               onToggleResolved={() => onToggleResolved(encounter.id)}
               onSave={onSave}
-              onEditFull={() => onEditFull(encounter)}
+              onEditFull={onEditFull}
               onDelete={() => onDelete(encounter.id)}
             />
           ))}
@@ -668,7 +668,7 @@ function NpcSection({ npcs, factions, onAdd, onToggleResolved, onSave, onEditFul
               faction={getFaction(npc.factionId)}
               onToggleResolved={() => onToggleResolved(npc.id)}
               onSave={onSave}
-              onEditFull={() => onEditFull(npc)}
+              onEditFull={onEditFull}
               onDelete={() => onDelete(npc.id)}
             />
           ))}

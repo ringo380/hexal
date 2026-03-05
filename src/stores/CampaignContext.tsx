@@ -111,6 +111,7 @@ function campaignReducer(state: CampaignState, action: CampaignAction): Campaign
         currentFilePath: action.filePath ?? null,
         saveStatus: 'saved',
         hasUnsavedChanges: false,
+        isLoading: false,
         past: [],    // Clear history on new/load campaign
         future: []
       };

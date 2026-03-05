@@ -734,11 +734,18 @@ label {
 .hex-item {
   display: flex;
   align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  position: relative;
+}
+
+.hex-item-content {
+  display: flex;
+  align-items: center;
   padding: 10px 16px;
   cursor: pointer;
-  border-bottom: 1px solid var(--border-color);
   gap: 10px;
-  position: relative;
+  flex: 1;
+  min-width: 0;
 }
 
 .hex-item:hover {
@@ -2690,7 +2697,7 @@ label {
   font-size: 13px;
 }
 
-.close-btn {
+.keyboard-shortcuts-modal .close-btn {
   position: absolute;
   top: 12px;
   right: 12px;

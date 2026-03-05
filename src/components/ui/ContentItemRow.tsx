@@ -19,8 +19,9 @@ function ContentItemRow({ item, onToggleResolved, onSave, onDelete }: ContentIte
     return (
       <div className="inline-edit-form" ref={containerRef}>
         <div className="field-group">
-          <label>Title</label>
+          <label htmlFor={`item-title-${draft.id}`}>Title</label>
           <input
+            id={`item-title-${draft.id}`}
             type="text"
             value={draft.title}
             onChange={(e) => setDraft({ ...draft, title: e.target.value })}
@@ -28,8 +29,9 @@ function ContentItemRow({ item, onToggleResolved, onSave, onDelete }: ContentIte
           />
         </div>
         <div className="field-group">
-          <label>Difficulty / CR</label>
+          <label htmlFor={`item-difficulty-${draft.id}`}>Difficulty / CR</label>
           <input
+            id={`item-difficulty-${draft.id}`}
             type="text"
             value={draft.difficulty ?? ''}
             onChange={(e) => setDraft({ ...draft, difficulty: e.target.value || undefined })}
@@ -37,8 +39,9 @@ function ContentItemRow({ item, onToggleResolved, onSave, onDelete }: ContentIte
           />
         </div>
         <div className="field-group">
-          <label>Description</label>
+          <label htmlFor={`item-desc-${draft.id}`}>Description</label>
           <textarea
+            id={`item-desc-${draft.id}`}
             value={draft.description}
             onChange={(e) => setDraft({ ...draft, description: e.target.value })}
             rows={3}

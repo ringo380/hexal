@@ -14,7 +14,7 @@ interface EncounterRowProps {
   encounter: Encounter;
   onToggleResolved: () => void;
   onSave: (encounter: Encounter) => void;
-  onEditFull: () => void;
+  onEditFull: (encounter: Encounter) => void;
   onDelete: () => void;
 }
 
@@ -25,8 +25,9 @@ function EncounterRow({ encounter, onToggleResolved, onSave, onEditFull, onDelet
     return (
       <div className="inline-edit-form" ref={containerRef}>
         <div className="field-group">
-          <label>Title</label>
+          <label htmlFor={`enc-title-${draft.id}`}>Title</label>
           <input
+            id={`enc-title-${draft.id}`}
             type="text"
             value={draft.title}
             onChange={(e) => setDraft({ ...draft, title: e.target.value })}
@@ -35,14 +36,15 @@ function EncounterRow({ encounter, onToggleResolved, onSave, onEditFull, onDelet
         </div>
         <div className="inline-edit-row">
           <div className="field-group">
-            <label>Type</label>
-            <select value={draft.encounterType} onChange={(e) => setDraft({ ...draft, encounterType: e.target.value as EncounterType })}>
+            <label htmlFor={`enc-type-${draft.id}`}>Type</label>
+            <select id={`enc-type-${draft.id}`} value={draft.encounterType} onChange={(e) => setDraft({ ...draft, encounterType: e.target.value as EncounterType })}>
               {ENCOUNTER_TYPES.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
             </select>
           </div>
           <div className="field-group">
-            <label>Difficulty</label>
+            <label htmlFor={`enc-diff-${draft.id}`}>Difficulty</label>
             <input
+              id={`enc-diff-${draft.id}`}
               type="text"
               value={draft.difficulty ?? ''}
               onChange={(e) => setDraft({ ...draft, difficulty: e.target.value || undefined })}
@@ -50,15 +52,16 @@ function EncounterRow({ encounter, onToggleResolved, onSave, onEditFull, onDelet
             />
           </div>
           <div className="field-group">
-            <label>Outcome</label>
-            <select value={draft.outcome} onChange={(e) => setDraft({ ...draft, outcome: e.target.value as EncounterOutcome })}>
+            <label htmlFor={`enc-outcome-${draft.id}`}>Outcome</label>
+            <select id={`enc-outcome-${draft.id}`} value={draft.outcome} onChange={(e) => setDraft({ ...draft, outcome: e.target.value as EncounterOutcome })}>
               {OUTCOME_TYPES.map(o => <option key={o} value={o}>{o.charAt(0).toUpperCase() + o.slice(1)}</option>)}
             </select>
           </div>
         </div>
         <div className="field-group">
-          <label>Description</label>
+          <label htmlFor={`enc-desc-${draft.id}`}>Description</label>
           <textarea
+            id={`enc-desc-${draft.id}`}
             value={draft.description}
             onChange={(e) => setDraft({ ...draft, description: e.target.value })}
             rows={3}
@@ -66,7 +69,7 @@ function EncounterRow({ encounter, onToggleResolved, onSave, onEditFull, onDelet
         </div>
         <div className="inline-edit-actions">
           <button className="btn btn-secondary btn-small" onClick={cancel}>Cancel</button>
-          <button className="btn btn-secondary btn-small" onClick={() => { save(); onEditFull(); }}>Edit Details...</button>
+          <button className="btn btn-secondary btn-small" onClick={() => { save(); onEditFull(draft); }}>Edit Details...</button>
           <button className="btn btn-primary btn-small" onClick={save}>Save</button>
         </div>
       </div>

@@ -46,6 +46,11 @@ function Sidebar() {
   const [groupBy, setGroupBy] = useState<GroupBy>('none');
   const [collapsed, setCollapsed] = useState<Map<string, boolean>>(new Map());
 
+  // Clear session-only state on campaign change
+  useEffect(() => {
+    setCollapsed(new Map());
+  }, [campaign?.id]);
+
   // Build hex-to-region lookup
   const hexRegionMap = useMemo(() => createHexRegionMap(regions), [regions]);
 
@@ -153,13 +158,11 @@ function Sidebar() {
     });
   }, []);
 
-  const handleStatusCycle = useCallback((e: React.MouseEvent, hex: Hex) => {
-    e.stopPropagation();
+  const handleStatusCycle = useCallback((hex: Hex) => {
     updateHex({ ...hex, status: nextStatus(hex.status) });
   }, [updateHex]);
 
-  const handleBookmarkToggle = useCallback((e: React.MouseEvent, hex: Hex) => {
-    e.stopPropagation();
+  const handleBookmarkToggle = useCallback((hex: Hex) => {
     toggleBookmark(hex.coordinate);
   }, [toggleBookmark]);
 
@@ -192,67 +195,71 @@ function Sidebar() {
       <li
         key={key}
         className={`hex-item ${isSelected(hex) ? 'selected' : ''}`}
-        role="button"
-        tabIndex={0}
-        aria-label={`Hex ${hex.coordinate.q}, ${hex.coordinate.r} — ${hex.terrain}`}
-        onClick={() => selectHex(hex.coordinate)}
-        onKeyDown={onActivate(() => selectHex(hex.coordinate))}
       >
-        <span
-          className="terrain-indicator"
-          style={{ backgroundColor: getTerrainColor(hex.terrain) }}
-        />
-        <div className="hex-info">
-          <div className="hex-info-row">
-            <span className="hex-coord">
-              ({hex.coordinate.q}, {hex.coordinate.r})
-            </span>
-            <span className="hex-terrain">{hex.terrain}</span>
-            {isBookmarked && (
-              <span className="bookmark-indicator" title="Bookmarked">
-                <Icon name="star" size={12} />
+        <div
+          className="hex-item-content"
+          role="button"
+          tabIndex={0}
+          aria-label={`Hex ${hex.coordinate.q}, ${hex.coordinate.r} — ${hex.terrain}`}
+          onClick={() => selectHex(hex.coordinate)}
+          onKeyDown={onActivate(() => selectHex(hex.coordinate))}
+        >
+          <span
+            className="terrain-indicator"
+            style={{ backgroundColor: getTerrainColor(hex.terrain) }}
+          />
+          <div className="hex-info">
+            <div className="hex-info-row">
+              <span className="hex-coord">
+                ({hex.coordinate.q}, {hex.coordinate.r})
               </span>
-            )}
-          </div>
-          {groupBy !== 'region' && hexRegion && (
-            <span className="hex-region-label">
-              <span className="region-swatch" style={{ backgroundColor: hexRegion.color }} />
-              {hexRegion.name || 'Unnamed'}
-            </span>
-          )}
-          {hasContent && (
-            <div className="hex-content-badges">
-              {Object.entries(contentCounts).map(([cat, count]) =>
-                count > 0 ? (
-                  <span key={cat} className="content-badge" title={`${count} ${cat}`}>
-                    <Icon name={CONTENT_ICONS[cat]} size={10} />
-                    <span>{count}</span>
-                  </span>
-                ) : null
+              <span className="hex-terrain">{hex.terrain}</span>
+              {isBookmarked && (
+                <span className="bookmark-indicator" title="Bookmarked">
+                  <Icon name="star" size={12} />
+                </span>
               )}
             </div>
-          )}
-          {hex.notes && (
-            <span className="hex-notes-preview">{hex.notes.slice(0, 40)}{hex.notes.length > 40 ? '...' : ''}</span>
-          )}
-          {matchHint && (
-            <span className="match-hint">{matchHint}</span>
-          )}
-        </div>
-        <div className="hex-status">
-          {hexHasUnresolvedContent(hex) && (
-            <span className="unresolved-indicator" title="Has unresolved content">!</span>
-          )}
-          <span className={`status-badge status-${hex.status}`}>
-            {hex.status.charAt(0).toUpperCase()}
-          </span>
+            {groupBy !== 'region' && hexRegion && (
+              <span className="hex-region-label">
+                <span className="region-swatch" style={{ backgroundColor: hexRegion.color }} />
+                {hexRegion.name || 'Unnamed'}
+              </span>
+            )}
+            {hasContent && (
+              <div className="hex-content-badges">
+                {Object.entries(contentCounts).map(([cat, count]) =>
+                  count > 0 ? (
+                    <span key={cat} className="content-badge" title={`${count} ${cat}`}>
+                      <Icon name={CONTENT_ICONS[cat]} size={10} />
+                      <span>{count}</span>
+                    </span>
+                  ) : null
+                )}
+              </div>
+            )}
+            {hex.notes && (
+              <span className="hex-notes-preview">{hex.notes.slice(0, 40)}{hex.notes.length > 40 ? '...' : ''}</span>
+            )}
+            {matchHint && (
+              <span className="match-hint">{matchHint}</span>
+            )}
+          </div>
+          <div className="hex-status">
+            {hexHasUnresolvedContent(hex) && (
+              <span className="unresolved-indicator" title="Has unresolved content">!</span>
+            )}
+            <span className={`status-badge status-${hex.status}`}>
+              {hex.status.charAt(0).toUpperCase()}
+            </span>
+          </div>
         </div>
         <div className="hex-quick-actions">
           <button
             className="btn-icon-small"
             title={`Change to ${nextStatus(hex.status)}`}
             aria-label={`Change status to ${nextStatus(hex.status)}`}
-            onClick={(e) => handleStatusCycle(e, hex)}
+            onClick={() => handleStatusCycle(hex)}
           >
             <Icon name="circle" size={12} />
           </button>
@@ -260,7 +267,7 @@ function Sidebar() {
             className="btn-icon-small"
             title={isBookmarked ? 'Remove bookmark' : 'Bookmark'}
             aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark hex'}
-            onClick={(e) => handleBookmarkToggle(e, hex)}
+            onClick={() => handleBookmarkToggle(hex)}
           >
             <Icon name="star" size={12} />
           </button>
