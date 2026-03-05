@@ -199,7 +199,7 @@ function SettingsModal({ onClose }: SettingsModalProps) {
           {activeTab === 'cloud' && (
             <div className="settings-section">
               <p className="settings-hint">
-                Cloud sync requires a Supabase project. These fields are optional — the app works fully offline without them.
+                Cloud sync stores campaign data in Supabase. These fields are optional — the app works fully offline without them. Sign in via the account menu to enable cloud features.
               </p>
               <label className="settings-label settings-checkbox-label">
                 <input
