@@ -1,8 +1,7 @@
-// LoginModal — Sign in / Sign up modal with OAuth support
+// LoginModal — OAuth sign-in modal (Google, GitHub, Apple)
 
 import { useState } from 'react';
-import { useAuth } from '../../stores/AuthContext';
-import { useSettings } from '../../stores/SettingsContext';
+import { useSignIn } from '@clerk/react';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import Icon from '../icons/Icon';
 
@@ -10,106 +9,57 @@ interface LoginModalProps {
   onClose: () => void;
 }
 
-type AuthTab = 'signin' | 'signup';
+type OAuthStrategy = 'oauth_google' | 'oauth_github' | 'oauth_apple';
+
+const providers: { strategy: OAuthStrategy; label: string; icon: string }[] = [
+  { strategy: 'oauth_google', label: 'Continue with Google', icon: 'sparkle' },
+  { strategy: 'oauth_github', label: 'Continue with GitHub', icon: 'scroll' },
+  { strategy: 'oauth_apple', label: 'Continue with Apple', icon: 'shield' },
+];
 
 function LoginModal({ onClose }: LoginModalProps) {
   const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: onClose });
-  const { signIn, signUp, signInWithOAuth, loading } = useAuth();
-  const { settings } = useSettings();
-  const [activeTab, setActiveTab] = useState<AuthTab>('signin');
+  const { signIn } = useSignIn();
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Sign In form state
-  const [signInEmail, setSignInEmail] = useState('');
-  const [signInPassword, setSignInPassword] = useState('');
+  const handleOAuth = async (strategy: OAuthStrategy) => {
+    if (!signIn) return;
 
-  // Sign Up form state
-  const [signUpDisplayName, setSignUpDisplayName] = useState('');
-  const [signUpEmail, setSignUpEmail] = useState('');
-  const [signUpPassword, setSignUpPassword] = useState('');
-  const [signUpConfirmPassword, setSignUpConfirmPassword] = useState('');
-
-  const cloudConfigured = Boolean(settings.cloud.supabaseUrl);
-
-  const handleSignIn = async () => {
-    if (!signInEmail || !signInPassword) {
-      setError('Please fill in all fields.');
-      return;
-    }
     setError('');
     setSubmitting(true);
     try {
-      const result = await signIn(signInEmail, signInPassword);
-      if (result.error) {
-        setError(result.error);
-      } else {
+      // Open OAuth in a popup window instead of redirecting the Electron main window.
+      // Clerk v6 natively supports a `popup` param on signIn.sso().
+      const popup = window.open('about:blank', '_blank', 'width=500,height=700');
+      if (!popup) {
+        throw new Error('Could not open popup window. Check your popup blocker settings.');
+      }
+
+      const { error: ssoError } = await signIn.sso({
+        strategy,
+        popup,
+        redirectUrl: `${window.location.origin}/sso-callback`,
+        redirectCallbackUrl: '/',
+      });
+
+      if (ssoError) {
+        throw new Error(ssoError.message ?? 'SSO authentication failed');
+      }
+
+      // signIn.sso() with popup resolves once the OAuth flow completes.
+      // If sign-in is complete, finalize it to set the active session.
+      if (signIn.status === 'complete') {
+        await signIn.finalize();
         onClose();
-      }
-    } catch (err) {
-      setError('An unexpected error occurred.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleSignUp = async () => {
-    if (!signUpDisplayName || !signUpEmail || !signUpPassword || !signUpConfirmPassword) {
-      setError('Please fill in all fields.');
-      return;
-    }
-    if (signUpPassword !== signUpConfirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-    if (signUpPassword.length < 6) {
-      setError('Password must be at least 6 characters.');
-      return;
-    }
-    setError('');
-    setSubmitting(true);
-    try {
-      const result = await signUp(signUpEmail, signUpPassword, signUpDisplayName);
-      if (result.error) {
-        setError(result.error);
       } else {
-        onClose();
+        setSubmitting(false);
       }
     } catch (err) {
-      setError('An unexpected error occurred.');
-    } finally {
+      setError('Sign-in failed. Please try again.');
+      console.error('OAuth error:', err);
       setSubmitting(false);
     }
-  };
-
-  const handleOAuth = async (provider: 'google' | 'github' | 'discord') => {
-    setError('');
-    setSubmitting(true);
-    try {
-      const result = await signInWithOAuth(provider);
-      if (result.error) {
-        setError(result.error);
-      }
-    } catch (err) {
-      setError('An unexpected error occurred.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      if (activeTab === 'signin') {
-        handleSignIn();
-      } else {
-        handleSignUp();
-      }
-    }
-  };
-
-  const switchTab = (tab: AuthTab) => {
-    setActiveTab(tab);
-    setError('');
   };
 
   return (
@@ -118,174 +68,37 @@ function LoginModal({ onClose }: LoginModalProps) {
         ref={focusTrapRef}
         className="modal login-modal"
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={handleKeyDown}
-        style={{ width: 400 }}
+        style={{ width: 360 }}
       >
         <div className="modal-header">
           <h3 id="login-modal-title">
-            <Icon name="user" size={18} /> Account
+            <Icon name="user" size={18} /> Sign In
           </h3>
-          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">x</button>
         </div>
 
-        {!cloudConfigured ? (
-          <div className="modal-body">
-            <p className="settings-hint" style={{ textAlign: 'center', padding: '24px 0' }}>
-              Cloud sync is not configured. Go to Settings &gt; Cloud to set up your Supabase connection.
-            </p>
+        <div className="modal-body">
+          {error && <div className="auth-error">{error}</div>}
+
+          <div className="oauth-buttons-vertical">
+            {providers.map(({ strategy, label, icon }) => (
+              <button
+                key={strategy}
+                className="oauth-btn-large"
+                onClick={() => handleOAuth(strategy)}
+                disabled={submitting}
+              >
+                <Icon name={icon as any} size={16} />
+                {submitting ? 'Signing in...' : label}
+              </button>
+            ))}
           </div>
-        ) : (
-          <>
-            <div className="auth-tabs">
-              <button
-                className={`tab-btn ${activeTab === 'signin' ? 'active' : ''}`}
-                onClick={() => switchTab('signin')}
-              >
-                Sign In
-              </button>
-              <button
-                className={`tab-btn ${activeTab === 'signup' ? 'active' : ''}`}
-                onClick={() => switchTab('signup')}
-              >
-                Sign Up
-              </button>
-            </div>
 
-            <div className="modal-body">
-              {error && <div className="auth-error">{error}</div>}
-
-              {activeTab === 'signin' && (
-                <div className="auth-form">
-                  <label className="settings-label">
-                    Email
-                    <input
-                      type="email"
-                      className="settings-input"
-                      value={signInEmail}
-                      onChange={(e) => setSignInEmail(e.target.value)}
-                      placeholder="you@example.com"
-                      autoFocus
-                      disabled={submitting}
-                    />
-                  </label>
-                  <label className="settings-label">
-                    Password
-                    <input
-                      type="password"
-                      className="settings-input"
-                      value={signInPassword}
-                      onChange={(e) => setSignInPassword(e.target.value)}
-                      placeholder="Your password"
-                      disabled={submitting}
-                    />
-                  </label>
-                  <button
-                    className="btn btn-primary"
-                    onClick={handleSignIn}
-                    disabled={submitting || loading}
-                    style={{ width: '100%' }}
-                  >
-                    {submitting ? 'Signing in...' : 'Sign In'}
-                  </button>
-
-                  <div className="auth-divider">or continue with</div>
-
-                  <div className="oauth-buttons">
-                    <button
-                      className="oauth-btn"
-                      onClick={() => handleOAuth('google')}
-                      disabled={submitting}
-                    >
-                      Google
-                    </button>
-                    <button
-                      className="oauth-btn"
-                      onClick={() => handleOAuth('github')}
-                      disabled={submitting}
-                    >
-                      GitHub
-                    </button>
-                    <button
-                      className="oauth-btn"
-                      onClick={() => handleOAuth('discord')}
-                      disabled={submitting}
-                    >
-                      Discord
-                    </button>
-                  </div>
-
-                  <div className="auth-switch">
-                    Don't have an account?{' '}
-                    <button onClick={() => switchTab('signup')}>Sign Up</button>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'signup' && (
-                <div className="auth-form">
-                  <label className="settings-label">
-                    Display Name
-                    <input
-                      type="text"
-                      className="settings-input"
-                      value={signUpDisplayName}
-                      onChange={(e) => setSignUpDisplayName(e.target.value)}
-                      placeholder="Your name"
-                      autoFocus
-                      disabled={submitting}
-                    />
-                  </label>
-                  <label className="settings-label">
-                    Email
-                    <input
-                      type="email"
-                      className="settings-input"
-                      value={signUpEmail}
-                      onChange={(e) => setSignUpEmail(e.target.value)}
-                      placeholder="you@example.com"
-                      disabled={submitting}
-                    />
-                  </label>
-                  <label className="settings-label">
-                    Password
-                    <input
-                      type="password"
-                      className="settings-input"
-                      value={signUpPassword}
-                      onChange={(e) => setSignUpPassword(e.target.value)}
-                      placeholder="At least 6 characters"
-                      disabled={submitting}
-                    />
-                  </label>
-                  <label className="settings-label">
-                    Confirm Password
-                    <input
-                      type="password"
-                      className="settings-input"
-                      value={signUpConfirmPassword}
-                      onChange={(e) => setSignUpConfirmPassword(e.target.value)}
-                      placeholder="Re-enter your password"
-                      disabled={submitting}
-                    />
-                  </label>
-                  <button
-                    className="btn btn-primary"
-                    onClick={handleSignUp}
-                    disabled={submitting || loading}
-                    style={{ width: '100%' }}
-                  >
-                    {submitting ? 'Creating account...' : 'Create Account'}
-                  </button>
-
-                  <div className="auth-switch">
-                    Already have an account?{' '}
-                    <button onClick={() => switchTab('signin')}>Sign In</button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </>
-        )}
+          <p className="auth-hint">
+            Sign in to sync campaigns across devices.
+            The app works fully offline without an account.
+          </p>
+        </div>
 
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onClose}>Close</button>

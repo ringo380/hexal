@@ -1,11 +1,10 @@
-// AuthContext — Optional Supabase authentication wrapper
-// The app works 100% without an account. If cloud settings aren't configured,
+// AuthContext — Clerk authentication wrapper
+// The app works 100% without an account. If Clerk isn't configured,
 // this context simply returns user: null, isAuthenticated: false.
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import type { Subscription } from '@supabase/supabase-js';
-import { useSettings } from './SettingsContext';
-import { getSupabaseClient, clearSupabaseClient } from '../services/supabaseClient';
+import React, { createContext, useContext, useCallback, useEffect } from 'react';
+import { useUser, useSession, useClerk } from '@clerk/react';
+import { setSupabaseTokenProvider, clearSupabaseClient } from '../services/supabaseClient';
 
 // ============ TYPES ============
 
@@ -19,9 +18,6 @@ export interface AuthUser {
 export interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error?: string }>;
-  signUp: (email: string, password: string, displayName: string) => Promise<{ error?: string }>;
-  signInWithOAuth: (provider: 'google' | 'github' | 'discord') => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   isAuthenticated: boolean;
 }
@@ -30,141 +26,59 @@ export interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-// ============ PROVIDER ============
+// ============ NO-AUTH FALLBACK ============
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { settings } = useSettings();
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
+const noAuthValue: AuthContextValue = {
+  user: null,
+  loading: false,
+  signOut: async () => {},
+  isAuthenticated: false,
+};
 
-  const { supabaseUrl, supabaseAnonKey } = settings.cloud;
+// ============ CLERK AUTH PROVIDER ============
 
-  // Listen for auth state changes whenever the Supabase client is available
+function ClerkAuthProvider({ children }: { children: React.ReactNode }) {
+  const { user: clerkUser, isLoaded } = useUser();
+  const { session } = useSession();
+  const { signOut: clerkSignOut } = useClerk();
+
+  // Map Clerk user to our AuthUser interface
+  const user: AuthUser | null = clerkUser ? {
+    id: clerkUser.id,
+    email: clerkUser.primaryEmailAddress?.emailAddress ?? '',
+    displayName: clerkUser.fullName ?? clerkUser.firstName ?? '',
+    avatarUrl: clerkUser.imageUrl,
+  } : null;
+
+  // Set up the Supabase token provider when session is available
   useEffect(() => {
-    const client = getSupabaseClient(supabaseUrl, supabaseAnonKey);
-
-    // If Supabase is not configured, skip auth entirely
-    if (!client) {
-      setUser(null);
-      setLoading(false);
-      return;
+    if (session) {
+      setSupabaseTokenProvider(() => session.getToken({ template: 'supabase' }));
+    } else {
+      setSupabaseTokenProvider(null);
     }
+  }, [session]);
 
-    // Check current session on mount
-    let authSubscription: Subscription | undefined;
-
-    const init = async () => {
-      try {
-        const { data: { session } } = await client.auth.getSession();
-        if (session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email ?? '',
-            displayName:
-              (session.user.user_metadata?.display_name as string) ??
-              (session.user.user_metadata?.full_name as string) ??
-              session.user.email ??
-              '',
-            avatarUrl: session.user.user_metadata?.avatar_url as string | undefined,
-          });
-        } else {
-          setUser(null);
-        }
-      } catch {
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-
-      // Subscribe to future auth state changes
-      const { data } = client.auth.onAuthStateChange((_event, session) => {
-        if (session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email ?? '',
-            displayName:
-              (session.user.user_metadata?.display_name as string) ??
-              (session.user.user_metadata?.full_name as string) ??
-              session.user.email ??
-              '',
-            avatarUrl: session.user.user_metadata?.avatar_url as string | undefined,
-          });
-        } else {
-          setUser(null);
-        }
-      });
-
-      authSubscription = data.subscription;
-    };
-
-    init();
-
-    // Cleanup subscription on unmount or credential change
+  // Clean up token provider on unmount
+  useEffect(() => {
     return () => {
-      authSubscription?.unsubscribe();
+      setSupabaseTokenProvider(null);
     };
-  }, [supabaseUrl, supabaseAnonKey]);
-
-  // ============ AUTH METHODS ============
-
-  const signIn = useCallback(
-    async (email: string, password: string): Promise<{ error?: string }> => {
-      const client = getSupabaseClient(supabaseUrl, supabaseAnonKey);
-      if (!client) return { error: 'Cloud settings not configured' };
-
-      const { error } = await client.auth.signInWithPassword({ email, password });
-      return error ? { error: error.message } : {};
-    },
-    [supabaseUrl, supabaseAnonKey]
-  );
-
-  const signUp = useCallback(
-    async (email: string, password: string, displayName: string): Promise<{ error?: string }> => {
-      const client = getSupabaseClient(supabaseUrl, supabaseAnonKey);
-      if (!client) return { error: 'Cloud settings not configured' };
-
-      const { error } = await client.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { display_name: displayName },
-        },
-      });
-      return error ? { error: error.message } : {};
-    },
-    [supabaseUrl, supabaseAnonKey]
-  );
-
-  const signInWithOAuth = useCallback(
-    async (provider: 'google' | 'github' | 'discord'): Promise<{ error?: string }> => {
-      const client = getSupabaseClient(supabaseUrl, supabaseAnonKey);
-      if (!client) return { error: 'Cloud settings not configured' };
-
-      const { error } = await client.auth.signInWithOAuth({ provider });
-      return error ? { error: error.message } : {};
-    },
-    [supabaseUrl, supabaseAnonKey]
-  );
+  }, []);
 
   const signOut = useCallback(async (): Promise<void> => {
-    const client = getSupabaseClient(supabaseUrl, supabaseAnonKey);
-    if (client) {
-      await client.auth.signOut();
-    }
+    await clerkSignOut();
+    setSupabaseTokenProvider(null);
     clearSupabaseClient();
-    setUser(null);
-  }, [supabaseUrl, supabaseAnonKey]);
+  }, [clerkSignOut]);
 
   // ============ CONTEXT VALUE ============
 
   const value: AuthContextValue = {
     user,
-    loading,
-    signIn,
-    signUp,
-    signInWithOAuth,
+    loading: !isLoaded,
     signOut,
-    isAuthenticated: user !== null,
+    isAuthenticated: clerkUser !== null && clerkUser !== undefined,
   };
 
   return (
@@ -172,6 +86,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
+}
+
+// ============ EXPORTED PROVIDER ============
+
+interface AuthProviderProps {
+  children: React.ReactNode;
+  clerkEnabled?: boolean;
+}
+
+export function AuthProvider({ children, clerkEnabled = false }: AuthProviderProps) {
+  if (!clerkEnabled) {
+    return (
+      <AuthContext.Provider value={noAuthValue}>
+        {children}
+      </AuthContext.Provider>
+    );
+  }
+
+  return <ClerkAuthProvider>{children}</ClerkAuthProvider>;
 }
 
 // ============ HOOK ============
