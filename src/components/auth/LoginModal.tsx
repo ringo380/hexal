@@ -29,11 +29,32 @@ function LoginModal({ onClose }: LoginModalProps) {
     setError('');
     setSubmitting(true);
     try {
-      await signIn.sso({
+      // Open OAuth in a popup window instead of redirecting the Electron main window.
+      // Clerk v6 natively supports a `popup` param on signIn.sso().
+      const popup = window.open('about:blank', '_blank', 'width=500,height=700');
+      if (!popup) {
+        throw new Error('Could not open popup window. Check your popup blocker settings.');
+      }
+
+      const { error: ssoError } = await signIn.sso({
         strategy,
-        redirectUrl: '/sso-callback',
+        popup,
+        redirectUrl: `${window.location.origin}/sso-callback`,
         redirectCallbackUrl: '/',
       });
+
+      if (ssoError) {
+        throw new Error(ssoError.message ?? 'SSO authentication failed');
+      }
+
+      // signIn.sso() with popup resolves once the OAuth flow completes.
+      // If sign-in is complete, finalize it to set the active session.
+      if (signIn.status === 'complete') {
+        await signIn.finalize();
+        onClose();
+      } else {
+        setSubmitting(false);
+      }
     } catch (err) {
       setError('Sign-in failed. Please try again.');
       console.error('OAuth error:', err);
@@ -68,7 +89,7 @@ function LoginModal({ onClose }: LoginModalProps) {
                 disabled={submitting}
               >
                 <Icon name={icon as any} size={16} />
-                {submitting ? 'Redirecting...' : label}
+                {submitting ? 'Signing in...' : label}
               </button>
             ))}
           </div>

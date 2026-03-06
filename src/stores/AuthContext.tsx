@@ -53,7 +53,7 @@ function ClerkAuthProvider({ children }: { children: React.ReactNode }) {
   // Set up the Supabase token provider when session is available
   useEffect(() => {
     if (session) {
-      setSupabaseTokenProvider(() => session.getToken());
+      setSupabaseTokenProvider(() => session.getToken({ template: 'supabase' }));
     } else {
       setSupabaseTokenProvider(null);
     }
