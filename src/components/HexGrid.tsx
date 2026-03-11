@@ -689,9 +689,10 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
         const cy = sumY / region.hexKeys.length;
 
         const fontSize = Math.max(8, Math.min(14, 10 / curZoom));
-        ctx.font = `bold ${fontSize}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+        const wantFont = `bold ${fontSize}px sans-serif`;
+        if (currentFont !== wantFont) { ctx.font = wantFont; currentFont = wantFont; }
+        if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
+        if (currentBaseline !== 'middle') { ctx.textBaseline = 'middle'; currentBaseline = 'middle'; }
         ctx.fillStyle = hexToRgba(region.color, 0.9);
         ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
         ctx.shadowBlur = 4;
