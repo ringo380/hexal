@@ -6,6 +6,7 @@ CLAUDE.md
 .claude/
 .claude-dev-helper/
 .plugin-config/
+docs/plans/
 
 # Worktrees
 .worktrees/
