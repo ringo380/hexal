@@ -148,6 +148,45 @@ export function coordinateAt(
   return { q, r };
 }
 
+/** Range of visible hex coordinates given current camera state */
+export interface HexRange {
+  qMin: number;
+  qMax: number;
+  rMin: number;
+  rMax: number;
+}
+
+/**
+ * Calculate the range of hex coordinates visible in the current viewport.
+ * Inverts the world-to-screen transform at canvas edges to find hex bounds.
+ * Adds a margin for partially visible hexes and blur edge artifacts.
+ */
+export function getVisibleHexRange(
+  offsetX: number,
+  offsetY: number,
+  zoomLevel: number,
+  canvasWidth: number,
+  canvasHeight: number,
+  gridWidth: number,
+  gridHeight: number,
+  margin: number = 2
+): HexRange {
+  // Convert screen corners to world coordinates
+  const worldLeft = -offsetX / zoomLevel;
+  const worldRight = (canvasWidth - offsetX) / zoomLevel;
+  const worldTop = -offsetY / zoomLevel;
+  const worldBottom = (canvasHeight - offsetY) / zoomLevel;
+
+  // Convert world coordinates to approximate hex column/row bounds
+  // hexCenter: x = q * HORIZONTAL_SPACING + HEX_SIZE, y = r * VERTICAL_SPACING + yOffset + HEX_SIZE
+  const qMin = Math.max(0, Math.floor((worldLeft - HEX_SIZE) / HORIZONTAL_SPACING) - margin);
+  const qMax = Math.min(gridWidth - 1, Math.ceil((worldRight - HEX_SIZE) / HORIZONTAL_SPACING) + margin);
+  const rMin = Math.max(0, Math.floor((worldTop - HEX_SIZE - VERTICAL_SPACING / 2) / VERTICAL_SPACING) - margin);
+  const rMax = Math.min(gridHeight - 1, Math.ceil((worldBottom - HEX_SIZE) / VERTICAL_SPACING) + margin);
+
+  return { qMin, qMax, rMin, rMax };
+}
+
 /**
  * Flood-fill from origin hex, collecting all connected hexes with the same terrain type.
  * Uses BFS via getValidNeighbors.

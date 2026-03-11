@@ -19,6 +19,8 @@ interface WeatherSimulationState {
   isRunning: boolean;
   /** Current weather field (interpolated for smooth 60fps) */
   field: WeatherField;
+  /** Monotonic version counter — increments only on actual worker FIELD_UPDATE ticks */
+  fieldVersion: number;
   /** Active pressure systems */
   pressureSystems: PressureSystem[];
   /** Active weather fronts */
@@ -69,6 +71,9 @@ export function WeatherSimulationProvider({ children }: { children: React.ReactN
   const tickIntervalRef = useRef(100); // ms between worker ticks
 
   const [field, setField] = useState<WeatherField>({});
+  // Monotonic version counter — only incremented on actual worker ticks, not interpolation frames
+  const fieldVersionRef = useRef(0);
+  const [fieldVersion, setFieldVersion] = useState(0);
   const [pressureSystems, setPressureSystems] = useState<PressureSystem[]>([]);
   const [fronts, setFronts] = useState<WeatherFront[]>([]);
   const [activeEvents, setActiveEvents] = useState<WeatherEvent[]>([]);
@@ -109,6 +114,9 @@ export function WeatherSimulationProvider({ children }: { children: React.ReactN
         prevFieldRef.current = currentFieldRef.current;
         currentFieldRef.current = msg.field;
         lastTickTimeRef.current = performance.now();
+        // Increment version counter (only on actual worker ticks, not interpolation)
+        fieldVersionRef.current++;
+        setFieldVersion(fieldVersionRef.current);
         // Also update the final state directly (particles etc. use non-interpolated)
         setField(msg.field);
         setPressureSystems(msg.pressureSystems);
@@ -179,6 +187,8 @@ export function WeatherSimulationProvider({ children }: { children: React.ReactN
     setIsRunning(false);
     setIsReady(false);
     setField({});
+    fieldVersionRef.current = 0;
+    setFieldVersion(0);
     setPressureSystems([]);
     setFronts([]);
     setActiveEvents([]);
@@ -222,6 +232,7 @@ export function WeatherSimulationProvider({ children }: { children: React.ReactN
   const value: WeatherSimulationContextType = {
     isRunning,
     field,
+    fieldVersion,
     pressureSystems,
     fronts,
     activeEvents,

@@ -2,7 +2,7 @@
 // Draws per-hex colored fills with Gaussian blur for smooth transitions
 
 import type { WeatherField, WeatherFieldCell, WeatherSimulationConfig } from '../types/Weather';
-import { hexCenter, drawHexPath, HEX_SIZE, getHexNeighbors } from './hexGeometry';
+import { hexCenter, drawHexPath, HEX_SIZE, getHexNeighbors, type HexRange } from './hexGeometry';
 import { clamp } from './weather/WeatherField';
 
 /** Color mapping functions for different overlay modes */
@@ -53,9 +53,36 @@ const COLOR_MAP: Record<string, (cell: WeatherFieldCell) => string> = {
   wind: windColor
 };
 
+/** Pre-allocated canvas pair for gradient rendering (draw + blur) */
+export interface GradientCanvasRefs {
+  draw: HTMLCanvasElement;
+  blur: HTMLCanvasElement;
+}
+
 /**
- * Render weather gradient overlay to an offscreen canvas.
- * Returns the offscreen canvas for compositing onto the main canvas.
+ * Ensure canvas refs exist and have the correct dimensions.
+ * Returns the refs, creating canvases only on first call or size change.
+ */
+export function ensureGradientCanvases(
+  refs: GradientCanvasRefs | null,
+  width: number,
+  height: number
+): GradientCanvasRefs {
+  if (refs && refs.draw.width === width && refs.draw.height === height) {
+    return refs;
+  }
+  const draw = refs?.draw || document.createElement('canvas');
+  const blur = refs?.blur || document.createElement('canvas');
+  draw.width = width;
+  draw.height = height;
+  blur.width = width;
+  blur.height = height;
+  return { draw, blur };
+}
+
+/**
+ * Render weather gradient overlay to pre-allocated offscreen canvases.
+ * Returns the blur canvas for compositing onto the main canvas.
  */
 export function renderWeatherGradient(
   field: WeatherField,
@@ -66,25 +93,34 @@ export function renderWeatherGradient(
   canvasHeight: number,
   offsetX: number,
   offsetY: number,
-  zoomLevel: number
+  zoomLevel: number,
+  canvasRefs?: GradientCanvasRefs | null,
+  visibleRange?: HexRange | null
 ): HTMLCanvasElement | null {
   if (!config.enabled || Object.keys(field).length === 0) return null;
 
-  const offscreen = document.createElement('canvas');
-  offscreen.width = canvasWidth;
-  offscreen.height = canvasHeight;
+  const refs = canvasRefs || ensureGradientCanvases(null, canvasWidth, canvasHeight);
+  const offscreen = refs.draw;
   const ctx = offscreen.getContext('2d');
   if (!ctx) return null;
 
+  // Clear previous content
+  ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
   const colorFn = COLOR_MAP[config.overlayMode] || precipitationColor;
+
+  const qMin = visibleRange ? visibleRange.qMin : 0;
+  const qMax = visibleRange ? visibleRange.qMax : gridWidth - 1;
+  const rMin = visibleRange ? visibleRange.rMin : 0;
+  const rMax = visibleRange ? visibleRange.rMax : gridHeight - 1;
 
   ctx.save();
   ctx.translate(offsetX, offsetY);
   ctx.scale(zoomLevel, zoomLevel);
 
   // Draw hex-by-hex colored fills
-  for (let q = 0; q < gridWidth; q++) {
-    for (let r = 0; r < gridHeight; r++) {
+  for (let q = qMin; q <= qMax; q++) {
+    for (let r = rMin; r <= rMax; r++) {
       const key = `${q},${r}`;
       const cell = field[key];
       if (!cell) continue;
@@ -102,13 +138,11 @@ export function renderWeatherGradient(
   ctx.restore();
 
   // Apply Gaussian blur for smooth transitions between hexes
-  // Use a second canvas to avoid undefined behavior from self-draw
   const blurAmount = Math.max(3, Math.min(12, 6 * zoomLevel));
-  const blurred = document.createElement('canvas');
-  blurred.width = canvasWidth;
-  blurred.height = canvasHeight;
+  const blurred = refs.blur;
   const blurCtx = blurred.getContext('2d');
   if (blurCtx) {
+    blurCtx.clearRect(0, 0, canvasWidth, canvasHeight);
     blurCtx.filter = `blur(${blurAmount}px)`;
     blurCtx.drawImage(offscreen, 0, 0);
     blurCtx.filter = 'none';
@@ -128,7 +162,8 @@ export function renderIsobars(
   field: WeatherField,
   gridWidth: number,
   gridHeight: number,
-  zoomLevel: number
+  zoomLevel: number,
+  visibleRange?: HexRange | null
 ): void {
   const interval = 5; // hPa between isobar lines
   ctx.save();
@@ -136,11 +171,16 @@ export function renderIsobars(
   ctx.lineWidth = 1.5 / zoomLevel;
   ctx.setLineDash([4 / zoomLevel, 2 / zoomLevel]);
 
+  const qMin = visibleRange ? visibleRange.qMin : 0;
+  const qMax = visibleRange ? visibleRange.qMax : gridWidth - 1;
+  const rMin = visibleRange ? visibleRange.rMin : 0;
+  const rMax = visibleRange ? visibleRange.rMax : gridHeight - 1;
+
   // Track drawn edges to avoid duplicates (lower key first)
   const drawnEdges = new Set<string>();
 
-  for (let q = 0; q < gridWidth; q++) {
-    for (let r = 0; r < gridHeight; r++) {
+  for (let q = qMin; q <= qMax; q++) {
+    for (let r = rMin; r <= rMax; r++) {
       const key = `${q},${r}`;
       const cell = field[key];
       if (!cell) continue;
@@ -190,7 +230,7 @@ export function renderIsobars(
 }
 
 /**
- * Render weather front lines — DM only.
+ * Render weather front lines (both DM and player views).
  * Blue triangles for cold fronts, red semicircles for warm fronts.
  */
 export function renderFronts(
@@ -198,13 +238,19 @@ export function renderFronts(
   field: WeatherField,
   gridWidth: number,
   gridHeight: number,
-  zoomLevel: number
+  zoomLevel: number,
+  visibleRange?: HexRange | null
 ): void {
   ctx.save();
   ctx.lineWidth = 3.5 / zoomLevel;
 
-  for (let q = 0; q < gridWidth; q++) {
-    for (let r = 0; r < gridHeight; r++) {
+  const qMin = visibleRange ? visibleRange.qMin : 0;
+  const qMax = visibleRange ? visibleRange.qMax : gridWidth - 1;
+  const rMin = visibleRange ? visibleRange.rMin : 0;
+  const rMax = visibleRange ? visibleRange.rMax : gridHeight - 1;
+
+  for (let q = qMin; q <= qMax; q++) {
+    for (let r = rMin; r <= rMax; r++) {
       const key = `${q},${r}`;
       const cell = field[key];
       if (!cell || cell.frontType === 'none') continue;

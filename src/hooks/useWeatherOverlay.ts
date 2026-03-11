@@ -4,8 +4,9 @@
 
 import { useRef, useCallback, useEffect } from 'react';
 import type { WeatherField, WeatherSimulationConfig } from '../types/Weather';
-import { renderWeatherGradient, renderIsobars, renderFronts } from '../services/weatherGradient';
-import { renderPressureLabels, renderWindArrows, renderCloudCover, renderCloudShadows } from '../services/weatherRadar';
+import { renderWeatherGradient, renderIsobars, renderFronts, type GradientCanvasRefs, ensureGradientCanvases } from '../services/weatherGradient';
+import { renderPressureLabels, renderWindArrows, renderCloudCover, renderCloudShadows, type CloudCanvasRefs, ensureCloudCanvases } from '../services/weatherRadar';
+import { getVisibleHexRange } from '../services/hexGeometry';
 import { WeatherParticleSystem } from '../services/weatherParticles';
 import { WeatherLightningSystem } from '../services/weatherLightning';
 
@@ -17,6 +18,7 @@ interface LayerFlags {
 
 interface UseWeatherOverlayOptions {
   field: WeatherField;
+  fieldVersion: number;
   config: WeatherSimulationConfig | undefined;
   gridWidth: number;
   gridHeight: number;
@@ -31,17 +33,28 @@ interface UseWeatherOverlayOptions {
  */
 export function useWeatherOverlay({
   field,
+  fieldVersion,
   config,
   gridWidth,
   gridHeight,
   isDMView,
   layerFlags
 }: UseWeatherOverlayOptions) {
-  // Cache the offscreen canvas to avoid recreating every frame
+  // Pre-allocated offscreen canvas pairs (reused across frames)
+  const gradientCanvasRefs = useRef<GradientCanvasRefs | null>(null);
+  const cloudCoverCanvasRefs = useRef<CloudCanvasRefs | null>(null);
+  const cloudShadowCanvasRefs = useRef<CloudCanvasRefs | null>(null);
+
+  // Cache the rendered result canvas for blitting when nothing changed
   const offscreenRef = useRef<HTMLCanvasElement | null>(null);
   const cloudCoverRef = useRef<HTMLCanvasElement | null>(null);
   const cloudShadowRef = useRef<HTMLCanvasElement | null>(null);
-  const lastFieldRef = useRef<WeatherField>({});
+  // Offscreen canvases for direct-draw passes (isobars, fronts, pressure labels, wind arrows)
+  const isobarsCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const frontsCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const pressureLabelsCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const windArrowsCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const lastFieldVersionRef = useRef(-1);
   const lastOffsetRef = useRef({ x: 0, y: 0 });
   const lastZoomRef = useRef(1);
 
@@ -98,7 +111,13 @@ export function useWeatherOverlay({
     const showPressure = layerFlags?.pressureLabels !== false;
     const showWind = layerFlags?.windArrows !== false;
 
-    const fieldChanged = field !== lastFieldRef.current;
+    // Compute visible hex range with extra margin for blur edge artifacts
+    const visibleRange = getVisibleHexRange(
+      offsetX, offsetY, zoomLevel, canvasWidth, canvasHeight,
+      gridWidth, gridHeight, 3
+    );
+
+    const fieldChanged = fieldVersion !== lastFieldVersionRef.current;
     const cameraChanged = offsetX !== lastOffsetRef.current.x ||
                           offsetY !== lastOffsetRef.current.y ||
                           zoomLevel !== lastZoomRef.current;
@@ -108,9 +127,11 @@ export function useWeatherOverlay({
     // ── 1. Cloud shadows (multiply blend to darken terrain) ──
     if (showClouds) {
       if (needsRedraw || !cloudShadowRef.current) {
+        cloudShadowCanvasRefs.current = ensureCloudCanvases(cloudShadowCanvasRefs.current, canvasWidth, canvasHeight);
         cloudShadowRef.current = renderCloudShadows(
           field, gridWidth, gridHeight,
-          canvasWidth, canvasHeight, offsetX, offsetY, zoomLevel
+          canvasWidth, canvasHeight, offsetX, offsetY, zoomLevel,
+          cloudShadowCanvasRefs.current, visibleRange
         );
       }
       if (cloudShadowRef.current) {
@@ -123,11 +144,13 @@ export function useWeatherOverlay({
 
     // ── 2. Gradient overlay ──
     if (needsRedraw || !offscreenRef.current) {
+      gradientCanvasRefs.current = ensureGradientCanvases(gradientCanvasRefs.current, canvasWidth, canvasHeight);
       offscreenRef.current = renderWeatherGradient(
         field, gridWidth, gridHeight, config,
-        canvasWidth, canvasHeight, offsetX, offsetY, zoomLevel
+        canvasWidth, canvasHeight, offsetX, offsetY, zoomLevel,
+        gradientCanvasRefs.current, visibleRange
       );
-      lastFieldRef.current = field;
+      lastFieldVersionRef.current = fieldVersion;
       lastOffsetRef.current = { x: offsetX, y: offsetY };
       lastZoomRef.current = zoomLevel;
     }
@@ -142,9 +165,11 @@ export function useWeatherOverlay({
     // ── 3. Cloud cover (white/gray haze) ──
     if (showClouds) {
       if (needsRedraw || !cloudCoverRef.current) {
+        cloudCoverCanvasRefs.current = ensureCloudCanvases(cloudCoverCanvasRefs.current, canvasWidth, canvasHeight);
         cloudCoverRef.current = renderCloudCover(
           field, gridWidth, gridHeight,
-          canvasWidth, canvasHeight, offsetX, offsetY, zoomLevel
+          canvasWidth, canvasHeight, offsetX, offsetY, zoomLevel,
+          cloudCoverCanvasRefs.current, visibleRange
         );
       }
       if (cloudCoverRef.current) {
@@ -157,38 +182,86 @@ export function useWeatherOverlay({
 
     // ── 4. Isobars (no longer DM-only) ──
     if (config.showIsobars) {
-      ctx.save();
-      ctx.translate(offsetX, offsetY);
-      ctx.scale(zoomLevel, zoomLevel);
-      renderIsobars(ctx, field, gridWidth, gridHeight, zoomLevel);
-      ctx.restore();
+      if (needsRedraw || !isobarsCanvasRef.current) {
+        const oc = isobarsCanvasRef.current || document.createElement('canvas');
+        if (oc.width !== canvasWidth || oc.height !== canvasHeight) {
+          oc.width = canvasWidth; oc.height = canvasHeight;
+        }
+        const octx = oc.getContext('2d');
+        if (octx) {
+          octx.clearRect(0, 0, canvasWidth, canvasHeight);
+          octx.save();
+          octx.translate(offsetX, offsetY);
+          octx.scale(zoomLevel, zoomLevel);
+          renderIsobars(octx, field, gridWidth, gridHeight, zoomLevel, visibleRange);
+          octx.restore();
+        }
+        isobarsCanvasRef.current = oc;
+      }
+      if (isobarsCanvasRef.current) ctx.drawImage(isobarsCanvasRef.current, 0, 0);
     }
 
     // ── 5. Fronts (no longer DM-only) ──
     if (config.showFronts) {
-      ctx.save();
-      ctx.translate(offsetX, offsetY);
-      ctx.scale(zoomLevel, zoomLevel);
-      renderFronts(ctx, field, gridWidth, gridHeight, zoomLevel);
-      ctx.restore();
+      if (needsRedraw || !frontsCanvasRef.current) {
+        const oc = frontsCanvasRef.current || document.createElement('canvas');
+        if (oc.width !== canvasWidth || oc.height !== canvasHeight) {
+          oc.width = canvasWidth; oc.height = canvasHeight;
+        }
+        const octx = oc.getContext('2d');
+        if (octx) {
+          octx.clearRect(0, 0, canvasWidth, canvasHeight);
+          octx.save();
+          octx.translate(offsetX, offsetY);
+          octx.scale(zoomLevel, zoomLevel);
+          renderFronts(octx, field, gridWidth, gridHeight, zoomLevel, visibleRange);
+          octx.restore();
+        }
+        frontsCanvasRef.current = oc;
+      }
+      if (frontsCanvasRef.current) ctx.drawImage(frontsCanvasRef.current, 0, 0);
     }
 
     // ── 6. Pressure labels (H/L markers) ──
     if (showPressure) {
-      ctx.save();
-      ctx.translate(offsetX, offsetY);
-      ctx.scale(zoomLevel, zoomLevel);
-      renderPressureLabels(ctx, field, gridWidth, gridHeight, zoomLevel);
-      ctx.restore();
+      if (needsRedraw || !pressureLabelsCanvasRef.current) {
+        const oc = pressureLabelsCanvasRef.current || document.createElement('canvas');
+        if (oc.width !== canvasWidth || oc.height !== canvasHeight) {
+          oc.width = canvasWidth; oc.height = canvasHeight;
+        }
+        const octx = oc.getContext('2d');
+        if (octx) {
+          octx.clearRect(0, 0, canvasWidth, canvasHeight);
+          octx.save();
+          octx.translate(offsetX, offsetY);
+          octx.scale(zoomLevel, zoomLevel);
+          renderPressureLabels(octx, field, gridWidth, gridHeight, zoomLevel, visibleRange);
+          octx.restore();
+        }
+        pressureLabelsCanvasRef.current = oc;
+      }
+      if (pressureLabelsCanvasRef.current) ctx.drawImage(pressureLabelsCanvasRef.current, 0, 0);
     }
 
     // ── 7. Wind arrows ──
     if (showWind && zoomLevel < 1.5) {
-      ctx.save();
-      ctx.translate(offsetX, offsetY);
-      ctx.scale(zoomLevel, zoomLevel);
-      renderWindArrows(ctx, field, gridWidth, gridHeight, zoomLevel);
-      ctx.restore();
+      if (needsRedraw || !windArrowsCanvasRef.current) {
+        const oc = windArrowsCanvasRef.current || document.createElement('canvas');
+        if (oc.width !== canvasWidth || oc.height !== canvasHeight) {
+          oc.width = canvasWidth; oc.height = canvasHeight;
+        }
+        const octx = oc.getContext('2d');
+        if (octx) {
+          octx.clearRect(0, 0, canvasWidth, canvasHeight);
+          octx.save();
+          octx.translate(offsetX, offsetY);
+          octx.scale(zoomLevel, zoomLevel);
+          renderWindArrows(octx, field, gridWidth, gridHeight, zoomLevel, visibleRange);
+          octx.restore();
+        }
+        windArrowsCanvasRef.current = oc;
+      }
+      if (windArrowsCanvasRef.current) ctx.drawImage(windArrowsCanvasRef.current, 0, 0);
     }
 
     // ── 8. Particles ──
@@ -197,10 +270,11 @@ export function useWeatherOverlay({
       const dt = Math.min(0.05, (now - lastFrameTimeRef.current) / 1000); // seconds, capped
       lastFrameTimeRef.current = now;
 
-      // Spawn new particles
+      // Spawn new particles (pass visible range for culling)
       particlesRef.current.spawn(
         field, gridWidth, gridHeight, zoomLevel,
-        offsetX, offsetY, canvasWidth, canvasHeight
+        offsetX, offsetY, canvasWidth, canvasHeight,
+        visibleRange
       );
 
       // Update positions and age
@@ -225,7 +299,7 @@ export function useWeatherOverlay({
       lightningRef.current.render(ctx, now);
       ctx.restore();
     }
-  }, [field, config, gridWidth, gridHeight, isDMView, layerFlags]);
+  }, [field, fieldVersion, config, gridWidth, gridHeight, isDMView, layerFlags]);
 
   return { renderOverlay };
 }

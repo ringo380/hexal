@@ -10,7 +10,8 @@ import {
   drawHexPath,
   hexPoints,
   coordinateAt,
-  floodFillSameTerrain
+  floodFillSameTerrain,
+  getVisibleHexRange
 } from '../services/hexGeometry';
 import { hexKey } from '../types/Campaign';
 import {
@@ -221,6 +222,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
 
   const { renderOverlay: renderWeatherOverlay } = useWeatherOverlay({
     field: weatherSim.field,
+    fieldVersion: weatherSim.fieldVersion,
     config: effectiveWeatherConfig,
     gridWidth: campaign?.gridWidth ?? 0,
     gridHeight: campaign?.gridHeight ?? 0,
@@ -257,12 +259,19 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
   const clickWasShiftRef = useRef(false);
 
   // Zoom state - both current and target for smooth animation
+  // Refs are the source of truth during animation; state is synced periodically for React UI
   const [zoomLevel, setZoomLevel] = useState(1);
   const [targetZoom, setTargetZoom] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [targetPan, setTargetPan] = useState({ x: 0, y: 0 });
+  const zoomRef = useRef(1);
+  const panRef = useRef({ x: 0, y: 0 });
+  // Keep refs in sync when state is set outside of animation (e.g. initial values, drag)
+  zoomRef.current = zoomLevel;
+  panRef.current = panOffset;
   const animationFrameRef = useRef<number | null>(null);
   const isAnimatingRef = useRef(false);
+  const lastStateSyncRef = useRef(0);
 
   // Store indicator positions for mouse hover detection
   const indicatorPositionsRef = useRef<IndicatorPosition[]>([]);
@@ -328,8 +337,19 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Read current zoom/pan from refs (source of truth during animation)
+    const curZoom = zoomRef.current;
+    const curPan = panRef.current;
+
     // Get current LOD configuration based on zoom level
-    const lod = getLOD(zoomLevel);
+    const lod = getLOD(curZoom);
+
+    // Calculate visible hex range for viewport culling
+    const visibleRange = getVisibleHexRange(
+      curPan.x, curPan.y, curZoom,
+      canvas.width, canvas.height,
+      campaign.gridWidth, campaign.gridHeight
+    );
 
     // Clear indicator positions for this draw cycle
     const indicatorPositions: IndicatorPosition[] = [];
@@ -346,17 +366,17 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
 
     // Apply zoom and pan transforms
     ctx.save();
-    ctx.translate(panOffset.x, panOffset.y);
-    ctx.scale(zoomLevel, zoomLevel);
+    ctx.translate(curPan.x, curPan.y);
+    ctx.scale(curZoom, curZoom);
 
     // Neighbor-to-edge index mapping for border rendering
     const NEIGHBOR_TO_EDGE = [5, 0, 1, 2, 3, 4];
 
     // ========================================================================
-    // PASS 1: Draw all hex backgrounds and content (terrain, indicators, labels)
+    // PASS 1: Draw hex backgrounds and content (terrain, indicators, labels)
     // ========================================================================
-    for (let q = 0; q < campaign.gridWidth; q++) {
-      for (let r = 0; r < campaign.gridHeight; r++) {
+    for (let q = visibleRange.qMin; q <= visibleRange.qMax; q++) {
+      for (let r = visibleRange.rMin; r <= visibleRange.rMax; r++) {
         const coord: HexCoordinate = { q, r };
         const center = hexCenter(coord);
         const hex = getHex(coord);
@@ -469,7 +489,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           // Truncate to fit within hex (more chars fit at higher zoom)
-          const terrainText = truncateForHex(hex.terrain, lod.terrainFont, zoomLevel);
+          const terrainText = truncateForHex(hex.terrain, lod.terrainFont, curZoom);
           ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
           ctx.shadowBlur = 3;
           ctx.fillText(terrainText, center.x, center.y + lod.terrainY);
@@ -508,7 +528,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
             // Draw visible items
             for (let i = 0; i < itemsToShow; i++) {
               const y = center.y + lod.contentTitleY + i * lineHeight;
-              const title = truncateForHex(items[i].title, lod.contentTitleFont, zoomLevel);
+              const title = truncateForHex(items[i].title, lod.contentTitleFont, curZoom);
               ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
               ctx.fillText(title, center.x, y);
             }
@@ -556,9 +576,9 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
     // ========================================================================
     // CONNECTION PASS: Draw rivers and roads (layer visibility gated)
     // ========================================================================
-    if (layerVisibility.connections && zoomLevel >= 0.25) {
-      for (let q = 0; q < campaign.gridWidth; q++) {
-        for (let r = 0; r < campaign.gridHeight; r++) {
+    if (layerVisibility.connections && curZoom >= 0.25) {
+      for (let q = visibleRange.qMin; q <= visibleRange.qMax; q++) {
+        for (let r = visibleRange.rMin; r <= visibleRange.rMax; r++) {
           const coord: HexCoordinate = { q, r };
           const hex = getHex(coord);
           if (!hex?.connections) continue;
@@ -566,7 +586,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
           const points = hexPoints(center, HEX_SIZE);
 
           // Draw rivers (blue curved lines)
-          if (hex.connections.rivers.length > 0 && zoomLevel >= 0.25) {
+          if (hex.connections.rivers.length > 0 && curZoom >= 0.25) {
             ctx.strokeStyle = '#4a9eff';
             ctx.lineWidth = 2;
             ctx.lineCap = 'round';
@@ -589,7 +609,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
           }
 
           // Draw roads (brown dashed lines)
-          if (hex.connections.roads.length > 0 && zoomLevel >= 0.40) {
+          if (hex.connections.roads.length > 0 && curZoom >= 0.40) {
             ctx.strokeStyle = '#8B7355';
             ctx.lineWidth = 1.5;
             ctx.lineCap = 'round';
@@ -641,7 +661,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
     // ========================================================================
     // REGION NAME LABELS (at lower zoom levels, layer visibility gated)
     // ========================================================================
-    if (layerVisibility.regionLabels && zoomLevel >= 0.25 && zoomLevel <= 0.80) {
+    if (layerVisibility.regionLabels && curZoom >= 0.25 && curZoom <= 0.80) {
       for (const region of regions) {
         if (region.hexKeys.length === 0) continue;
 
@@ -658,7 +678,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
         const cx = sumX / region.hexKeys.length;
         const cy = sumY / region.hexKeys.length;
 
-        const fontSize = Math.max(8, Math.min(14, 10 / zoomLevel));
+        const fontSize = Math.max(8, Math.min(14, 10 / curZoom));
         ctx.font = `bold ${fontSize}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -676,22 +696,19 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
     // ========================================================================
     if (layerVisibility.weatherOverlay) {
       ctx.save();
-      ctx.scale(1 / zoomLevel, 1 / zoomLevel);
-      ctx.translate(-panOffset.x, -panOffset.y);
-      renderWeatherOverlay(ctx, canvas.width, canvas.height, panOffset.x, panOffset.y, zoomLevel);
+      ctx.scale(1 / curZoom, 1 / curZoom);
+      ctx.translate(-curPan.x, -curPan.y);
+      renderWeatherOverlay(ctx, canvas.width, canvas.height, curPan.x, curPan.y, curZoom);
       ctx.restore();
     }
-
-    // Update weather audio with current camera state
-    updateAudio(zoomLevel, panOffset.x, panOffset.y, canvas.width, canvas.height);
 
     // ========================================================================
     // PASS 2: Draw all markers (figurines) on top of hex content (layer visibility gated)
     // This ensures markers with free-form positions can overlap adjacent hexes
     // ========================================================================
     if (lod.showMarkers && layerVisibility.markers) {
-      for (let q = 0; q < campaign.gridWidth; q++) {
-        for (let r = 0; r < campaign.gridHeight; r++) {
+      for (let q = visibleRange.qMin; q <= visibleRange.qMax; q++) {
+        for (let r = visibleRange.rMin; r <= visibleRange.rMax; r++) {
           const coord: HexCoordinate = { q, r };
           const center = hexCenter(coord);
           const hex = getHex(coord);
@@ -702,7 +719,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
               hex,
               center,
               markerTypes,
-              zoomLevel,
+              curZoom,
               selectedMarker?.markerId
             );
             markerPositions.push(...hexMarkerPositions);
@@ -739,11 +756,15 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
         marker,
         { x: canvasX, y: canvasY },
         markerTypes,
-        zoomLevel,
+        curZoom,
         tilt
       );
     }
-  }, [campaign, getHex, selectedCoordinate, getTerrainColor, zoomLevel, panOffset, markerDrag.isDragging, markerDrag.state, regions, hexRegionMap, multiSelectedKeys, renderWeatherOverlay, layerVisibility, updateAudio]);
+  }, [campaign, getHex, selectedCoordinate, getTerrainColor, markerDrag.isDragging, markerDrag.state, regions, hexRegionMap, multiSelectedKeys, renderWeatherOverlay, layerVisibility]);
+
+  // Ref to latest draw for imperative calls from animation loop (avoids stale closures)
+  const drawRef = useRef(draw);
+  drawRef.current = draw;
 
   // Track container size for responsive canvas
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -776,6 +797,16 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
   useEffect(() => {
     draw();
   }, [selectedCoordinate, selectedMarker, draw]);
+
+  // Weather audio update on a separate 200ms interval (avoid running BFS every draw frame)
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const interval = setInterval(() => {
+      updateAudio(zoomRef.current, panRef.current.x, panRef.current.y, canvas.width, canvas.height);
+    }, 200);
+    return () => clearInterval(interval);
+  }, [updateAudio]);
 
   // Preload figurine cache when campaign loads
   useEffect(() => {
@@ -1237,34 +1268,51 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [campaign, clearSelection, selectedMarker, removeMarker, selectMarker, regionPaintMode, setRegionPaintMode, multiSelectedKeys, clearMultiSelection]);
 
-  // Smooth zoom and pan animation loop - animates both in sync
+  // Smooth zoom and pan animation loop - uses refs to avoid React re-renders per frame.
+  // Only syncs to React state every ~100ms (for zoom label, etc.) and on animation end.
   useEffect(() => {
     const animate = () => {
-      const zoomDiff = Math.abs(targetZoom - zoomLevel);
-      const panDiffX = Math.abs(targetPan.x - panOffset.x);
-      const panDiffY = Math.abs(targetPan.y - panOffset.y);
+      const curZoom = zoomRef.current;
+      const curPan = panRef.current;
+
+      const zoomDiff = Math.abs(targetZoom - curZoom);
+      const panDiffX = Math.abs(targetPan.x - curPan.x);
+      const panDiffY = Math.abs(targetPan.y - curPan.y);
 
       // Snap thresholds
       const zoomDone = zoomDiff < 0.001;
       const panDone = panDiffX < 0.5 && panDiffY < 0.5;
 
       if (zoomDone && panDone) {
-        // Snap to final values
-        if (zoomLevel !== targetZoom) setZoomLevel(targetZoom);
-        if (panOffset.x !== targetPan.x || panOffset.y !== targetPan.y) {
-          setPanOffset(targetPan);
-        }
+        // Snap to final values and sync state
+        zoomRef.current = targetZoom;
+        panRef.current = targetPan;
+        setZoomLevel(targetZoom);
+        setPanOffset(targetPan);
         isAnimatingRef.current = false;
+        drawRef.current();
         return;
       }
 
       // Lerp both zoom and pan together
-      const newZoom = zoomLevel + (targetZoom - zoomLevel) * ZOOM_ANIMATION_SPEED;
-      const newPanX = panOffset.x + (targetPan.x - panOffset.x) * ZOOM_ANIMATION_SPEED;
-      const newPanY = panOffset.y + (targetPan.y - panOffset.y) * ZOOM_ANIMATION_SPEED;
+      const newZoom = curZoom + (targetZoom - curZoom) * ZOOM_ANIMATION_SPEED;
+      const newPanX = curPan.x + (targetPan.x - curPan.x) * ZOOM_ANIMATION_SPEED;
+      const newPanY = curPan.y + (targetPan.y - curPan.y) * ZOOM_ANIMATION_SPEED;
 
-      setZoomLevel(newZoom);
-      setPanOffset({ x: newPanX, y: newPanY });
+      // Update refs (no React re-render)
+      zoomRef.current = newZoom;
+      panRef.current = { x: newPanX, y: newPanY };
+
+      // Throttle React state sync to ~10fps for UI elements (zoom label)
+      const now = performance.now();
+      if (now - lastStateSyncRef.current > 100) {
+        lastStateSyncRef.current = now;
+        setZoomLevel(newZoom);
+        setPanOffset({ x: newPanX, y: newPanY });
+      }
+
+      // Redraw canvas directly from refs
+      drawRef.current();
 
       animationFrameRef.current = requestAnimationFrame(animate);
     };
@@ -1278,7 +1326,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [zoomLevel, targetZoom, panOffset, targetPan]);
+  }, [targetZoom, targetPan]);
 
   // Handle wheel zoom (centered on selected hex, or cursor if no selection)
   const handleWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
