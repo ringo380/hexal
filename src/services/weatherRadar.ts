@@ -1,7 +1,7 @@
 // News-station style radar rendering: pressure labels, wind arrows, cloud cover, ground shadows
 
 import type { WeatherField } from '../types/Weather';
-import { hexCenter, drawHexPath, HEX_SIZE, getHexNeighbors } from './hexGeometry';
+import { hexCenter, drawHexPath, HEX_SIZE, getHexNeighbors, type HexRange } from './hexGeometry';
 import { clamp } from './weather/WeatherField';
 
 /**
@@ -13,16 +13,22 @@ export function renderPressureLabels(
   field: WeatherField,
   gridWidth: number,
   gridHeight: number,
-  zoomLevel: number
+  zoomLevel: number,
+  visibleRange?: HexRange | null
 ): void {
   const threshold = 2; // hPa above/below neighbor average to qualify
+
+  const qMin = visibleRange ? visibleRange.qMin : 0;
+  const qMax = visibleRange ? visibleRange.qMax : gridWidth - 1;
+  const rMin = visibleRange ? visibleRange.rMin : 0;
+  const rMax = visibleRange ? visibleRange.rMax : gridHeight - 1;
 
   ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
-  for (let q = 0; q < gridWidth; q++) {
-    for (let r = 0; r < gridHeight; r++) {
+  for (let q = qMin; q <= qMax; q++) {
+    for (let r = rMin; r <= rMax; r++) {
       const key = `${q},${r}`;
       const cell = field[key];
       if (!cell) continue;
@@ -88,7 +94,8 @@ export function renderWindArrows(
   field: WeatherField,
   gridWidth: number,
   gridHeight: number,
-  zoomLevel: number
+  zoomLevel: number,
+  visibleRange?: HexRange | null
 ): void {
   ctx.save();
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
@@ -97,8 +104,13 @@ export function renderWindArrows(
   // Skip pattern: at medium zoom, show every other hex for readability
   const skipCheckerboard = zoomLevel > 0.4;
 
-  for (let q = 0; q < gridWidth; q++) {
-    for (let r = 0; r < gridHeight; r++) {
+  const qMin = visibleRange ? visibleRange.qMin : 0;
+  const qMax = visibleRange ? visibleRange.qMax : gridWidth - 1;
+  const rMin = visibleRange ? visibleRange.rMin : 0;
+  const rMax = visibleRange ? visibleRange.rMax : gridHeight - 1;
+
+  for (let q = qMin; q <= qMax; q++) {
+    for (let r = rMin; r <= rMax; r++) {
       if (skipCheckerboard && (q + r) % 2 !== 0) continue;
 
       const key = `${q},${r}`;
@@ -143,6 +155,32 @@ export function renderWindArrows(
   ctx.restore();
 }
 
+/** Pre-allocated canvas pair for cloud rendering (draw + blur) */
+export interface CloudCanvasRefs {
+  draw: HTMLCanvasElement;
+  blur: HTMLCanvasElement;
+}
+
+/**
+ * Ensure cloud canvas refs exist and have the correct dimensions.
+ */
+export function ensureCloudCanvases(
+  refs: CloudCanvasRefs | null,
+  width: number,
+  height: number
+): CloudCanvasRefs {
+  if (refs && refs.draw.width === width && refs.draw.height === height) {
+    return refs;
+  }
+  const draw = refs?.draw || document.createElement('canvas');
+  const blur = refs?.blur || document.createElement('canvas');
+  draw.width = width;
+  draw.height = height;
+  blur.width = width;
+  blur.height = height;
+  return { draw, blur };
+}
+
 /**
  * Render cloud cover as a blurred gray/white haze layer.
  * Returns an offscreen canvas for compositing.
@@ -155,22 +193,30 @@ export function renderCloudCover(
   canvasHeight: number,
   offsetX: number,
   offsetY: number,
-  zoomLevel: number
+  zoomLevel: number,
+  canvasRefs?: CloudCanvasRefs | null,
+  visibleRange?: HexRange | null
 ): HTMLCanvasElement | null {
   if (Object.keys(field).length === 0) return null;
 
-  const offscreen = document.createElement('canvas');
-  offscreen.width = canvasWidth;
-  offscreen.height = canvasHeight;
+  const refs = canvasRefs || ensureCloudCanvases(null, canvasWidth, canvasHeight);
+  const offscreen = refs.draw;
   const ctx = offscreen.getContext('2d');
   if (!ctx) return null;
+
+  ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+  const qMin = visibleRange ? visibleRange.qMin : 0;
+  const qMax = visibleRange ? visibleRange.qMax : gridWidth - 1;
+  const rMin = visibleRange ? visibleRange.rMin : 0;
+  const rMax = visibleRange ? visibleRange.rMax : gridHeight - 1;
 
   ctx.save();
   ctx.translate(offsetX, offsetY);
   ctx.scale(zoomLevel, zoomLevel);
 
-  for (let q = 0; q < gridWidth; q++) {
-    for (let r = 0; r < gridHeight; r++) {
+  for (let q = qMin; q <= qMax; q++) {
+    for (let r = rMin; r <= rMax; r++) {
       const key = `${q},${r}`;
       const cell = field[key];
       if (!cell) continue;
@@ -198,11 +244,10 @@ export function renderCloudCover(
 
   // Apply Gaussian blur for smooth cloud edges
   const blurAmount = Math.max(3, Math.min(12, 6 * zoomLevel));
-  const blurred = document.createElement('canvas');
-  blurred.width = canvasWidth;
-  blurred.height = canvasHeight;
+  const blurred = refs.blur;
   const blurCtx = blurred.getContext('2d');
   if (blurCtx) {
+    blurCtx.clearRect(0, 0, canvasWidth, canvasHeight);
     blurCtx.filter = `blur(${blurAmount}px)`;
     blurCtx.drawImage(offscreen, 0, 0);
     blurCtx.filter = 'none';
@@ -224,13 +269,14 @@ export function renderCloudShadows(
   canvasHeight: number,
   offsetX: number,
   offsetY: number,
-  zoomLevel: number
+  zoomLevel: number,
+  canvasRefs?: CloudCanvasRefs | null,
+  visibleRange?: HexRange | null
 ): HTMLCanvasElement | null {
   if (Object.keys(field).length === 0) return null;
 
-  const offscreen = document.createElement('canvas');
-  offscreen.width = canvasWidth;
-  offscreen.height = canvasHeight;
+  const refs = canvasRefs || ensureCloudCanvases(null, canvasWidth, canvasHeight);
+  const offscreen = refs.draw;
   const ctx = offscreen.getContext('2d');
   if (!ctx) return null;
 
@@ -238,12 +284,17 @@ export function renderCloudShadows(
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
+  const qMin = visibleRange ? visibleRange.qMin : 0;
+  const qMax = visibleRange ? visibleRange.qMax : gridWidth - 1;
+  const rMin = visibleRange ? visibleRange.rMin : 0;
+  const rMax = visibleRange ? visibleRange.rMax : gridHeight - 1;
+
   ctx.save();
   ctx.translate(offsetX, offsetY);
   ctx.scale(zoomLevel, zoomLevel);
 
-  for (let q = 0; q < gridWidth; q++) {
-    for (let r = 0; r < gridHeight; r++) {
+  for (let q = qMin; q <= qMax; q++) {
+    for (let r = rMin; r <= rMax; r++) {
       const key = `${q},${r}`;
       const cell = field[key];
       if (!cell || cell.cloudCover < 0.2) continue;
@@ -268,11 +319,10 @@ export function renderCloudShadows(
 
   // Apply heavy Gaussian blur for soft shadow edges
   const blurAmount = Math.max(6, 10 * zoomLevel);
-  const blurred = document.createElement('canvas');
-  blurred.width = canvasWidth;
-  blurred.height = canvasHeight;
+  const blurred = refs.blur;
   const blurCtx = blurred.getContext('2d');
   if (blurCtx) {
+    blurCtx.clearRect(0, 0, canvasWidth, canvasHeight);
     blurCtx.filter = `blur(${blurAmount}px)`;
     blurCtx.drawImage(offscreen, 0, 0);
     blurCtx.filter = 'none';

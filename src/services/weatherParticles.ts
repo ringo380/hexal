@@ -2,7 +2,7 @@
 // Renders rain, snow, wind streaks, fog, and storm sparks
 
 import type { WeatherField, WeatherFieldCell } from '../types/Weather';
-import { hexCenter, HEX_SIZE } from './hexGeometry';
+import { hexCenter, HEX_SIZE, type HexRange } from './hexGeometry';
 import { clamp } from './weather/WeatherField';
 
 // ============ Particle Types ============
@@ -82,10 +82,11 @@ export class WeatherParticleSystem {
     gridWidth: number,
     gridHeight: number,
     zoomLevel: number,
-    viewportX: number,
-    viewportY: number,
-    viewportW: number,
-    viewportH: number
+    _viewportX: number,
+    _viewportY: number,
+    _viewportW: number,
+    _viewportH: number,
+    visibleRange?: HexRange | null
   ): void {
     // LOD: No particles below zoom 0.2
     if (zoomLevel < 0.2) return;
@@ -98,21 +99,18 @@ export class WeatherParticleSystem {
     const maxSpawnsPerFrame = Math.floor(20 * effectiveDensity);
     let spawned = 0;
 
-    for (let q = 0; q < gridWidth && spawned < maxSpawnsPerFrame; q++) {
-      for (let r = 0; r < gridHeight && spawned < maxSpawnsPerFrame; r++) {
+    const qMin = visibleRange ? visibleRange.qMin : 0;
+    const qMax = visibleRange ? visibleRange.qMax : gridWidth - 1;
+    const rMin = visibleRange ? visibleRange.rMin : 0;
+    const rMax = visibleRange ? visibleRange.rMax : gridHeight - 1;
+
+    for (let q = qMin; q <= qMax && spawned < maxSpawnsPerFrame; q++) {
+      for (let r = rMin; r <= rMax && spawned < maxSpawnsPerFrame; r++) {
         const key = `${q},${r}`;
         const cell = field[key];
         if (!cell) continue;
 
         const center = hexCenter({ q, r });
-
-        // Viewport culling (in world space)
-        const worldX = center.x;
-        const worldY = center.y;
-        const screenX = worldX * zoomLevel + viewportX;
-        const screenY = worldY * zoomLevel + viewportY;
-        if (screenX < -HEX_SIZE * 2 || screenX > viewportW + HEX_SIZE * 2) continue;
-        if (screenY < -HEX_SIZE * 2 || screenY > viewportH + HEX_SIZE * 2) continue;
 
         // Determine particle type and spawn probability
         const spawnChance = this.getSpawnChance(cell, effectiveDensity);

@@ -9,7 +9,8 @@ import {
   hexCenter,
   drawHexPath,
   hexPoints,
-  coordinateAt
+  coordinateAt,
+  getVisibleHexRange
 } from '../../services/hexGeometry';
 import { hexToRgba, renderMarkers } from '../../services/hexRenderer';
 import { figurineCache } from '../../services/markerFigurines';
@@ -40,6 +41,14 @@ interface PlayerHexGridProps {
 function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, weatherField, weatherConfig }: PlayerHexGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Track weather field version locally (increments when prop reference changes)
+  const weatherFieldVersionRef = useRef(0);
+  const prevWeatherFieldRef = useRef(weatherField);
+  if (weatherField !== prevWeatherFieldRef.current) {
+    weatherFieldVersionRef.current++;
+    prevWeatherFieldRef.current = weatherField;
+  }
 
   // Zoom/pan state
   const [zoomLevel, setZoomLevel] = useState(0.8);
@@ -79,6 +88,7 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
 
   const { renderOverlay: renderWeatherOverlay } = useWeatherOverlay({
     field: weatherField || {},
+    fieldVersion: weatherFieldVersionRef.current,
     config: effectiveWeatherConfig,
     gridWidth: campaign.gridWidth,
     gridHeight: campaign.gridHeight,
@@ -136,9 +146,16 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
     const hexRegionMap = createHexRegionMap(regionAdapters);
     const NEIGHBOR_TO_EDGE = [5, 0, 1, 2, 3, 4];
 
+    // Calculate visible hex range for viewport culling
+    const visibleRange = getVisibleHexRange(
+      panOffset.x, panOffset.y, zoomLevel,
+      canvas.width, canvas.height,
+      campaign.gridWidth, campaign.gridHeight
+    );
+
     // PASS 1: Draw hex backgrounds
-    for (let q = 0; q < campaign.gridWidth; q++) {
-      for (let r = 0; r < campaign.gridHeight; r++) {
+    for (let q = visibleRange.qMin; q <= visibleRange.qMax; q++) {
+      for (let r = visibleRange.rMin; r <= visibleRange.rMax; r++) {
         const coord: HexCoordinate = { q, r };
         const center = hexCenter(coord);
         const key = `${q},${r}`;
@@ -211,8 +228,8 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
 
     // CONNECTION PASS: Draw rivers and roads (layer visibility gated)
     if (playerLayers.connections && zoomLevel >= 0.25) {
-      for (let q = 0; q < campaign.gridWidth; q++) {
-        for (let r = 0; r < campaign.gridHeight; r++) {
+      for (let q = visibleRange.qMin; q <= visibleRange.qMax; q++) {
+        for (let r = visibleRange.rMin; r <= visibleRange.rMax; r++) {
           const key = `${q},${r}`;
           const hex = campaign.hexes[key];
           if (!hex?.connections) continue;
@@ -333,8 +350,8 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
     updateAudio(zoomLevel, panOffset.x, panOffset.y, canvas.width, canvas.height);
 
     // PASS 4: Markers (layer visibility gated)
-    if (playerLayers.markers) for (let q = 0; q < campaign.gridWidth; q++) {
-      for (let r = 0; r < campaign.gridHeight; r++) {
+    if (playerLayers.markers) for (let q = visibleRange.qMin; q <= visibleRange.qMax; q++) {
+      for (let r = visibleRange.rMin; r <= visibleRange.rMax; r++) {
         const key = `${q},${r}`;
         const hex = campaign.hexes[key];
         if (hex && hex.markers && hex.markers.length > 0 && hex.status !== 'undiscovered') {
