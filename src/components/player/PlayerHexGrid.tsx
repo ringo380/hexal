@@ -118,6 +118,12 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
     ? { q: parseInt(selectedHexKey.split(',')[0]), r: parseInt(selectedHexKey.split(',')[1]) }
     : null;
 
+  // Memoize region adapters — only recompute when regions change
+  const regionAdapters: Region[] = useMemo(() =>
+    campaign.regions.map(r => ({ ...r, description: '', tags: [], notes: '' })),
+    [campaign.regions]
+  );
+
   // Draw the grid
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -137,12 +143,6 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
     ctx.scale(zoomLevel, zoomLevel);
 
     // Build hex-to-region lookup
-    const regionAdapters: Region[] = campaign.regions.map(r => ({
-      ...r,
-      description: '',
-      tags: [],
-      notes: ''
-    }));
     const hexRegionMap = createHexRegionMap(regionAdapters);
     const NEIGHBOR_TO_EDGE = [5, 0, 1, 2, 3, 4];
 
@@ -154,6 +154,11 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
     );
 
     // PASS 1: Draw hex backgrounds
+    // Track current canvas text properties to avoid redundant assignments
+    let currentFont = '';
+    let currentAlign = '';
+    let currentBaseline = '';
+
     for (let q = visibleRange.qMin; q <= visibleRange.qMax; q++) {
       for (let r = visibleRange.rMin; r <= visibleRange.rMax; r++) {
         const coord: HexCoordinate = { q, r };
@@ -205,10 +210,11 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
 
         // Terrain label (layer visibility gated)
         if (playerLayers.terrainLabels && hex && hex.terrain && hex.status !== 'undiscovered' && zoomLevel >= 1.5) {
-          ctx.font = 'bold 6px sans-serif';
+          const wantFont = 'bold 6px sans-serif';
+          if (currentFont !== wantFont) { ctx.font = wantFont; currentFont = wantFont; }
+          if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
+          if (currentBaseline !== 'middle') { ctx.textBaseline = 'middle'; currentBaseline = 'middle'; }
           ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
           ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
           ctx.shadowBlur = 3;
           ctx.fillText(hex.terrain, center.x, center.y + 6);
@@ -217,10 +223,11 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
 
         // Coordinate label (layer visibility gated)
         if (playerLayers.coordinateLabels && hex && hex.status !== 'undiscovered' && zoomLevel >= 0.8) {
-          ctx.font = '5px sans-serif';
+          const wantFont = '5px sans-serif';
+          if (currentFont !== wantFont) { ctx.font = wantFont; currentFont = wantFont; }
+          if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
+          if (currentBaseline !== 'alphabetic') { ctx.textBaseline = 'alphabetic'; currentBaseline = 'alphabetic'; }
           ctx.fillStyle = 'rgba(136, 136, 136, 0.5)';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'alphabetic';
           ctx.fillText(`${q},${r}`, center.x, center.y + 18);
         }
       }
@@ -326,9 +333,10 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
         const cy = sumY / region.hexKeys.length;
 
         const fontSize = Math.max(8, Math.min(14, 10 / zoomLevel));
-        ctx.font = `bold ${fontSize}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+        const wantFont = `bold ${fontSize}px sans-serif`;
+        if (currentFont !== wantFont) { ctx.font = wantFont; currentFont = wantFont; }
+        if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
+        if (currentBaseline !== 'middle') { ctx.textBaseline = 'middle'; currentBaseline = 'middle'; }
         ctx.fillStyle = hexToRgba(region.color, 0.9);
         ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
         ctx.shadowBlur = 4;
@@ -373,7 +381,7 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
     }
 
     ctx.restore();
-  }, [campaign, zoomLevel, panOffset, selectedCoord, getTerrainColor, renderWeatherOverlay, playerLayers, updateAudio]);
+  }, [campaign, zoomLevel, panOffset, selectedCoord, getTerrainColor, renderWeatherOverlay, playerLayers, updateAudio, regionAdapters]);
 
   // Track container size for responsive canvas
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });

@@ -375,6 +375,11 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
     // ========================================================================
     // PASS 1: Draw hex backgrounds and content (terrain, indicators, labels)
     // ========================================================================
+    // Track current canvas text properties to avoid redundant assignments
+    let currentFont = '';
+    let currentAlign = '';
+    let currentBaseline = '';
+
     for (let q = visibleRange.qMin; q <= visibleRange.qMax; q++) {
       for (let r = visibleRange.rMin; r <= visibleRange.rMax; r++) {
         const coord: HexCoordinate = { q, r };
@@ -455,10 +460,11 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
 
               // Draw letter (LOD-controlled) - only at mid-zoom levels
               if (lod.showIndicatorLetters && lod.indicatorFont > 0) {
-                ctx.font = `bold ${lod.indicatorFont}px sans-serif`;
+                const wantFont = `bold ${lod.indicatorFont}px sans-serif`;
+                if (currentFont !== wantFont) { ctx.font = wantFont; currentFont = wantFont; }
+                if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
+                if (currentBaseline !== 'middle') { ctx.textBaseline = 'middle'; currentBaseline = 'middle'; }
                 ctx.fillStyle = isFullyResolved ? 'rgba(255,255,255,0.6)' : '#ffffff';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
                 ctx.fillText(config.letter, indicatorX, indicatorY);
               }
 
@@ -472,10 +478,11 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
                 ctx.fillStyle = '#1e1e1e';
                 ctx.fill();
 
-                ctx.font = `bold ${lod.badgeFont}px sans-serif`;
+                const wantBadgeFont = `bold ${lod.badgeFont}px sans-serif`;
+                if (currentFont !== wantBadgeFont) { ctx.font = wantBadgeFont; currentFont = wantBadgeFont; }
+                if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
+                if (currentBaseline !== 'middle') { ctx.textBaseline = 'middle'; currentBaseline = 'middle'; }
                 ctx.fillStyle = isFullyResolved ? 'rgba(255,255,255,0.6)' : '#ffffff';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
                 ctx.fillText(summary.total > 9 ? '9+' : String(summary.total), badgeX, badgeY);
               }
             });
@@ -484,10 +491,11 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
 
         // Draw terrain label (LOD-controlled + layer visibility)
         if (lod.showTerrainLabels && layerVisibility.terrainLabels && hex && hex.terrain && lod.terrainFont > 0) {
-          ctx.font = `bold ${lod.terrainFont}px sans-serif`;
+          const wantFont = `bold ${lod.terrainFont}px sans-serif`;
+          if (currentFont !== wantFont) { ctx.font = wantFont; currentFont = wantFont; }
+          if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
+          if (currentBaseline !== 'middle') { ctx.textBaseline = 'middle'; currentBaseline = 'middle'; }
           ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
           // Truncate to fit within hex (more chars fit at higher zoom)
           const terrainText = truncateForHex(hex.terrain, lod.terrainFont, curZoom);
           ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
@@ -509,9 +517,10 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
           }
 
           if (items.length > 0) {
-            ctx.font = `${lod.contentTitleFont}px sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
+            const wantFont = `${lod.contentTitleFont}px sans-serif`;
+            if (currentFont !== wantFont) { ctx.font = wantFont; currentFont = wantFont; }
+            if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
+            if (currentBaseline !== 'top') { ctx.textBaseline = 'top'; currentBaseline = 'top'; }
             ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
             ctx.shadowBlur = 2;
 
@@ -546,10 +555,11 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
 
         // Draw coordinate label (LOD-controlled + layer visibility)
         if (lod.showCoordLabels && layerVisibility.coordinateLabels && lod.coordFont > 0) {
-          ctx.font = `${lod.coordFont}px sans-serif`;
+          const wantFont = `${lod.coordFont}px sans-serif`;
+          if (currentFont !== wantFont) { ctx.font = wantFont; currentFont = wantFont; }
+          if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
+          if (currentBaseline !== 'alphabetic') { ctx.textBaseline = 'alphabetic'; currentBaseline = 'alphabetic'; }
           ctx.fillStyle = `rgba(136, 136, 136, ${lod.coordOpacity})`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'alphabetic';
           ctx.fillText(`${q},${r}`, center.x, center.y + lod.coordY);
         }
       }

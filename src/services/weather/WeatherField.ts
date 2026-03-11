@@ -39,7 +39,8 @@ export function interpolateCell(a: WeatherFieldCell, b: WeatherFieldCell, t: num
 /** Interpolate an entire field between two snapshots */
 export function interpolateField(fieldA: WeatherField, fieldB: WeatherField, t: number): WeatherField {
   const result: WeatherField = {};
-  for (const key of Object.keys(fieldB)) {
+  for (const key in fieldB) {
+    if (!Object.prototype.hasOwnProperty.call(fieldB, key)) continue;
     const a = fieldA[key];
     const b = fieldB[key];
     if (a && b) {
