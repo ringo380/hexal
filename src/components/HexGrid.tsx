@@ -337,12 +337,16 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Read current zoom/pan from refs (source of truth during animation)
+    const curZoom = zoomRef.current;
+    const curPan = panRef.current;
+
     // Get current LOD configuration based on zoom level
-    const lod = getLOD(zoomLevel);
+    const lod = getLOD(curZoom);
 
     // Calculate visible hex range for viewport culling
     const visibleRange = getVisibleHexRange(
-      panOffset.x, panOffset.y, zoomLevel,
+      curPan.x, curPan.y, curZoom,
       canvas.width, canvas.height,
       campaign.gridWidth, campaign.gridHeight
     );
@@ -362,8 +366,8 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
 
     // Apply zoom and pan transforms
     ctx.save();
-    ctx.translate(panOffset.x, panOffset.y);
-    ctx.scale(zoomLevel, zoomLevel);
+    ctx.translate(curPan.x, curPan.y);
+    ctx.scale(curZoom, curZoom);
 
     // Neighbor-to-edge index mapping for border rendering
     const NEIGHBOR_TO_EDGE = [5, 0, 1, 2, 3, 4];
@@ -485,7 +489,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           // Truncate to fit within hex (more chars fit at higher zoom)
-          const terrainText = truncateForHex(hex.terrain, lod.terrainFont, zoomLevel);
+          const terrainText = truncateForHex(hex.terrain, lod.terrainFont, curZoom);
           ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
           ctx.shadowBlur = 3;
           ctx.fillText(terrainText, center.x, center.y + lod.terrainY);
@@ -524,7 +528,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
             // Draw visible items
             for (let i = 0; i < itemsToShow; i++) {
               const y = center.y + lod.contentTitleY + i * lineHeight;
-              const title = truncateForHex(items[i].title, lod.contentTitleFont, zoomLevel);
+              const title = truncateForHex(items[i].title, lod.contentTitleFont, curZoom);
               ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
               ctx.fillText(title, center.x, y);
             }
@@ -572,7 +576,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
     // ========================================================================
     // CONNECTION PASS: Draw rivers and roads (layer visibility gated)
     // ========================================================================
-    if (layerVisibility.connections && zoomLevel >= 0.25) {
+    if (layerVisibility.connections && curZoom >= 0.25) {
       for (let q = visibleRange.qMin; q <= visibleRange.qMax; q++) {
         for (let r = visibleRange.rMin; r <= visibleRange.rMax; r++) {
           const coord: HexCoordinate = { q, r };
@@ -582,7 +586,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
           const points = hexPoints(center, HEX_SIZE);
 
           // Draw rivers (blue curved lines)
-          if (hex.connections.rivers.length > 0 && zoomLevel >= 0.25) {
+          if (hex.connections.rivers.length > 0 && curZoom >= 0.25) {
             ctx.strokeStyle = '#4a9eff';
             ctx.lineWidth = 2;
             ctx.lineCap = 'round';
@@ -605,7 +609,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
           }
 
           // Draw roads (brown dashed lines)
-          if (hex.connections.roads.length > 0 && zoomLevel >= 0.40) {
+          if (hex.connections.roads.length > 0 && curZoom >= 0.40) {
             ctx.strokeStyle = '#8B7355';
             ctx.lineWidth = 1.5;
             ctx.lineCap = 'round';
@@ -657,7 +661,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
     // ========================================================================
     // REGION NAME LABELS (at lower zoom levels, layer visibility gated)
     // ========================================================================
-    if (layerVisibility.regionLabels && zoomLevel >= 0.25 && zoomLevel <= 0.80) {
+    if (layerVisibility.regionLabels && curZoom >= 0.25 && curZoom <= 0.80) {
       for (const region of regions) {
         if (region.hexKeys.length === 0) continue;
 
@@ -674,7 +678,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
         const cx = sumX / region.hexKeys.length;
         const cy = sumY / region.hexKeys.length;
 
-        const fontSize = Math.max(8, Math.min(14, 10 / zoomLevel));
+        const fontSize = Math.max(8, Math.min(14, 10 / curZoom));
         ctx.font = `bold ${fontSize}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -692,9 +696,9 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
     // ========================================================================
     if (layerVisibility.weatherOverlay) {
       ctx.save();
-      ctx.scale(1 / zoomLevel, 1 / zoomLevel);
-      ctx.translate(-panOffset.x, -panOffset.y);
-      renderWeatherOverlay(ctx, canvas.width, canvas.height, panOffset.x, panOffset.y, zoomLevel);
+      ctx.scale(1 / curZoom, 1 / curZoom);
+      ctx.translate(-curPan.x, -curPan.y);
+      renderWeatherOverlay(ctx, canvas.width, canvas.height, curPan.x, curPan.y, curZoom);
       ctx.restore();
     }
 
@@ -715,7 +719,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
               hex,
               center,
               markerTypes,
-              zoomLevel,
+              curZoom,
               selectedMarker?.markerId
             );
             markerPositions.push(...hexMarkerPositions);
@@ -752,11 +756,11 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
         marker,
         { x: canvasX, y: canvasY },
         markerTypes,
-        zoomLevel,
+        curZoom,
         tilt
       );
     }
-  }, [campaign, getHex, selectedCoordinate, getTerrainColor, zoomLevel, panOffset, markerDrag.isDragging, markerDrag.state, regions, hexRegionMap, multiSelectedKeys, renderWeatherOverlay, layerVisibility]);
+  }, [campaign, getHex, selectedCoordinate, getTerrainColor, markerDrag.isDragging, markerDrag.state, regions, hexRegionMap, multiSelectedKeys, renderWeatherOverlay, layerVisibility]);
 
   // Ref to latest draw for imperative calls from animation loop (avoids stale closures)
   const drawRef = useRef(draw);

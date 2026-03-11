@@ -230,7 +230,7 @@ export function renderIsobars(
 }
 
 /**
- * Render weather front lines — DM only.
+ * Render weather front lines (both DM and player views).
  * Blue triangles for cold fronts, red semicircles for warm fronts.
  */
 export function renderFronts(
