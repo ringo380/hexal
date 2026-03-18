@@ -7,6 +7,7 @@ import {
   createContext,
   useContext,
   useCallback,
+  useMemo,
   useRef,
   useState,
   useEffect,
@@ -191,14 +192,22 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setUnreadCount(0);
   }, []);
 
-  const contextValue: ToastContextValue = {
+  // Refresh timestamps periodically while history panel is open
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!showHistory) return;
+    const interval = setInterval(() => setTick((t) => t + 1), 15000);
+    return () => clearInterval(interval);
+  }, [showHistory]);
+
+  const contextValue = useMemo<ToastContextValue>(() => ({
     toast,
     history,
     unreadCount,
     showHistory,
     toggleHistory,
     clearHistory,
-  };
+  }), [toast, history, unreadCount, showHistory, toggleHistory, clearHistory]);
 
   return (
     <ToastContext.Provider value={contextValue}>
