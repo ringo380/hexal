@@ -6,6 +6,7 @@ import type { Hex, ContentItem, DiscoveryStatus, HexMarker, MarkerType, Npc } fr
 import { createContentItem, createNpc, createHex } from '../types';
 import type { Encounter, EncounterTemplate, ActiveEncounter } from '../types/Campaign';
 import { createEncounter, instantiateFromTemplate, hexKey as toHexKey } from '../types/Campaign';
+import { useToast } from '../stores/ToastContext';
 import { deleteNpcCleanup } from '../services/npcService';
 import { getQuestsForHex, removeNpcFromQuests, removeEncounterFromQuests, removeClueFromQuests } from '../services/questService';
 import { getEntriesForHex } from '../services/sessionLog';
@@ -77,9 +78,11 @@ function HexDetail({ onOpenQuestManager, onRevealEncounter }: HexDetailProps = {
     removeHexFromRegion,
     getRegionForHex,
     sessions,
-    sessionLog
+    sessionLog,
+    undo
   } = useCampaign();
   const { selectedCoordinate, selectedMarker, selectMarker, regionPaintMode } = useHexSelection();
+  const toast = useToast();
   const weatherSim = useWeatherSimulation();
 
   const [hex, setHex] = useState<Hex | null>(null);
@@ -240,14 +243,18 @@ function HexDetail({ onOpenQuestManager, onRevealEncounter }: HexDetailProps = {
       ...currentHex,
       npcs: currentHex.npcs.filter(n => n.id !== npcToDelete.id)
     };
-    saveHex(updatedHex);
-    const hKey = `${selectedCoordinate.q},${selectedCoordinate.r}`;
-    const cleanup = deleteNpcCleanup(campaign, npcToDelete.id, hKey);
-    updateCampaignData(cleanup);
+    // Batch all changes into a single dispatch for one undo state
+    const hKey = toHexKey(selectedCoordinate);
+    const npcCleanup = deleteNpcCleanup(campaign, npcToDelete.id, hKey);
     const questCleanup = removeNpcFromQuests(campaign, npcToDelete.id);
-    updateCampaignData(questCleanup);
+    updateCampaignData({
+      hexes: { ...npcCleanup.hexes, [hKey]: updatedHex },
+      ...questCleanup,
+    });
+    setHex(updatedHex);
+    toast(`${npcToDelete.title} deleted`, { variant: 'success', action: { label: 'Undo', onClick: undo } });
     setNpcToDelete(null);
-  }, [hex, selectedCoordinate, campaign, npcToDelete, getOrCreateHex, saveHex, updateCampaignData]);
+  }, [hex, selectedCoordinate, campaign, npcToDelete, getOrCreateHex, updateCampaignData, toast, undo]);
 
   const updateItem = useCallback((category: ContentCategory, updatedItem: ContentItem) => {
     if (!hex || !selectedCoordinate) return;
@@ -264,19 +271,29 @@ function HexDetail({ onOpenQuestManager, onRevealEncounter }: HexDetailProps = {
   const deleteItem = useCallback((category: ContentCategory, itemId: string) => {
     if (!hex || !selectedCoordinate) return;
     const currentHex = getOrCreateHex(selectedCoordinate);
+    const deletedItem = currentHex[category].find(item => item.id === itemId);
     const updated = {
       ...currentHex,
       [category]: currentHex[category].filter(item => item.id !== itemId)
     };
-    saveHex(updated);
+    // Batch hex update + quest cleanup into a single dispatch for one undo state
+    const hKey = toHexKey(selectedCoordinate);
+    let questCleanup = {};
     if (campaign) {
       if (category === 'encounters') {
-        updateCampaignData(removeEncounterFromQuests(campaign, itemId));
+        questCleanup = removeEncounterFromQuests(campaign, itemId);
       } else if (category === 'clues') {
-        updateCampaignData(removeClueFromQuests(campaign, itemId));
+        questCleanup = removeClueFromQuests(campaign, itemId);
       }
     }
-  }, [hex, selectedCoordinate, campaign, getOrCreateHex, saveHex, updateCampaignData]);
+    updateCampaignData({
+      hexes: { ...(campaign?.hexes ?? {}), [hKey]: updated },
+      ...questCleanup,
+    });
+    setHex(updated);
+    const label = deletedItem?.title || categoryConfig[category].title.replace(/s$/, '');
+    toast(`${label} deleted`, { variant: 'success', action: { label: 'Undo', onClick: undo } });
+  }, [hex, selectedCoordinate, campaign, getOrCreateHex, updateCampaignData, toast, undo]);
 
   const toggleResolved = useCallback((category: ContentCategory, itemId: string) => {
     if (!hex || !selectedCoordinate) return;

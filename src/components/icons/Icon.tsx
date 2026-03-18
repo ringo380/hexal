@@ -80,7 +80,9 @@ export type IconName =
   // Status Icons
   | 'spinner'
   | 'alert-triangle'
-  | 'info';
+  | 'info'
+  // Notification Icons
+  | 'bell';
 
 const icons: Record<IconName, JSX.Element> = {
   'arrow-left': (
@@ -1532,6 +1534,33 @@ const icons: Record<IconName, JSX.Element> = {
       {/* Info symbol */}
       <path d="M12 16v-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       <circle cx="12" cy="8" r="1" fill="currentColor" />
+    </>
+  ),
+  'bell': (
+    <>
+      {/* Secondary - bell body fill */}
+      <path
+        d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"
+        fill="var(--icon-secondary)"
+      />
+      {/* Primary - bell outline */}
+      <path
+        d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      {/* Clapper */}
+      <path
+        d="M13.73 21a2 2 0 0 1-3.46 0"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
     </>
   ),
 };
