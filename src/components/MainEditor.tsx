@@ -1,5 +1,5 @@
 // MainEditor - Three-column layout for campaign editing
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useCampaign } from '../stores/CampaignContext';
 import { useHexSelection } from '../stores/HexSelectionContext';
 import { useFilter } from '../stores/FilterContext';
@@ -127,17 +127,9 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
     return () => clearInterval(interval);
   }, [weatherSim.isRunning, campaign?.weatherSimulation?.config]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Track encounter reveals sent from this window
-  useEffect(() => {
-    const origReveal = window.electronAPI.revealEncounter;
-    window.electronAPI.revealEncounter = (data: unknown) => {
-      const enc = data as ActiveEncounter;
-      setRevealedEncounterId(enc.id);
-      origReveal(data);
-    };
-    return () => {
-      window.electronAPI.revealEncounter = origReveal;
-    };
+  const handleRevealEncounter = useCallback((data: ActiveEncounter) => {
+    setRevealedEncounterId(data.id);
+    window.electronAPI.revealEncounter(data);
   }, []);
 
   const handleDismissEncounter = () => {
@@ -516,7 +508,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
           />
         </div>
         <div className="detail-panel">
-          <HexDetail onOpenQuestManager={() => setShowQuestManager(true)} />
+          <HexDetail onOpenQuestManager={() => setShowQuestManager(true)} onRevealEncounter={handleRevealEncounter} />
         </div>
       </div>
 

@@ -49,9 +49,10 @@ const categoryConfig: Record<ContentCategory, { title: string; icon: IconName }>
 
 interface HexDetailProps {
   onOpenQuestManager?: () => void;
+  onRevealEncounter?: (encounter: ActiveEncounter) => void;
 }
 
-function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
+function HexDetail({ onOpenQuestManager, onRevealEncounter }: HexDetailProps = {}) {
   const {
     campaign,
     getHex,
@@ -490,7 +491,7 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
               hexKey: key,
               regionName: region?.name,
             };
-            window.electronAPI.revealEncounter(active);
+            onRevealEncounter?.(active);
           }}
         />
 

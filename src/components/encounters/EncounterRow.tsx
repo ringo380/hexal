@@ -125,8 +125,7 @@ function EncounterRow({ encounter, onToggleResolved, onSave, onEditFull, onDelet
 }
 
 function areEqual(prev: EncounterRowProps, next: EncounterRowProps) {
-  return prev.encounter === next.encounter
-    && prev.onReveal === next.onReveal;
+  return prev.encounter === next.encounter;
 }
 
 export default memo(EncounterRow, areEqual);

@@ -3,6 +3,7 @@
 import type { ActiveEncounter } from '../../types/Campaign';
 import { ENCOUNTER_TYPE_INFO } from '../../types/Campaign';
 import CreatureCard from './CreatureCard';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface EncounterOverlayProps {
   encounter: ActiveEncounter;
@@ -11,10 +12,11 @@ interface EncounterOverlayProps {
 
 function EncounterOverlay({ encounter, onDismiss }: EncounterOverlayProps) {
   const typeInfo = ENCOUNTER_TYPE_INFO[encounter.encounterType];
+  const overlayRef = useFocusTrap({ onEscape: onDismiss });
 
   return (
     <div className="encounter-overlay" onClick={onDismiss}>
-      <div className="encounter-overlay-card" onClick={(e) => e.stopPropagation()}>
+      <div className="encounter-overlay-card" ref={overlayRef} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="encounter-overlay-header">
           <h1 className="encounter-overlay-title">{encounter.title}</h1>
