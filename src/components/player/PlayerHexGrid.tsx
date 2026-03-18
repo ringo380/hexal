@@ -410,6 +410,49 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
       }
     }
 
+    // PASS 5: Character tokens
+    for (const char of campaign.characters) {
+      if (!char.hexKey) continue;
+      const hex = campaign.hexes[char.hexKey];
+      if (!hex || hex.status === 'undiscovered') continue;
+
+      const parts = char.hexKey.split(',');
+      const cq = parseInt(parts[0], 10);
+      const cr = parseInt(parts[1], 10);
+      if (cq < visibleRange.qMin || cq > visibleRange.qMax || cr < visibleRange.rMin || cr > visibleRange.rMax) continue;
+
+      const center = hexCenter({ q: cq, r: cr });
+
+      // Draw circular token
+      const tokenRadius = 8;
+      ctx.beginPath();
+      ctx.arc(center.x, center.y - 10, tokenRadius, 0, Math.PI * 2);
+      ctx.fillStyle = char.color;
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Draw icon
+      const wantFont = '10px sans-serif';
+      if (currentFont !== wantFont) { ctx.font = wantFont; currentFont = wantFont; }
+      if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
+      if (currentBaseline !== 'middle') { ctx.textBaseline = 'middle'; currentBaseline = 'middle'; }
+      ctx.fillStyle = '#fff';
+      ctx.fillText(char.icon, center.x, center.y - 10);
+
+      // Draw name label if zoomed in enough
+      if (zoomLevel >= 0.6) {
+        const nameFont = 'bold 5px sans-serif';
+        if (currentFont !== nameFont) { ctx.font = nameFont; currentFont = nameFont; }
+        ctx.fillStyle = char.color;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+        ctx.shadowBlur = 2;
+        ctx.fillText(char.name, center.x, center.y - 1);
+        ctx.shadowBlur = 0;
+      }
+    }
+
     ctx.restore();
   }, [campaign, zoomLevel, panOffset, selectedCoord, getTerrainColor, renderWeatherOverlay, playerLayers, updateAudio, regionAdapters]);
 

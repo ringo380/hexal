@@ -172,6 +172,8 @@ describe('migrateCampaign', () => {
       storyArcs: [],
       weatherSimulation: createDefaultSimulationState(),
       fogOfWarConfig: createDefaultFogOfWarConfig(),
+      playerCharacters: [],
+      parties: [],
     });
     const migrated = migrateCampaign(campaign);
     // No encounter migration needed, fields exist => same reference
@@ -392,6 +394,25 @@ describe('migrateCampaign', () => {
     const campaign = makeLegacyCampaign({ fogOfWarConfig: config });
     const migrated = migrateCampaign(campaign);
     expect(migrated.fogOfWarConfig).toEqual(config);
+  });
+
+  it('adds playerCharacters: [] and parties: [] when missing', () => {
+    const legacy = makeLegacyCampaign();
+    expect(legacy.playerCharacters).toBeUndefined();
+    expect(legacy.parties).toBeUndefined();
+
+    const migrated = migrateCampaign(legacy);
+    expect(migrated.playerCharacters).toEqual([]);
+    expect(migrated.parties).toEqual([]);
+  });
+
+  it('preserves existing playerCharacters and parties', () => {
+    const playerCharacters = [{ id: 'pc1', name: 'Hero', color: '#4a9eff', icon: '🧙', hexKey: '0,0', isVisible: true }];
+    const parties = [{ id: 'p1', name: 'The Party', color: '#4a9eff' }];
+    const campaign = makeLegacyCampaign({ playerCharacters, parties } as any);
+    const migrated = migrateCampaign(campaign);
+    expect(migrated.playerCharacters).toEqual(playerCharacters);
+    expect(migrated.parties).toEqual(parties);
   });
 
   it('preserves existing quests and storyArcs', () => {

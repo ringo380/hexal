@@ -35,6 +35,7 @@ import WebServerStatus from './player/WebServerStatus';
 import CreateRegionFromSelectionModal from './modals/CreateRegionFromSelectionModal';
 import ExportTemplateModal from './modals/ExportTemplateModal';
 import FogOfWarModal from './modals/FogOfWarModal';
+import CharacterPanelModal from './modals/CharacterPanelModal';
 import CommandPalette from './CommandPalette';
 import Icon from './icons/Icon';
 import { CATEGORY_INFO, type ContentCategory, parseHexKey } from '../types/Campaign';
@@ -88,6 +89,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
   const [showCreateRegion, setShowCreateRegion] = useState(false);
   const [showExportTemplate, setShowExportTemplate] = useState(false);
   const [showFogOfWar, setShowFogOfWar] = useState(false);
+  const [showCharacterPanel, setShowCharacterPanel] = useState(false);
   const [exportSelection, setExportSelection] = useState<Set<string> | null>(null);
 
   // Clear session-only UI state and stop weather simulation when campaign changes
@@ -437,6 +439,9 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
           <button className="btn btn-secondary" onClick={() => setShowQuestManager(true)}>
             <Icon name="star" size={16} /> Quests
           </button>
+          <button className="btn btn-secondary" onClick={() => setShowCharacterPanel(true)}>
+            <Icon name="walk" size={16} /> Characters
+          </button>
           <button className="btn btn-secondary" onClick={() => setShowGenerator(true)}>
             <Icon name="dice" size={16} /> Generate
           </button>
@@ -577,6 +582,9 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
       )}
       {showExportTemplate && (
         <ExportTemplateModal onClose={() => setShowExportTemplate(false)} />
+      )}
+      {showCharacterPanel && (
+        <CharacterPanelModal onClose={() => setShowCharacterPanel(false)} />
       )}
       {isCommandPaletteOpen && (
         <CommandPalette onClose={closeCommandPalette} />

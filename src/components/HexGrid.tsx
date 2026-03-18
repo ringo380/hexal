@@ -13,7 +13,7 @@ import {
   floodFillSameTerrain,
   getVisibleHexRange
 } from '../services/hexGeometry';
-import { hexKey } from '../types/Campaign';
+import { hexKey, parseHexKey } from '../types/Campaign';
 import {
   hexToRgba,
   getContentSummary,
@@ -736,6 +736,52 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
             markerPositions.push(...hexMarkerPositions);
           }
         }
+      }
+    }
+
+    // ========================================================================
+    // PASS 3: Character tokens (player characters on map)
+    // ========================================================================
+    const playerCharacters = campaign.playerCharacters ?? [];
+    for (const pc of playerCharacters) {
+      if (!pc.hexKey) continue;
+      const hex = getHex(parseHexKey(pc.hexKey) ?? { q: -1, r: -1 });
+      if (!hex) continue;
+
+      const parts = pc.hexKey.split(',');
+      const cq = parseInt(parts[0], 10);
+      const cr = parseInt(parts[1], 10);
+      if (cq < visibleRange.qMin || cq > visibleRange.qMax || cr < visibleRange.rMin || cr > visibleRange.rMax) continue;
+
+      const center = hexCenter({ q: cq, r: cr });
+
+      // Draw circular token (slightly transparent for invisible characters in DM view)
+      const tokenRadius = 8;
+      ctx.beginPath();
+      ctx.arc(center.x, center.y - 10, tokenRadius, 0, Math.PI * 2);
+      ctx.fillStyle = pc.isVisible ? pc.color : hexToRgba(pc.color, 0.4);
+      ctx.fill();
+      ctx.strokeStyle = pc.isVisible ? '#fff' : 'rgba(255, 255, 255, 0.4)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Draw icon
+      const wantFont = '10px sans-serif';
+      if (currentFont !== wantFont) { ctx.font = wantFont; currentFont = wantFont; }
+      if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
+      if (currentBaseline !== 'middle') { ctx.textBaseline = 'middle'; currentBaseline = 'middle'; }
+      ctx.fillStyle = pc.isVisible ? '#fff' : 'rgba(255, 255, 255, 0.4)';
+      ctx.fillText(pc.icon, center.x, center.y - 10);
+
+      // Draw name label if zoomed in enough
+      if (curZoom >= 0.6) {
+        const nameFont = 'bold 5px sans-serif';
+        if (currentFont !== nameFont) { ctx.font = nameFont; currentFont = nameFont; }
+        ctx.fillStyle = pc.isVisible ? pc.color : hexToRgba(pc.color, 0.4);
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+        ctx.shadowBlur = 2;
+        ctx.fillText(pc.name, center.x, center.y - 1);
+        ctx.shadowBlur = 0;
       }
     }
 
