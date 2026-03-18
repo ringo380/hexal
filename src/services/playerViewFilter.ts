@@ -1,6 +1,8 @@
 // Player View Filter - Strips DM-only data from campaign for player consumption
 
-import type { Campaign, Hex, TerrainType, HexCoordinate, DiscoveryStatus, HexConnections, Faction, NpcAttitude } from '../types';
+import type { Campaign, Hex, TerrainType, HexCoordinate, DiscoveryStatus, HexConnections, Faction, NpcAttitude, FogOfWarConfig } from '../types';
+import { createDefaultFogOfWarConfig } from '../types/Campaign';
+import { getHexNeighbors } from './hexGeometry';
 import type { TimeWeatherState, WeatherField } from '../types/Weather';
 import type { MarkerType, HexMarker } from '../types/Markers';
 import type { QuestStatus, StoryArcStatus } from '../types/Quest';
@@ -25,6 +27,8 @@ export interface PlayerHex {
   markers?: HexMarker[];
   // River and road connections (map features, not DM secrets)
   connections?: HexConnections;
+  // Fog of war adjacency: silhouette/dim hexes near discovered areas
+  adjacencyVisibility?: 'silhouette' | 'dim';
 }
 
 // Player-safe region data
@@ -108,6 +112,7 @@ export interface PlayerCampaign {
   storyArcs: PlayerStoryArc[];
   weatherSimConfig?: PlayerWeatherSimConfig;
   weatherField?: WeatherField;
+  fogOfWarConfig?: FogOfWarConfig;
 }
 
 /**
@@ -203,6 +208,12 @@ export function filterCampaignForPlayer(campaign: Campaign): PlayerCampaign {
     };
   }
 
+  // Compute fog of war adjacency visibility
+  const fogConfig = campaign.fogOfWarConfig ?? createDefaultFogOfWarConfig();
+  if (fogConfig.showAdjacentSilhouettes) {
+    computeAdjacentVisibility(hexes, campaign.hexes, fogConfig, campaign.gridWidth, campaign.gridHeight);
+  }
+
   return {
     id: campaign.id,
     name: campaign.name,
@@ -218,7 +229,8 @@ export function filterCampaignForPlayer(campaign: Campaign): PlayerCampaign {
     quests,
     storyArcs,
     weatherSimConfig,
-    weatherField: weatherSimConfig ? campaign.weatherSimulation?.field : undefined
+    weatherField: weatherSimConfig ? campaign.weatherSimulation?.field : undefined,
+    fogOfWarConfig: fogConfig
   };
 }
 
@@ -257,4 +269,69 @@ function filterHexForPlayer(hex: Hex, factions: Faction[]): PlayerHex {
   }
 
   return base;
+}
+
+/**
+ * BFS from discovered/cleared hexes outward to mark undiscovered neighbors
+ * with silhouette/dim adjacency visibility based on fog of war config.
+ */
+function computeAdjacentVisibility(
+  playerHexes: Record<string, PlayerHex>,
+  sourceHexes: Record<string, Hex>,
+  config: FogOfWarConfig,
+  gridWidth: number,
+  gridHeight: number
+): void {
+  // Collect all discovered/cleared hex keys as BFS seeds
+  const seeds: string[] = [];
+  for (const [key, hex] of Object.entries(sourceHexes)) {
+    if (hex.status === 'discovered' || hex.status === 'cleared') {
+      seeds.push(key);
+    }
+  }
+
+  // BFS with distance tracking
+  const visited = new Map<string, number>(); // key → distance from nearest seed
+  const queue: Array<{ key: string; dist: number }> = [];
+
+  for (const key of seeds) {
+    visited.set(key, 0);
+    queue.push({ key, dist: 0 });
+  }
+
+  let idx = 0;
+  while (idx < queue.length) {
+    const { key, dist } = queue[idx++];
+    if (dist >= config.revealRadius) continue;
+
+    const parts = key.split(',');
+    const q = parseInt(parts[0], 10);
+    const r = parseInt(parts[1], 10);
+    const neighbors = getHexNeighbors({ q, r });
+
+    for (const neighbor of neighbors) {
+      // Bounds check
+      if (neighbor.q < 0 || neighbor.q >= gridWidth || neighbor.r < 0 || neighbor.r >= gridHeight) continue;
+
+      const nKey = `${neighbor.q},${neighbor.r}`;
+      const nextDist = dist + 1;
+
+      // Skip if already visited at equal or shorter distance
+      if (visited.has(nKey) && visited.get(nKey)! <= nextDist) continue;
+      visited.set(nKey, nextDist);
+
+      // Only mark undiscovered hexes
+      const sourceHex = sourceHexes[nKey];
+      if (!sourceHex || sourceHex.status !== 'undiscovered') continue;
+
+      // Set adjacency visibility: distance 1 = silhouette, distance 2+ = dim
+      const visibility: 'silhouette' | 'dim' = nextDist === 1 ? 'silhouette' : 'dim';
+
+      if (playerHexes[nKey]) {
+        playerHexes[nKey].adjacencyVisibility = visibility;
+      }
+
+      queue.push({ key: nKey, dist: nextDist });
+    }
+  }
 }

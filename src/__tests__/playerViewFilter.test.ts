@@ -579,4 +579,84 @@ describe('filterCampaignForPlayer', () => {
       expect(raw['engineType']).toBeUndefined();
     });
   });
+
+  describe('fog of war adjacency visibility', () => {
+    it('marks hexes adjacent to discovered hexes as silhouette', () => {
+      const hexes: Record<string, Hex> = {
+        '2,2': makeHex(2, 2, { status: 'discovered' }),
+        '2,3': makeHex(2, 3, { status: 'undiscovered' }), // neighbor of 2,2
+        '2,1': makeHex(2, 1, { status: 'undiscovered' }), // neighbor of 2,2
+      };
+      const campaign = makeCampaign(hexes, {
+        fogOfWarConfig: { revealRadius: 1, showAdjacentSilhouettes: true, fadeTransitionEnabled: true }
+      });
+      const result = filterCampaignForPlayer(campaign);
+
+      expect(result.hexes['2,3'].adjacencyVisibility).toBe('silhouette');
+      expect(result.hexes['2,1'].adjacencyVisibility).toBe('silhouette');
+    });
+
+    it('does not mark adjacency when showAdjacentSilhouettes is false', () => {
+      const hexes: Record<string, Hex> = {
+        '2,2': makeHex(2, 2, { status: 'discovered' }),
+        '2,3': makeHex(2, 3, { status: 'undiscovered' }),
+      };
+      const campaign = makeCampaign(hexes, {
+        fogOfWarConfig: { revealRadius: 1, showAdjacentSilhouettes: false, fadeTransitionEnabled: true }
+      });
+      const result = filterCampaignForPlayer(campaign);
+
+      expect(result.hexes['2,3'].adjacencyVisibility).toBeUndefined();
+    });
+
+    it('marks hexes at distance 2 as dim with revealRadius 2', () => {
+      const hexes: Record<string, Hex> = {
+        '2,2': makeHex(2, 2, { status: 'discovered' }),
+        '2,3': makeHex(2, 3, { status: 'undiscovered' }),  // distance 1
+        '2,4': makeHex(2, 4, { status: 'undiscovered' }),  // distance 2
+      };
+      const campaign = makeCampaign(hexes, {
+        fogOfWarConfig: { revealRadius: 2, showAdjacentSilhouettes: true, fadeTransitionEnabled: true }
+      });
+      const result = filterCampaignForPlayer(campaign);
+
+      expect(result.hexes['2,3'].adjacencyVisibility).toBe('silhouette');
+      expect(result.hexes['2,4'].adjacencyVisibility).toBe('dim');
+    });
+
+    it('does not mark discovered hexes with adjacency visibility', () => {
+      const hexes: Record<string, Hex> = {
+        '2,2': makeHex(2, 2, { status: 'discovered' }),
+        '2,3': makeHex(2, 3, { status: 'discovered' }),
+      };
+      const campaign = makeCampaign(hexes, {
+        fogOfWarConfig: { revealRadius: 1, showAdjacentSilhouettes: true, fadeTransitionEnabled: true }
+      });
+      const result = filterCampaignForPlayer(campaign);
+
+      expect(result.hexes['2,2'].adjacencyVisibility).toBeUndefined();
+      expect(result.hexes['2,3'].adjacencyVisibility).toBeUndefined();
+    });
+
+    it('includes fogOfWarConfig in player campaign', () => {
+      const campaign = makeCampaign({}, {
+        fogOfWarConfig: { revealRadius: 2, showAdjacentSilhouettes: true, fadeTransitionEnabled: false }
+      });
+      const result = filterCampaignForPlayer(campaign);
+
+      expect(result.fogOfWarConfig).toBeDefined();
+      expect(result.fogOfWarConfig!.revealRadius).toBe(2);
+      expect(result.fogOfWarConfig!.fadeTransitionEnabled).toBe(false);
+    });
+
+    it('defaults fogOfWarConfig when not present on campaign', () => {
+      const campaign = makeCampaign({});
+      const result = filterCampaignForPlayer(campaign);
+
+      expect(result.fogOfWarConfig).toBeDefined();
+      expect(result.fogOfWarConfig!.revealRadius).toBe(1);
+      expect(result.fogOfWarConfig!.showAdjacentSilhouettes).toBe(true);
+      expect(result.fogOfWarConfig!.fadeTransitionEnabled).toBe(true);
+    });
+  });
 });

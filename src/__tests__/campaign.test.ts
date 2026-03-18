@@ -6,7 +6,8 @@ import {
   createHex,
   migrateCampaign,
   hasUnresolvedContent,
-  CAMPAIGN_SCHEMA_VERSION
+  CAMPAIGN_SCHEMA_VERSION,
+  createDefaultFogOfWarConfig
 } from '../types/Campaign';
 import type { Campaign, Hex, Encounter, ContentItem, Npc } from '../types/Campaign';
 import { createDefaultSimulationState } from '../types/Weather';
@@ -170,6 +171,7 @@ describe('migrateCampaign', () => {
       quests: [],
       storyArcs: [],
       weatherSimulation: createDefaultSimulationState(),
+      fogOfWarConfig: createDefaultFogOfWarConfig(),
     });
     const migrated = migrateCampaign(campaign);
     // No encounter migration needed, fields exist => same reference
@@ -372,6 +374,24 @@ describe('migrateCampaign', () => {
     expect(migrated.weatherSimulation!.config.enabled).toBe(false);
     expect(migrated.weatherSimulation!.config.engineType).toBe('perlin');
     expect(migrated.weatherSimulation!.field).toEqual({});
+  });
+
+  it('adds fogOfWarConfig with defaults when missing', () => {
+    const legacy = makeLegacyCampaign();
+    expect(legacy.fogOfWarConfig).toBeUndefined();
+
+    const migrated = migrateCampaign(legacy);
+    expect(migrated.fogOfWarConfig).toBeDefined();
+    expect(migrated.fogOfWarConfig!.revealRadius).toBe(1);
+    expect(migrated.fogOfWarConfig!.showAdjacentSilhouettes).toBe(true);
+    expect(migrated.fogOfWarConfig!.fadeTransitionEnabled).toBe(true);
+  });
+
+  it('preserves existing fogOfWarConfig', () => {
+    const config = { revealRadius: 3, showAdjacentSilhouettes: false, fadeTransitionEnabled: false };
+    const campaign = makeLegacyCampaign({ fogOfWarConfig: config });
+    const migrated = migrateCampaign(campaign);
+    expect(migrated.fogOfWarConfig).toEqual(config);
   });
 
   it('preserves existing quests and storyArcs', () => {
