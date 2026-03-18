@@ -126,6 +126,18 @@ export interface Campaign {
    * Optional for backward compatibility with legacy campaign files.
    */
   fogOfWarConfig?: FogOfWarConfig;
+
+  /**
+   * Player characters tracked on the map.
+   * Optional for backward compatibility with legacy campaign files.
+   */
+  playerCharacters?: PlayerCharacter[];
+
+  /**
+   * Named parties for grouping player characters.
+   * Optional for backward compatibility with legacy campaign files.
+   */
+  parties?: Party[];
 }
 
 export interface Hex {
@@ -316,7 +328,9 @@ export function createCampaign(name: string, gridWidth: number, gridHeight: numb
     quests: [],
     storyArcs: [],
     weatherSimulation: createDefaultSimulationState(),
-    fogOfWarConfig: createDefaultFogOfWarConfig()
+    fogOfWarConfig: createDefaultFogOfWarConfig(),
+    playerCharacters: [],
+    parties: []
   };
 }
 
@@ -699,6 +713,42 @@ export function createDefaultFogOfWarConfig(): FogOfWarConfig {
   };
 }
 
+// ============ PLAYER CHARACTER TRACKING ============
+
+export interface PlayerCharacter {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;        // emoji/unicode character
+  hexKey?: string;     // current location "q,r"
+  isVisible: boolean;  // visible on player view
+  partyId?: string;
+}
+
+export interface Party {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export function createPlayerCharacter(name: string = '', color: string = '#4a9eff'): PlayerCharacter {
+  return {
+    id: crypto.randomUUID(),
+    name,
+    color,
+    icon: '🧙',
+    isVisible: true
+  };
+}
+
+export function createParty(name: string = '', color: string = '#4a9eff'): Party {
+  return {
+    id: crypto.randomUUID(),
+    name,
+    color
+  };
+}
+
 // ============ REGION SYSTEM ============
 
 export interface Region {
@@ -926,6 +976,8 @@ export function migrateCampaign(campaign: Campaign): Campaign {
     && campaign.weatherSimulation !== undefined
     && campaign.weatherSimulation.config.timeMode !== undefined
     && campaign.fogOfWarConfig !== undefined
+    && campaign.playerCharacters !== undefined
+    && campaign.parties !== undefined
   ) return campaign;
 
   const ws = campaign.weatherSimulation ?? createDefaultSimulationState();
@@ -949,7 +1001,9 @@ export function migrateCampaign(campaign: Campaign): Campaign {
       ...ws,
       config: { ...ws.config, timeMode: ws.config.timeMode ?? 'realtime' }
     },
-    fogOfWarConfig: campaign.fogOfWarConfig ?? createDefaultFogOfWarConfig()
+    fogOfWarConfig: campaign.fogOfWarConfig ?? createDefaultFogOfWarConfig(),
+    playerCharacters: campaign.playerCharacters ?? [],
+    parties: campaign.parties ?? []
   };
 }
 

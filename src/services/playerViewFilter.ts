@@ -86,6 +86,15 @@ export interface PlayerStoryArc {
   color: string;
 }
 
+// Player-safe character token (stripped of DM-only fields)
+export interface PlayerCharacterToken {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+  hexKey?: string;
+}
+
 // Player-safe weather simulation config (no analytical overlays)
 export interface PlayerWeatherSimConfig {
   enabled: boolean;
@@ -110,6 +119,7 @@ export interface PlayerCampaign {
   sessionLog: PlayerSessionLogEntry[];
   quests: PlayerQuest[];
   storyArcs: PlayerStoryArc[];
+  characters: PlayerCharacterToken[];
   weatherSimConfig?: PlayerWeatherSimConfig;
   weatherField?: WeatherField;
   fogOfWarConfig?: FogOfWarConfig;
@@ -195,6 +205,17 @@ export function filterCampaignForPlayer(campaign: Campaign): PlayerCampaign {
       color: a.color
     }));
 
+  // Filter characters: only visible ones, skip those on undiscovered hexes
+  const characters: PlayerCharacterToken[] = (campaign.playerCharacters ?? [])
+    .filter(pc => pc.isVisible && (!pc.hexKey || hexes[pc.hexKey]?.status !== 'undiscovered'))
+    .map(pc => ({
+      id: pc.id,
+      name: pc.name,
+      color: pc.color,
+      icon: pc.icon,
+      hexKey: pc.hexKey
+    }));
+
   // Filter weather simulation config for player (strip DM analytical overlays)
   let weatherSimConfig: PlayerWeatherSimConfig | undefined;
   if (campaign.weatherSimulation?.config?.enabled) {
@@ -228,6 +249,7 @@ export function filterCampaignForPlayer(campaign: Campaign): PlayerCampaign {
     sessionLog,
     quests,
     storyArcs,
+    characters,
     weatherSimConfig,
     weatherField: weatherSimConfig ? campaign.weatherSimulation?.field : undefined,
     fogOfWarConfig: fogConfig

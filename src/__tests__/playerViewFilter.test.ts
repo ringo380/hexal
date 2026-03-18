@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { filterCampaignForPlayer } from '../services/playerViewFilter';
 // Types used implicitly via assertions on return values
-import { createCampaign, createHex, createContentItem, createNpc, createEncounter, createFaction } from '../types/Campaign';
+import { createCampaign, createHex, createContentItem, createNpc, createEncounter, createFaction, createPlayerCharacter } from '../types/Campaign';
 import type { Campaign, Hex, Region } from '../types/Campaign';
 import type { HexMarker } from '../types/Markers';
 
@@ -532,6 +532,81 @@ describe('filterCampaignForPlayer', () => {
       expect(result.hexes['0,0'].locationNames).toEqual([]);
       expect(result.hexes['1,0'].locationNames).toEqual(['Found Place']);
       expect(result.hexes['2,0'].npcs).toEqual([{ name: 'Freed NPC' }]);
+    });
+  });
+
+  describe('player character filtering', () => {
+    it('includes visible characters on discovered hexes', () => {
+      const pc = createPlayerCharacter('Hero');
+      pc.hexKey = '0,0';
+      pc.isVisible = true;
+      const hex = makeHex(0, 0, { status: 'discovered' });
+      const campaign = makeCampaign({ '0,0': hex }, { playerCharacters: [pc] });
+      const result = filterCampaignForPlayer(campaign);
+
+      expect(result.characters).toHaveLength(1);
+      expect(result.characters[0].name).toBe('Hero');
+      expect(result.characters[0].hexKey).toBe('0,0');
+    });
+
+    it('excludes invisible characters', () => {
+      const pc = createPlayerCharacter('Spy');
+      pc.hexKey = '0,0';
+      pc.isVisible = false;
+      const hex = makeHex(0, 0, { status: 'discovered' });
+      const campaign = makeCampaign({ '0,0': hex }, { playerCharacters: [pc] });
+      const result = filterCampaignForPlayer(campaign);
+
+      expect(result.characters).toHaveLength(0);
+    });
+
+    it('excludes characters on undiscovered hexes', () => {
+      const pc = createPlayerCharacter('Scout');
+      pc.hexKey = '0,0';
+      pc.isVisible = true;
+      const hex = makeHex(0, 0, { status: 'undiscovered' });
+      const campaign = makeCampaign({ '0,0': hex }, { playerCharacters: [pc] });
+      const result = filterCampaignForPlayer(campaign);
+
+      expect(result.characters).toHaveLength(0);
+    });
+
+    it('includes characters with no hex assignment', () => {
+      const pc = createPlayerCharacter('Unplaced');
+      pc.isVisible = true;
+      // no hexKey set
+      const campaign = makeCampaign({}, { playerCharacters: [pc] });
+      const result = filterCampaignForPlayer(campaign);
+
+      expect(result.characters).toHaveLength(1);
+      expect(result.characters[0].hexKey).toBeUndefined();
+    });
+
+    it('whitelists only safe fields (strips partyId, isVisible)', () => {
+      const pc = createPlayerCharacter('Tank');
+      pc.hexKey = '1,1';
+      pc.isVisible = true;
+      pc.partyId = 'party-1';
+      const hex = makeHex(1, 1, { status: 'cleared' });
+      const campaign = makeCampaign({ '1,1': hex }, { playerCharacters: [pc] });
+      const result = filterCampaignForPlayer(campaign);
+
+      expect(result.characters).toHaveLength(1);
+      const token = result.characters[0] as unknown as Record<string, unknown>;
+      expect(token.id).toBeDefined();
+      expect(token.name).toBe('Tank');
+      expect(token.color).toBeDefined();
+      expect(token.icon).toBeDefined();
+      expect(token.hexKey).toBe('1,1');
+      // DM-only fields should not be present
+      expect(token['partyId']).toBeUndefined();
+      expect(token['isVisible']).toBeUndefined();
+    });
+
+    it('handles campaigns with no playerCharacters', () => {
+      const campaign = makeCampaign({});
+      const result = filterCampaignForPlayer(campaign);
+      expect(result.characters).toEqual([]);
     });
   });
 
