@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog, Menu, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import Store from 'electron-store';
-import { startServer, stopServer, getStatus as getWebServerStatus, broadcastState, broadcastCampaignClosed, broadcastMessage, broadcastEncounterReveal, broadcastEncounterDismiss } from './webServer';
+import { startServer, stopServer, getStatus as getWebServerStatus, broadcastState, broadcastCampaignClosed, broadcastMessage, broadcastEncounterReveal, broadcastEncounterDismiss, broadcastPlayerNote, setPlayerNoteCallback } from './webServer';
 
 // Session-only message type (not persisted in campaign data)
 interface DmMessage {
@@ -612,6 +612,40 @@ ipcMain.on('dismiss-encounter', () => {
     }
   });
   broadcastEncounterDismiss();
+});
+
+// Relay player note from player window to DM renderer + other player windows + web clients
+ipcMain.on('player-note-save', (event, note) => {
+  // Send to DM windows (non-player windows)
+  Array.from(windows).forEach(win => {
+    if (!win.isDestroyed()) {
+      win.webContents.send('player-note-received', note);
+    }
+  });
+  // Send to other player view windows (exclude sender)
+  Array.from(playerViewWindows).forEach(win => {
+    if (!win.isDestroyed() && win.webContents !== event.sender) {
+      win.webContents.send('player-note-received', note);
+    }
+  });
+  // Broadcast to web player clients
+  broadcastPlayerNote(note);
+});
+
+// Wire up web player note callback to relay to DM
+setPlayerNoteCallback((note) => {
+  // Relay to DM renderer windows
+  Array.from(windows).forEach(win => {
+    if (!win.isDestroyed()) {
+      win.webContents.send('player-note-received', note);
+    }
+  });
+  // Also relay to Electron player view windows
+  Array.from(playerViewWindows).forEach(win => {
+    if (!win.isDestroyed()) {
+      win.webContents.send('player-note-received', note);
+    }
+  });
 });
 
 // Relay campaign-closed event from DM to all player view windows + web clients

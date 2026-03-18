@@ -138,6 +138,12 @@ export interface Campaign {
    * Optional for backward compatibility with legacy campaign files.
    */
   parties?: Party[];
+
+  /**
+   * Player journal notes (bidirectional: players create, DM views).
+   * Optional for backward compatibility with legacy campaign files.
+   */
+  playerNotes?: PlayerNote[];
 }
 
 export interface Hex {
@@ -330,7 +336,8 @@ export function createCampaign(name: string, gridWidth: number, gridHeight: numb
     weatherSimulation: createDefaultSimulationState(),
     fogOfWarConfig: createDefaultFogOfWarConfig(),
     playerCharacters: [],
-    parties: []
+    parties: [],
+    playerNotes: []
   };
 }
 
@@ -762,6 +769,36 @@ export function createParty(name: string = '', color: string = '#4a9eff'): Party
   };
 }
 
+// ============ PLAYER NOTES ============
+
+export interface PlayerNote {
+  id: string;
+  playerName: string;
+  title: string;
+  content: string;          // markdown (plain text for now, no rendering)
+  createdAt: string;         // ISO date string
+  modifiedAt: string;        // ISO date string
+  linkedHexKeys: string[];
+  linkedNpcNames: string[];
+  linkedQuestIds: string[];
+  tags: string[];
+}
+
+export function createPlayerNote(playerName: string): PlayerNote {
+  return {
+    id: crypto.randomUUID(),
+    playerName,
+    title: '',
+    content: '',
+    createdAt: new Date().toISOString(),
+    modifiedAt: new Date().toISOString(),
+    linkedHexKeys: [],
+    linkedNpcNames: [],
+    linkedQuestIds: [],
+    tags: []
+  };
+}
+
 // ============ REGION SYSTEM ============
 
 export interface Region {
@@ -991,6 +1028,7 @@ export function migrateCampaign(campaign: Campaign): Campaign {
     && campaign.fogOfWarConfig !== undefined
     && campaign.playerCharacters !== undefined
     && campaign.parties !== undefined
+    && campaign.playerNotes !== undefined
   ) return campaign;
 
   const ws = campaign.weatherSimulation ?? createDefaultSimulationState();
@@ -1016,7 +1054,8 @@ export function migrateCampaign(campaign: Campaign): Campaign {
     },
     fogOfWarConfig: campaign.fogOfWarConfig ?? createDefaultFogOfWarConfig(),
     playerCharacters: campaign.playerCharacters ?? [],
-    parties: campaign.parties ?? []
+    parties: campaign.parties ?? [],
+    playerNotes: campaign.playerNotes ?? []
   };
 }
 

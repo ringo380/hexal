@@ -86,6 +86,9 @@ interface ElectronAPI {
   startWebServer: (options?: { port?: number }) => Promise<{ success: boolean; status?: WebServerStatus; error?: string }>;
   stopWebServer: () => Promise<{ success: boolean; error?: string }>;
   getWebServerStatus: () => Promise<WebServerStatus>;
+  // Player notes
+  sendPlayerNote: (note: unknown) => void;
+  onPlayerNoteReceived: (callback: (note: unknown) => void) => () => void;
 }
 
 declare global {

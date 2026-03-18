@@ -203,7 +203,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('stop-web-server'),
 
   getWebServerStatus: (): Promise<WebServerStatusInfo> =>
-    ipcRenderer.invoke('get-web-server-status')
+    ipcRenderer.invoke('get-web-server-status'),
+
+  // Player note operations (bidirectional player → DM)
+  sendPlayerNote: (note: unknown): void => {
+    ipcRenderer.send('player-note-save', note);
+  },
+
+  onPlayerNoteReceived: (callback: (note: unknown) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, note: unknown) => callback(note);
+    ipcRenderer.on('player-note-received', handler);
+    return () => ipcRenderer.removeListener('player-note-received', handler);
+  }
 });
 
 // Type declaration for window.electronAPI
@@ -250,6 +261,9 @@ declare global {
       startWebServer: (options?: { port?: number }) => Promise<{ success: boolean; status?: WebServerStatusInfo; error?: string }>;
       stopWebServer: () => Promise<{ success: boolean; error?: string }>;
       getWebServerStatus: () => Promise<WebServerStatusInfo>;
+      // Player notes
+      sendPlayerNote: (note: unknown) => void;
+      onPlayerNoteReceived: (callback: (note: unknown) => void) => () => void;
     };
   }
 }

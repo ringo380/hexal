@@ -1,9 +1,10 @@
 // PlayerApp - Root component for the player view window
 // Manages IPC state, shows waiting/closed screens, renders PlayerView when data is available
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { PlayerCampaign } from '../../services/playerViewFilter';
 import type { ActiveEncounter } from '../../types/Campaign';
+import type { PlayerNote } from '../../types';
 import PlayerView from './PlayerView';
 import '../../styles/player.css';
 
@@ -47,12 +48,27 @@ function PlayerApp() {
       setActiveEncounter(null);
     });
 
+    // Listen for notes from other players (relayed by main process)
+    const cleanupNotes = window.electronAPI.onPlayerNoteReceived((data) => {
+      const note = data as PlayerNote;
+      setPlayerCampaign(prev => {
+        if (!prev) return prev;
+        const existing = prev.playerNotes ?? [];
+        const idx = existing.findIndex(n => n.id === note.id);
+        const updated = idx >= 0
+          ? existing.map((n, i) => i === idx ? note : n)
+          : [...existing, note];
+        return { ...prev, playerNotes: updated };
+      });
+    });
+
     return () => {
       cleanupUpdate();
       cleanupClosed();
       cleanupMessage();
       cleanupEncounterReveal();
       cleanupEncounterDismiss();
+      cleanupNotes();
     };
   }, []);
 
@@ -80,12 +96,27 @@ function PlayerApp() {
     );
   }
 
+  const handleSaveNote = useCallback((note: PlayerNote) => {
+    window.electronAPI.sendPlayerNote(note);
+    // Also update local state immediately
+    setPlayerCampaign(prev => {
+      if (!prev) return prev;
+      const existing = prev.playerNotes ?? [];
+      const idx = existing.findIndex(n => n.id === note.id);
+      const updated = idx >= 0
+        ? existing.map((n, i) => i === idx ? note : n)
+        : [...existing, note];
+      return { ...prev, playerNotes: updated };
+    });
+  }, []);
+
   return (
     <PlayerView
       campaign={playerCampaign}
       messages={messages}
       activeEncounter={activeEncounter}
       onEncounterDismiss={() => setActiveEncounter(null)}
+      onSaveNote={handleSaveNote}
     />
   );
 }

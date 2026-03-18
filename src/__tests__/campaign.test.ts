@@ -174,6 +174,7 @@ describe('migrateCampaign', () => {
       fogOfWarConfig: createDefaultFogOfWarConfig(),
       playerCharacters: [],
       parties: [],
+      playerNotes: [],
     });
     const migrated = migrateCampaign(campaign);
     // No encounter migration needed, fields exist => same reference
@@ -413,6 +414,21 @@ describe('migrateCampaign', () => {
     const migrated = migrateCampaign(campaign);
     expect(migrated.playerCharacters).toEqual(playerCharacters);
     expect(migrated.parties).toEqual(parties);
+  });
+
+  it('adds playerNotes: [] when missing', () => {
+    const legacy = makeLegacyCampaign();
+    expect(legacy.playerNotes).toBeUndefined();
+
+    const migrated = migrateCampaign(legacy);
+    expect(migrated.playerNotes).toEqual([]);
+  });
+
+  it('preserves existing playerNotes', () => {
+    const playerNotes = [{ id: 'pn1', playerName: 'Alice', title: 'Note', content: '', createdAt: '2026-01-01', modifiedAt: '2026-01-01', linkedHexKeys: [], linkedNpcNames: [], linkedQuestIds: [], tags: [] }];
+    const campaign = makeLegacyCampaign({ playerNotes } as any);
+    const migrated = migrateCampaign(campaign);
+    expect(migrated.playerNotes).toEqual(playerNotes);
   });
 
   it('preserves existing quests and storyArcs', () => {

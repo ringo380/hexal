@@ -35,6 +35,7 @@ let latestState: string | null = null; // JSON-stringified PlayerCampaign
 let activeEncounter: unknown | null = null; // Current revealed encounter
 let pingIntervalHandle: ReturnType<typeof setInterval> | null = null;
 let messageHistory: unknown[] = []; // Session message buffer (max 100)
+let onPlayerNoteCallback: ((note: unknown) => void) | null = null;
 
 // ---------- Helpers ----------
 
@@ -190,7 +191,7 @@ export function startServer(options: { port: number; pin?: string }): WebServerS
     }, 5000);
 
     ws.on('message', (raw: Buffer | string) => {
-      let msg: { type: string; pin?: string };
+      let msg: { type: string; pin?: string; data?: unknown };
       try {
         msg = JSON.parse(typeof raw === 'string' ? raw : raw.toString());
       } catch {
@@ -227,6 +228,21 @@ export function startServer(options: { port: number; pin?: string }): WebServerS
 
       if (msg.type === 'pong') {
         // Keepalive response — no action needed, ws library handles pong at protocol level
+        return;
+      }
+
+      // Player note from web client — relay to DM and broadcast to other clients
+      if (msg.type === 'player-note-save' && client.authenticated && msg.data) {
+        if (onPlayerNoteCallback) {
+          onPlayerNoteCallback(msg.data);
+        }
+        // Broadcast to other authenticated clients (not the sender)
+        const noteMessage = JSON.stringify({ type: 'player-note', data: msg.data });
+        Array.from(clients).forEach(c => {
+          if (c !== client && c.authenticated && c.ws.readyState === WebSocket.OPEN) {
+            c.ws.send(noteMessage);
+          }
+        });
         return;
       }
     });
@@ -324,6 +340,15 @@ export function broadcastEncounterReveal(data: unknown): void {
   });
 }
 
+export function broadcastPlayerNote(note: unknown): void {
+  const message = JSON.stringify({ type: 'player-note', data: note });
+  Array.from(clients).forEach(client => {
+    if (client.authenticated && client.ws.readyState === WebSocket.OPEN) {
+      client.ws.send(message);
+    }
+  });
+}
+
 export function broadcastEncounterDismiss(): void {
   activeEncounter = null;
   const message = JSON.stringify({ type: 'encounter-dismiss' });
@@ -332,6 +357,10 @@ export function broadcastEncounterDismiss(): void {
       client.ws.send(message);
     }
   });
+}
+
+export function setPlayerNoteCallback(cb: (note: unknown) => void): void {
+  onPlayerNoteCallback = cb;
 }
 
 export function broadcastCampaignClosed(): void {

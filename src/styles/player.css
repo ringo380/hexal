@@ -908,6 +908,186 @@
   font-weight: 500;
 }
 
+/* ============================================================================
+   Journal Toggle Button
+   ============================================================================ */
+
+.player-journal-toggle {
+  position: absolute;
+  top: 12px;
+  right: 240px;
+  z-index: 20;
+  background: rgba(30, 30, 30, 0.85);
+  border: 1px solid #444;
+  color: #e0e0e0;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: background 0.15s;
+}
+
+.player-journal-toggle:hover {
+  background: rgba(50, 50, 50, 0.9);
+}
+
+/* ============================================================================
+   Journal Panel
+   ============================================================================ */
+
+.player-journal-panel {
+  position: absolute;
+  top: 48px;
+  right: 12px;
+  z-index: 30;
+  width: 380px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+}
+
+.player-journal {
+  background: #252525;
+  border: 1px solid #444;
+  border-radius: 8px;
+  color: #e0e0e0;
+  padding: 16px;
+}
+
+.player-journal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.player-journal-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.player-journal-close {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.player-journal-close:hover {
+  color: #fff;
+}
+
+.player-journal-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.player-journal-search {
+  flex: 1;
+  background: #1e1e1e;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #e0e0e0;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.player-journal-search::placeholder {
+  color: #666;
+}
+
+.player-journal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.player-journal-empty {
+  text-align: center;
+  color: #666;
+  font-size: 13px;
+  font-style: italic;
+  padding: 16px 0;
+  margin: 0;
+}
+
+.player-journal-item {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.player-journal-item:hover,
+.player-journal-item:focus {
+  border-color: #4a9eff;
+  outline: none;
+}
+
+.player-journal-item-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.player-journal-item-meta {
+  font-size: 11px;
+  color: #888;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.player-journal-item-tags {
+  display: flex;
+  gap: 4px;
+}
+
+.player-journal-tag {
+  background: rgba(74, 158, 255, 0.15);
+  color: #4a9eff;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+.player-journal-item-preview {
+  font-size: 12px;
+  color: #999;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* ============================================================================
+   Note Editor
+   ============================================================================ */
+
+.player-note-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.player-note-editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.player-note-editor-field label {
+  font-size: 12px;
+  color: #aaa;
+  font-weight: 500;
+}
+
 .creature-card-cr {
   padding: 1px 6px;
   background: rgba(244, 67, 54, 0.15);
@@ -915,4 +1095,156 @@
   border-radius: 3px;
   font-size: 11px;
   font-weight: 600;
+}
+
+.player-note-editor-field input,
+.player-note-editor-field textarea {
+  background: #1e1e1e;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #e0e0e0;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.player-note-editor-field input:focus,
+.player-note-editor-field textarea:focus {
+  outline: none;
+  border-color: #4a9eff;
+}
+
+.player-note-editor-field input::placeholder,
+.player-note-editor-field textarea::placeholder {
+  color: #666;
+}
+
+.player-note-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.player-note-btn {
+  padding: 6px 16px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s;
+}
+
+.player-note-btn-primary {
+  background: #4a9eff;
+  color: #fff;
+  border-color: #4a9eff;
+}
+
+.player-note-btn-primary:hover:not(:disabled) {
+  background: #3a8eef;
+}
+
+.player-note-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.player-note-btn-secondary {
+  background: #333;
+  color: #e0e0e0;
+  border-color: #444;
+}
+
+.player-note-btn-secondary:hover {
+  background: #444;
+}
+
+/* ============================================================================
+   Player Name Prompt
+   ============================================================================ */
+
+.player-name-prompt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.player-name-prompt {
+  background: #252525;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 24px;
+  width: 320px;
+  color: #e0e0e0;
+}
+
+.player-name-prompt h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  color: #fff;
+}
+
+.player-name-prompt p {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: #888;
+}
+
+.player-name-prompt input {
+  width: 100%;
+  background: #1e1e1e;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #e0e0e0;
+  padding: 8px 10px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+}
+
+.player-name-prompt input:focus {
+  outline: none;
+  border-color: #4a9eff;
+}
+
+.player-name-prompt-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.player-name-prompt-actions button {
+  padding: 6px 16px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid #444;
+  background: #333;
+  color: #e0e0e0;
+  transition: background 0.15s;
+}
+
+.player-name-prompt-actions button:hover:not(:disabled) {
+  background: #444;
+}
+
+.player-name-prompt-actions button:last-child {
+  background: #4a9eff;
+  border-color: #4a9eff;
+  color: #fff;
+}
+
+.player-name-prompt-actions button:last-child:hover:not(:disabled) {
+  background: #3a8eef;
+}
+
+.player-name-prompt-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

@@ -610,6 +610,26 @@ describe('filterCampaignForPlayer', () => {
     });
   });
 
+  describe('player notes', () => {
+    it('includes playerNotes in filtered output', () => {
+      const campaign = makeCampaign({}, {
+        playerNotes: [
+          { id: 'pn1', playerName: 'Alice', title: 'My Note', content: 'Some text', createdAt: '2026-01-01', modifiedAt: '2026-01-01', linkedHexKeys: [], linkedNpcNames: [], linkedQuestIds: [], tags: [] }
+        ]
+      } as any);
+      const result = filterCampaignForPlayer(campaign);
+      expect(result.playerNotes).toHaveLength(1);
+      expect(result.playerNotes[0].title).toBe('My Note');
+      expect(result.playerNotes[0].playerName).toBe('Alice');
+    });
+
+    it('defaults to empty array when playerNotes is undefined', () => {
+      const campaign = makeCampaign({}, { playerNotes: undefined } as any);
+      const result = filterCampaignForPlayer(campaign);
+      expect(result.playerNotes).toEqual([]);
+    });
+  });
+
   describe('weather simulation config', () => {
     it('omits weatherSimConfig when simulation is not enabled', () => {
       const campaign = makeCampaign({});

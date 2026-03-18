@@ -36,9 +36,11 @@ import CreateRegionFromSelectionModal from './modals/CreateRegionFromSelectionMo
 import ExportTemplateModal from './modals/ExportTemplateModal';
 import FogOfWarModal from './modals/FogOfWarModal';
 import CharacterPanelModal from './modals/CharacterPanelModal';
+import PlayerNotesViewer from './PlayerNotesViewer';
 import CommandPalette from './CommandPalette';
 import DmMessagePanel from './player/DmMessagePanel';
 import Icon from './icons/Icon';
+import type { PlayerNote } from '../types';
 import { CATEGORY_INFO, type ContentCategory, parseHexKey, type ActiveEncounter } from '../types/Campaign';
 import { useWeatherSimulation } from '../stores/WeatherSimulationContext';
 import { useToast } from '../stores/ToastContext';
@@ -92,6 +94,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
   const [showFogOfWar, setShowFogOfWar] = useState(false);
   const [showCharacterPanel, setShowCharacterPanel] = useState(false);
   const [showDmMessages, setShowDmMessages] = useState(false);
+  const [showPlayerNotes, setShowPlayerNotes] = useState(false);
   const [exportSelection, setExportSelection] = useState<Set<string> | null>(null);
   const [revealedEncounterId, setRevealedEncounterId] = useState<string | null>(null);
 
@@ -145,6 +148,23 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
     }
     prevSaveError.current = saveError;
   }, [saveError, toast]);
+
+  // Listen for player notes from player views
+  const playerNotesRef = useRef(campaign?.playerNotes);
+  playerNotesRef.current = campaign?.playerNotes;
+  useEffect(() => {
+    if (!campaign) return;
+    const cleanup = window.electronAPI.onPlayerNoteReceived((data) => {
+      const note = data as PlayerNote;
+      const existing = playerNotesRef.current ?? [];
+      const idx = existing.findIndex(n => n.id === note.id);
+      const updated = idx >= 0
+        ? existing.map((n, i) => i === idx ? note : n)
+        : [...existing, note];
+      updateCampaignData({ playerNotes: updated });
+    });
+    return cleanup;
+  }, [campaign?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Register export handler for menu command
   useEffect(() => {
@@ -465,6 +485,12 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
           <button className="btn btn-secondary" onClick={() => setShowCharacterPanel(true)}>
             <Icon name="walk" size={16} /> Characters
           </button>
+          <button className="btn btn-secondary" onClick={() => setShowPlayerNotes(true)}>
+            <Icon name="lightbulb" size={16} /> Player Notes
+            {(campaign.playerNotes ?? []).length > 0 && (
+              <span className="filter-badge">{(campaign.playerNotes ?? []).length}</span>
+            )}
+          </button>
           <button className="btn btn-secondary" onClick={() => setShowGenerator(true)}>
             <Icon name="dice" size={16} /> Generate
           </button>
@@ -611,6 +637,12 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
       )}
       {showCharacterPanel && (
         <CharacterPanelModal onClose={() => setShowCharacterPanel(false)} />
+      )}
+      {showPlayerNotes && (
+        <PlayerNotesViewer
+          notes={campaign.playerNotes ?? []}
+          onClose={() => setShowPlayerNotes(false)}
+        />
       )}
       {isCommandPaletteOpen && (
         <CommandPalette onClose={closeCommandPalette} />
