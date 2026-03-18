@@ -2,7 +2,15 @@ import { app, BrowserWindow, ipcMain, dialog, Menu, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import Store from 'electron-store';
-import { startServer, stopServer, getStatus as getWebServerStatus, broadcastState, broadcastCampaignClosed } from './webServer';
+import { startServer, stopServer, getStatus as getWebServerStatus, broadcastState, broadcastCampaignClosed, broadcastMessage } from './webServer';
+
+// Session-only message type (not persisted in campaign data)
+interface DmMessage {
+  id: string;
+  text: string;
+  timestamp: number;
+  imageDataUrl?: string;
+}
 
 // Set app name for macOS menu bar (must be before app.whenReady)
 if (process.platform === 'darwin') {
@@ -574,6 +582,16 @@ ipcMain.on('sync-player-view', (_event, data) => {
   });
   // Also broadcast to web player clients
   broadcastState(data);
+});
+
+// Relay DM message to all player view windows + web clients
+ipcMain.on('send-player-message', (_event, message: DmMessage) => {
+  Array.from(playerViewWindows).forEach(win => {
+    if (!win.isDestroyed()) {
+      win.webContents.send('player-message', message);
+    }
+  });
+  broadcastMessage(message);
 });
 
 // Relay campaign-closed event from DM to all player view windows + web clients

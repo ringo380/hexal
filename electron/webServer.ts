@@ -33,6 +33,7 @@ let currentPort = 0;
 let clients: AuthenticatedClient[] = [];
 let latestState: string | null = null; // JSON-stringified PlayerCampaign
 let pingIntervalHandle: ReturnType<typeof setInterval> | null = null;
+let messageHistory: unknown[] = []; // Session message buffer (max 100)
 
 // ---------- Helpers ----------
 
@@ -207,6 +208,10 @@ export function startServer(options: { port: number; pin?: string }): WebServerS
           if (latestState) {
             ws.send(latestState); // Already JSON-stringified with { type: 'state', data: ... }
           }
+          // Send message history to late-joining clients
+          if (messageHistory.length > 0) {
+            sendJson(ws, { type: 'message-history', data: messageHistory });
+          }
         } else {
           sendJson(ws, { type: 'auth-fail', reason: 'Invalid PIN' });
           ws.close();
@@ -265,6 +270,7 @@ export function stopServer(): void {
   currentPin = '';
   currentPort = 0;
   latestState = null;
+  messageHistory = [];
 }
 
 export function getStatus(): WebServerStatus {
@@ -288,9 +294,24 @@ export function broadcastState(playerCampaign: unknown): void {
   });
 }
 
+export function broadcastMessage(message: unknown): void {
+  messageHistory.push(message);
+  if (messageHistory.length > 100) {
+    messageHistory = messageHistory.slice(-100);
+  }
+
+  const payload = JSON.stringify({ type: 'dm-message', data: message });
+  Array.from(clients).forEach(client => {
+    if (client.authenticated && client.ws.readyState === WebSocket.OPEN) {
+      client.ws.send(payload);
+    }
+  });
+}
+
 export function broadcastCampaignClosed(): void {
   const message = JSON.stringify({ type: 'campaign-closed' });
   latestState = null;
+  messageHistory = [];
   Array.from(clients).forEach(client => {
     if (client.authenticated && client.ws.readyState === WebSocket.OPEN) {
       client.ws.send(message);

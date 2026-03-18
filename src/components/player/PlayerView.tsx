@@ -1,27 +1,58 @@
 // PlayerView - Layout wrapper with Presentation/Explorer mode toggle
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { PlayerCampaign } from '../../services/playerViewFilter';
 import { createDefaultSimulationConfig } from '../../types/Weather';
 import PlayerHexGrid from './PlayerHexGrid';
 import PlayerHexInfo from './PlayerHexInfo';
 import PlayerSidebar from './PlayerSidebar';
 import PlayerQuestLog from './PlayerQuestLog';
+import MessageToast from './MessageToast';
+import MessageHistory from './MessageHistory';
 import type { HexCoordinate } from '../../types';
 import { WEATHER_CONDITION_LABELS, TEMPERATURE_LABELS } from '../../types/Weather';
+
+interface DmMessage {
+  id: string;
+  text: string;
+  timestamp: number;
+  imageDataUrl?: string;
+}
 
 type LayoutMode = 'presentation' | 'explorer';
 
 interface PlayerViewProps {
   campaign: PlayerCampaign;
+  messages?: DmMessage[];
+  onMessageSeen?: () => void;
 }
 
-function PlayerView({ campaign }: PlayerViewProps) {
+function PlayerView({ campaign, messages = [], onMessageSeen }: PlayerViewProps) {
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('presentation');
   const [selectedHexKey, setSelectedHexKey] = useState<string | null>(null);
   const [showQuestLog, setShowQuestLog] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [infoCollapsed, setInfoCollapsed] = useState(false);
+  const [activeToast, setActiveToast] = useState<DmMessage | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [lastSeenCount, setLastSeenCount] = useState(0);
+  const prevMessageCountRef = useRef(messages.length);
+
+  // Show toast when a new message arrives (not on initial mount with history)
+  useEffect(() => {
+    if (messages.length > prevMessageCountRef.current) {
+      setActiveToast(messages[messages.length - 1]);
+    }
+    prevMessageCountRef.current = messages.length;
+  }, [messages.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const unreadCount = Math.max(0, messages.length - lastSeenCount);
+
+  const handleOpenHistory = useCallback(() => {
+    setShowHistory(true);
+    setLastSeenCount(messages.length);
+    onMessageSeen?.();
+  }, [messages.length, onMessageSeen]);
 
   const selectedHex = selectedHexKey ? campaign.hexes[selectedHexKey] ?? null : null;
 
@@ -152,6 +183,35 @@ function PlayerView({ campaign }: PlayerViewProps) {
         <div className="player-quest-log-panel">
           <PlayerQuestLog campaign={campaign} />
         </div>
+      )}
+
+      {/* Message toggle button */}
+      <button
+        className="player-message-toggle"
+        onClick={handleOpenHistory}
+        title="Messages from DM"
+        aria-label="Messages from DM"
+      >
+        Messages
+        {unreadCount > 0 && (
+          <span className="player-message-badge">{unreadCount}</span>
+        )}
+      </button>
+
+      {/* Message toast */}
+      {activeToast && (
+        <MessageToast
+          message={activeToast}
+          onDismiss={() => setActiveToast(null)}
+        />
+      )}
+
+      {/* Message history panel */}
+      {showHistory && (
+        <MessageHistory
+          messages={messages}
+          onClose={() => setShowHistory(false)}
+        />
       )}
     </div>
   );

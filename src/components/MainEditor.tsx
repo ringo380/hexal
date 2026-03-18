@@ -37,6 +37,7 @@ import ExportTemplateModal from './modals/ExportTemplateModal';
 import FogOfWarModal from './modals/FogOfWarModal';
 import CharacterPanelModal from './modals/CharacterPanelModal';
 import CommandPalette from './CommandPalette';
+import DmMessagePanel from './player/DmMessagePanel';
 import Icon from './icons/Icon';
 import { CATEGORY_INFO, type ContentCategory, parseHexKey } from '../types/Campaign';
 import { useWeatherSimulation } from '../stores/WeatherSimulationContext';
@@ -90,6 +91,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
   const [showExportTemplate, setShowExportTemplate] = useState(false);
   const [showFogOfWar, setShowFogOfWar] = useState(false);
   const [showCharacterPanel, setShowCharacterPanel] = useState(false);
+  const [showDmMessages, setShowDmMessages] = useState(false);
   const [exportSelection, setExportSelection] = useState<Set<string> | null>(null);
 
   // Clear session-only UI state and stop weather simulation when campaign changes
@@ -451,6 +453,9 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
           <button className="btn btn-secondary" onClick={() => setShowExport(true)}>
             <Icon name="export" size={16} /> Export Data
           </button>
+          <button className="btn btn-secondary" onClick={() => setShowDmMessages(!showDmMessages)}>
+            <Icon name="info" size={16} /> Message Players
+          </button>
           <ConnectionStatus />
           <WebServerStatus />
           <ProfileMenu onOpenLogin={() => setShowLogin(true)} />
@@ -588,6 +593,9 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
       )}
       {isCommandPaletteOpen && (
         <CommandPalette onClose={closeCommandPalette} />
+      )}
+      {showDmMessages && (
+        <DmMessagePanel onClose={() => setShowDmMessages(false)} />
       )}
     </div>
   );
