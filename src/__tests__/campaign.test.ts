@@ -175,6 +175,7 @@ describe('migrateCampaign', () => {
       playerCharacters: [],
       parties: [],
       playerNotes: [],
+      travelLog: [],
     });
     const migrated = migrateCampaign(campaign);
     // No encounter migration needed, fields exist => same reference
@@ -429,6 +430,21 @@ describe('migrateCampaign', () => {
     const campaign = makeLegacyCampaign({ playerNotes } as any);
     const migrated = migrateCampaign(campaign);
     expect(migrated.playerNotes).toEqual(playerNotes);
+  });
+
+  it('adds travelLog: [] when missing', () => {
+    const legacy = makeLegacyCampaign();
+    expect(legacy.travelLog).toBeUndefined();
+
+    const migrated = migrateCampaign(legacy);
+    expect(migrated.travelLog).toEqual([]);
+  });
+
+  it('preserves existing travelLog', () => {
+    const travelLog = [{ id: 'tl1', fromHexKey: '0,0', toHexKey: '1,0', timestamp: '2026-01-01T00:00:00Z', discovered: false }];
+    const campaign = makeLegacyCampaign({ travelLog } as any);
+    const migrated = migrateCampaign(campaign);
+    expect(migrated.travelLog).toEqual(travelLog);
   });
 
   it('preserves existing quests and storyArcs', () => {

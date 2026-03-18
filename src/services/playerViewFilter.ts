@@ -124,6 +124,7 @@ export interface PlayerCampaign {
   weatherField?: WeatherField;
   fogOfWarConfig?: FogOfWarConfig;
   playerNotes: PlayerNote[];
+  partyPosition?: string;
 }
 
 /**
@@ -254,7 +255,8 @@ export function filterCampaignForPlayer(campaign: Campaign): PlayerCampaign {
     weatherSimConfig,
     weatherField: weatherSimConfig ? campaign.weatherSimulation?.field : undefined,
     fogOfWarConfig: fogConfig,
-    playerNotes: campaign.playerNotes ?? []
+    playerNotes: campaign.playerNotes ?? [],
+    partyPosition: campaign.partyPosition
   };
 }
 

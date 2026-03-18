@@ -39,6 +39,7 @@ import CharacterPanelModal from './modals/CharacterPanelModal';
 import PlayerNotesViewer from './PlayerNotesViewer';
 import CommandPalette from './CommandPalette';
 import DmMessagePanel from './player/DmMessagePanel';
+import TravelPanel from './travel/TravelPanel';
 import Icon from './icons/Icon';
 import type { PlayerNote } from '../types';
 import { CATEGORY_INFO, type ContentCategory, parseHexKey, type ActiveEncounter } from '../types/Campaign';
@@ -97,6 +98,9 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
   const [showPlayerNotes, setShowPlayerNotes] = useState(false);
   const [exportSelection, setExportSelection] = useState<Set<string> | null>(null);
   const [revealedEncounterId, setRevealedEncounterId] = useState<string | null>(null);
+  const [showTravelPanel, setShowTravelPanel] = useState(false);
+  const [travelPath, setTravelPath] = useState<string[]>([]);
+  const hexClickOverrideRef = useRef<((key: string) => void) | null>(null);
 
   // Clear session-only UI state and stop weather simulation when campaign changes
   useEffect(() => {
@@ -104,6 +108,9 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
     setExportSelection(null);
     setRevealedEncounterId(null);
     setLayerVisibility(DEFAULT_LAYER_VISIBILITY);
+    setShowTravelPanel(false);
+    setTravelPath([]);
+    hexClickOverrideRef.current = null;
     if (weatherSim.isRunning) {
       weatherSim.stopSimulation();
     }
@@ -491,6 +498,12 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
               <span className="filter-badge">{(campaign.playerNotes ?? []).length}</span>
             )}
           </button>
+          <button
+            className={`btn btn-secondary${showTravelPanel ? ' btn-active' : ''}`}
+            onClick={() => setShowTravelPanel(!showTravelPanel)}
+          >
+            <Icon name="walk" size={16} /> Travel
+          </button>
           <button className="btn btn-secondary" onClick={() => setShowGenerator(true)}>
             <Icon name="dice" size={16} /> Generate
           </button>
@@ -531,12 +544,28 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
               setExportSelection(new Set(multiSelectedKeys));
               setShowMapExport(true);
             }}
+            travelPath={showTravelPanel ? travelPath : undefined}
+            hexClickOverride={showTravelPanel ? hexClickOverrideRef : undefined}
           />
         </div>
         <div className="detail-panel">
           <HexDetail onOpenQuestManager={() => setShowQuestManager(true)} onRevealEncounter={handleRevealEncounter} />
         </div>
       </div>
+
+      {/* Travel Panel (floating) */}
+      {showTravelPanel && (
+        <TravelPanel
+          onClose={() => {
+            setShowTravelPanel(false);
+            setTravelPath([]);
+            hexClickOverrideRef.current = null;
+          }}
+          travelPath={travelPath}
+          onTravelPathChange={setTravelPath}
+          hexClickCallback={hexClickOverrideRef}
+        />
+      )}
 
       {/* Modals */}
       {showGenerator && (

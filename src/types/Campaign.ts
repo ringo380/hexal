@@ -12,6 +12,15 @@ import type { CampaignTemplate } from './CampaignTemplate';
 /** Current campaign schema version. Increment when making breaking data model changes. */
 export const CAMPAIGN_SCHEMA_VERSION = 2;
 
+export interface TravelLogEntry {
+  id: string;
+  fromHexKey: string;
+  toHexKey: string;
+  timestamp: string;           // ISO date string
+  encounterTriggered?: string; // encounter ID if one was triggered
+  discovered: boolean;         // whether this step discovered a new hex
+}
+
 export interface Campaign {
   id: string;
   name: string;
@@ -144,6 +153,18 @@ export interface Campaign {
    * Optional for backward compatibility with legacy campaign files.
    */
   playerNotes?: PlayerNote[];
+
+  /**
+   * Current party position as hex key ("q,r" format).
+   * Optional — undefined means party position is not set.
+   */
+  partyPosition?: string;
+
+  /**
+   * Travel log entries recording party movement history.
+   * Optional for backward compatibility with legacy campaign files.
+   */
+  travelLog?: TravelLogEntry[];
 }
 
 export interface Hex {
@@ -337,7 +358,9 @@ export function createCampaign(name: string, gridWidth: number, gridHeight: numb
     fogOfWarConfig: createDefaultFogOfWarConfig(),
     playerCharacters: [],
     parties: [],
-    playerNotes: []
+    playerNotes: [],
+    partyPosition: undefined,
+    travelLog: []
   };
 }
 
@@ -1029,6 +1052,7 @@ export function migrateCampaign(campaign: Campaign): Campaign {
     && campaign.playerCharacters !== undefined
     && campaign.parties !== undefined
     && campaign.playerNotes !== undefined
+    && campaign.travelLog !== undefined
   ) return campaign;
 
   const ws = campaign.weatherSimulation ?? createDefaultSimulationState();
@@ -1055,7 +1079,8 @@ export function migrateCampaign(campaign: Campaign): Campaign {
     fogOfWarConfig: campaign.fogOfWarConfig ?? createDefaultFogOfWarConfig(),
     playerCharacters: campaign.playerCharacters ?? [],
     parties: campaign.parties ?? [],
-    playerNotes: campaign.playerNotes ?? []
+    playerNotes: campaign.playerNotes ?? [],
+    travelLog: campaign.travelLog ?? []
   };
 }
 

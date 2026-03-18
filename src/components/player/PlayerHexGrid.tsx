@@ -3,6 +3,7 @@
 import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import type { PlayerCampaign } from '../../services/playerViewFilter';
 import type { HexCoordinate } from '../../types';
+import { parseHexKey } from '../../types/Campaign';
 import { DEFAULT_MARKER_TYPES } from '../../types/Markers';
 import {
   HEX_SIZE,
