@@ -67,6 +67,7 @@ export function WeatherSimulationProvider({ children }: { children: React.ReactN
   // Double-buffered field snapshots for interpolation
   const prevFieldRef = useRef<WeatherField>({});
   const currentFieldRef = useRef<WeatherField>({});
+  const hasFieldDataRef = useRef(false);
   const lastTickTimeRef = useRef(0);
   const tickIntervalRef = useRef(100); // ms between worker ticks
 
@@ -89,9 +90,15 @@ export function WeatherSimulationProvider({ children }: { children: React.ReactN
     const prev = prevFieldRef.current;
     const curr = currentFieldRef.current;
 
-    // Only interpolate if we have both snapshots and there's meaningful data
-    if (Object.keys(prev).length > 0 && Object.keys(curr).length > 0 && t < 1) {
-      setField(interpolateField(prev, curr, t));
+    // Only interpolate if we have field data and there's meaningful interpolation to do
+    if (hasFieldDataRef.current && t < 1) {
+      if (t <= 0.02) {
+        setField(prev);  // Reuse existing snapshot — visually identical
+      } else if (t >= 0.98) {
+        setField(curr);  // Reuse existing snapshot — visually identical
+      } else {
+        setField(interpolateField(prev, curr, t));
+      }
     }
 
     animFrameRef.current = requestAnimationFrame(animate);
@@ -113,6 +120,7 @@ export function WeatherSimulationProvider({ children }: { children: React.ReactN
         // Shift current → prev, store new as current
         prevFieldRef.current = currentFieldRef.current;
         currentFieldRef.current = msg.field;
+        hasFieldDataRef.current = true;
         lastTickTimeRef.current = performance.now();
         // Increment version counter (only on actual worker ticks, not interpolation)
         fieldVersionRef.current++;
@@ -192,6 +200,7 @@ export function WeatherSimulationProvider({ children }: { children: React.ReactN
     setPressureSystems([]);
     setFronts([]);
     setActiveEvents([]);
+    hasFieldDataRef.current = false;
     prevFieldRef.current = {};
     currentFieldRef.current = {};
   }, [postMessage]);

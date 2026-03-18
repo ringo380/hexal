@@ -49,11 +49,12 @@ export function useWeatherOverlay({
   const offscreenRef = useRef<HTMLCanvasElement | null>(null);
   const cloudCoverRef = useRef<HTMLCanvasElement | null>(null);
   const cloudShadowRef = useRef<HTMLCanvasElement | null>(null);
-  // Offscreen canvases for direct-draw passes (isobars, fronts, pressure labels, wind arrows)
-  const isobarsCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const frontsCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const pressureLabelsCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const windArrowsCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  // Offscreen canvases + cached contexts for direct-draw passes
+  interface OffscreenCanvasWithCtx { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D; }
+  const isobarsRef = useRef<OffscreenCanvasWithCtx | null>(null);
+  const frontsRef = useRef<OffscreenCanvasWithCtx | null>(null);
+  const pressureLabelsRef = useRef<OffscreenCanvasWithCtx | null>(null);
+  const windArrowsRef = useRef<OffscreenCanvasWithCtx | null>(null);
   const lastFieldVersionRef = useRef(-1);
   const lastOffsetRef = useRef({ x: 0, y: 0 });
   const lastZoomRef = useRef(1);
@@ -102,7 +103,7 @@ export function useWeatherOverlay({
     offsetY: number,
     zoomLevel: number
   ) => {
-    if (!config?.enabled || Object.keys(field).length === 0) return;
+    if (!config?.enabled || fieldVersion === 0) return;
 
     // LOD: Skip overlay at very low zoom
     if (zoomLevel < 0.15) return;
@@ -180,122 +181,116 @@ export function useWeatherOverlay({
       }
     }
 
+    // Helper: ensure an offscreen canvas+context pair is sized correctly
+    function ensureOffscreen(
+      ref: React.MutableRefObject<OffscreenCanvasWithCtx | null>,
+      w: number, h: number
+    ): OffscreenCanvasWithCtx | null {
+      let entry = ref.current;
+      if (!entry) {
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx2 = canvas.getContext('2d');
+        if (!ctx2) return null;
+        entry = { canvas, ctx: ctx2 };
+        ref.current = entry;
+      } else if (entry.canvas.width !== w || entry.canvas.height !== h) {
+        entry.canvas.width = w; entry.canvas.height = h;
+      }
+      return entry;
+    }
+
     // ── 4. Isobars (no longer DM-only) ──
     if (config.showIsobars) {
-      if (needsRedraw || !isobarsCanvasRef.current) {
-        const oc = isobarsCanvasRef.current || document.createElement('canvas');
-        if (oc.width !== canvasWidth || oc.height !== canvasHeight) {
-          oc.width = canvasWidth; oc.height = canvasHeight;
+      if (needsRedraw || !isobarsRef.current) {
+        const oc = ensureOffscreen(isobarsRef, canvasWidth, canvasHeight);
+        if (oc) {
+          oc.ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+          oc.ctx.save();
+          oc.ctx.translate(offsetX, offsetY);
+          oc.ctx.scale(zoomLevel, zoomLevel);
+          renderIsobars(oc.ctx, field, gridWidth, gridHeight, zoomLevel, visibleRange);
+          oc.ctx.restore();
         }
-        const octx = oc.getContext('2d');
-        if (octx) {
-          octx.clearRect(0, 0, canvasWidth, canvasHeight);
-          octx.save();
-          octx.translate(offsetX, offsetY);
-          octx.scale(zoomLevel, zoomLevel);
-          renderIsobars(octx, field, gridWidth, gridHeight, zoomLevel, visibleRange);
-          octx.restore();
-        }
-        isobarsCanvasRef.current = oc;
       }
-      if (isobarsCanvasRef.current) ctx.drawImage(isobarsCanvasRef.current, 0, 0);
+      if (isobarsRef.current) ctx.drawImage(isobarsRef.current.canvas, 0, 0);
     }
 
     // ── 5. Fronts (no longer DM-only) ──
     if (config.showFronts) {
-      if (needsRedraw || !frontsCanvasRef.current) {
-        const oc = frontsCanvasRef.current || document.createElement('canvas');
-        if (oc.width !== canvasWidth || oc.height !== canvasHeight) {
-          oc.width = canvasWidth; oc.height = canvasHeight;
+      if (needsRedraw || !frontsRef.current) {
+        const oc = ensureOffscreen(frontsRef, canvasWidth, canvasHeight);
+        if (oc) {
+          oc.ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+          oc.ctx.save();
+          oc.ctx.translate(offsetX, offsetY);
+          oc.ctx.scale(zoomLevel, zoomLevel);
+          renderFronts(oc.ctx, field, gridWidth, gridHeight, zoomLevel, visibleRange);
+          oc.ctx.restore();
         }
-        const octx = oc.getContext('2d');
-        if (octx) {
-          octx.clearRect(0, 0, canvasWidth, canvasHeight);
-          octx.save();
-          octx.translate(offsetX, offsetY);
-          octx.scale(zoomLevel, zoomLevel);
-          renderFronts(octx, field, gridWidth, gridHeight, zoomLevel, visibleRange);
-          octx.restore();
-        }
-        frontsCanvasRef.current = oc;
       }
-      if (frontsCanvasRef.current) ctx.drawImage(frontsCanvasRef.current, 0, 0);
+      if (frontsRef.current) ctx.drawImage(frontsRef.current.canvas, 0, 0);
     }
 
     // ── 6. Pressure labels (H/L markers) ──
     if (showPressure) {
-      if (needsRedraw || !pressureLabelsCanvasRef.current) {
-        const oc = pressureLabelsCanvasRef.current || document.createElement('canvas');
-        if (oc.width !== canvasWidth || oc.height !== canvasHeight) {
-          oc.width = canvasWidth; oc.height = canvasHeight;
+      if (needsRedraw || !pressureLabelsRef.current) {
+        const oc = ensureOffscreen(pressureLabelsRef, canvasWidth, canvasHeight);
+        if (oc) {
+          oc.ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+          oc.ctx.save();
+          oc.ctx.translate(offsetX, offsetY);
+          oc.ctx.scale(zoomLevel, zoomLevel);
+          renderPressureLabels(oc.ctx, field, gridWidth, gridHeight, zoomLevel, visibleRange);
+          oc.ctx.restore();
         }
-        const octx = oc.getContext('2d');
-        if (octx) {
-          octx.clearRect(0, 0, canvasWidth, canvasHeight);
-          octx.save();
-          octx.translate(offsetX, offsetY);
-          octx.scale(zoomLevel, zoomLevel);
-          renderPressureLabels(octx, field, gridWidth, gridHeight, zoomLevel, visibleRange);
-          octx.restore();
-        }
-        pressureLabelsCanvasRef.current = oc;
       }
-      if (pressureLabelsCanvasRef.current) ctx.drawImage(pressureLabelsCanvasRef.current, 0, 0);
+      if (pressureLabelsRef.current) ctx.drawImage(pressureLabelsRef.current.canvas, 0, 0);
     }
 
     // ── 7. Wind arrows ──
     if (showWind && zoomLevel < 1.5) {
-      if (needsRedraw || !windArrowsCanvasRef.current) {
-        const oc = windArrowsCanvasRef.current || document.createElement('canvas');
-        if (oc.width !== canvasWidth || oc.height !== canvasHeight) {
-          oc.width = canvasWidth; oc.height = canvasHeight;
+      if (needsRedraw || !windArrowsRef.current) {
+        const oc = ensureOffscreen(windArrowsRef, canvasWidth, canvasHeight);
+        if (oc) {
+          oc.ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+          oc.ctx.save();
+          oc.ctx.translate(offsetX, offsetY);
+          oc.ctx.scale(zoomLevel, zoomLevel);
+          renderWindArrows(oc.ctx, field, gridWidth, gridHeight, zoomLevel, visibleRange);
+          oc.ctx.restore();
         }
-        const octx = oc.getContext('2d');
-        if (octx) {
-          octx.clearRect(0, 0, canvasWidth, canvasHeight);
-          octx.save();
-          octx.translate(offsetX, offsetY);
-          octx.scale(zoomLevel, zoomLevel);
-          renderWindArrows(octx, field, gridWidth, gridHeight, zoomLevel, visibleRange);
-          octx.restore();
-        }
-        windArrowsCanvasRef.current = oc;
       }
-      if (windArrowsCanvasRef.current) ctx.drawImage(windArrowsCanvasRef.current, 0, 0);
+      if (windArrowsRef.current) ctx.drawImage(windArrowsRef.current.canvas, 0, 0);
     }
 
-    // ── 8. Particles ──
-    if (config.showParticles) {
-      const now = performance.now();
-      const dt = Math.min(0.05, (now - lastFrameTimeRef.current) / 1000); // seconds, capped
-      lastFrameTimeRef.current = now;
-
-      // Spawn new particles (pass visible range for culling)
-      particlesRef.current.spawn(
-        field, gridWidth, gridHeight, zoomLevel,
-        offsetX, offsetY, canvasWidth, canvasHeight,
-        visibleRange
-      );
-
-      // Update positions and age
-      particlesRef.current.update(dt);
-
-      // Render in world space
-      ctx.save();
-      ctx.translate(offsetX, offsetY);
-      ctx.scale(zoomLevel, zoomLevel);
-      particlesRef.current.render(ctx);
-      ctx.restore();
-    }
-
-    // ── 9. Lightning flashes ──
+    // ── 8. Particles + 9. Lightning (shared world-space transform) ──
     {
       const now = performance.now();
+
+      // Update particles
+      if (config.showParticles) {
+        const dt = Math.min(0.05, (now - lastFrameTimeRef.current) / 1000); // seconds, capped
+        lastFrameTimeRef.current = now;
+
+        particlesRef.current.spawn(
+          field, gridWidth, gridHeight, zoomLevel,
+          offsetX, offsetY, canvasWidth, canvasHeight,
+          visibleRange
+        );
+        particlesRef.current.update(dt);
+      }
+
+      // Update lightning
       lightningRef.current.update(field, now);
 
+      // Single save/restore for both passes (same transform)
       ctx.save();
       ctx.translate(offsetX, offsetY);
       ctx.scale(zoomLevel, zoomLevel);
+      if (config.showParticles) {
+        particlesRef.current.render(ctx);
+      }
       lightningRef.current.render(ctx, now);
       ctx.restore();
     }
