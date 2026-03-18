@@ -19,12 +19,16 @@ function TravelPanel({ onClose, travelPath, onTravelPathChange, hexClickCallback
   const { campaign, updateCampaignData } = useCampaign();
   const [isSettingPosition, setIsSettingPosition] = useState(false);
   const [isPlanningRoute, setIsPlanningRoute] = useState(false);
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
   const panelRef = useFocusTrap({ onEscape: onClose });
 
   const partyPosition = campaign?.partyPosition;
   const travelLog = campaign?.travelLog ?? [];
+
+  // Derive currentStepIndex from partyPosition to stay in sync with undo/redo
+  const currentStepIndex = travelPath.length > 0 && partyPosition
+    ? travelPath.indexOf(partyPosition)
+    : -1;
 
   // Build terrain lookup for display
   const getTerrainName = useCallback((key: string) => {
@@ -51,7 +55,6 @@ function TravelPanel({ onClose, travelPath, onTravelPathChange, hexClickCallback
       const path = findPath(startCoord, endCoord, passable, campaign.gridWidth, campaign.gridHeight);
       if (path) {
         onTravelPathChange(path);
-        setCurrentStepIndex(0);
       }
       setIsPlanningRoute(false);
       hexClickCallback.current = null;
@@ -71,7 +74,6 @@ function TravelPanel({ onClose, travelPath, onTravelPathChange, hexClickCallback
     setIsPlanningRoute(true);
     setIsSettingPosition(false);
     onTravelPathChange([]);
-    setCurrentStepIndex(0);
     hexClickCallback.current = handleHexClick;
   }, [partyPosition, handleHexClick, hexClickCallback, onTravelPathChange]);
 
@@ -115,7 +117,6 @@ function TravelPanel({ onClose, travelPath, onTravelPathChange, hexClickCallback
     updates.travelLog = [...(campaign.travelLog ?? []), logEntry];
 
     updateCampaignData(updates);
-    setCurrentStepIndex(nextIndex);
   }, [campaign, travelPath, currentStepIndex, updateCampaignData]);
 
   // Complete route (jump to end)
@@ -149,20 +150,17 @@ function TravelPanel({ onClose, travelPath, onTravelPathChange, hexClickCallback
       hexes,
       travelLog: [...(campaign.travelLog ?? []), ...logEntries]
     });
-    setCurrentStepIndex(travelPath.length - 1);
   }, [campaign, travelPath, currentStepIndex, updateCampaignData]);
 
   // Clear route
   const clearRoute = useCallback(() => {
     onTravelPathChange([]);
-    setCurrentStepIndex(0);
   }, [onTravelPathChange]);
 
   // Clear party position
   const clearPosition = useCallback(() => {
     updateCampaignData({ partyPosition: undefined });
     onTravelPathChange([]);
-    setCurrentStepIndex(0);
   }, [updateCampaignData, onTravelPathChange]);
 
   // Remaining steps

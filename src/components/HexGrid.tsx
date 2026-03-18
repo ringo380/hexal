@@ -281,6 +281,10 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
   // Store marker positions for hit testing
   const markerPositionsRef = useRef<MarkerPosition[]>([]);
 
+  // Mirror travelPath prop to ref for draw() (avoid stale closures in animation loop)
+  const travelPathRef = useRef(travelPath);
+  useEffect(() => { travelPathRef.current = travelPath; }, [travelPath]);
+
   // Drag-to-pan state
   const [isDraggingMap, setIsDraggingMap] = useState(false);
   const [isPotentialDrag, setIsPotentialDrag] = useState(false);
@@ -704,17 +708,30 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
     }
 
     // ========================================================================
+    // WEATHER OVERLAY PASS: Gradient overlay + isobars + fronts (layer visibility gated)
+    // Uses local save/restore to exit world-space without breaking the outer frame
+    // ========================================================================
+    if (layerVisibility.weatherOverlay) {
+      ctx.save();
+      ctx.scale(1 / curZoom, 1 / curZoom);
+      ctx.translate(-curPan.x, -curPan.y);
+      renderWeatherOverlay(ctx, canvas.width, canvas.height, curPan.x, curPan.y, curZoom);
+      ctx.restore();
+    }
+
+    // ========================================================================
     // TRAVEL PATH OVERLAY PASS: Draw planned travel path and party position
     // ========================================================================
-    if (travelPath && travelPath.length > 1) {
+    const curTravelPath = travelPathRef.current;
+    if (curTravelPath && curTravelPath.length > 1) {
       // Draw path lines
       ctx.save();
       ctx.strokeStyle = 'rgba(255, 200, 50, 0.8)';
       ctx.lineWidth = 3 / curZoom;
       ctx.setLineDash([8 / curZoom, 4 / curZoom]);
       ctx.beginPath();
-      for (let i = 0; i < travelPath.length; i++) {
-        const coord = parseHexKey(travelPath[i]);
+      for (let i = 0; i < curTravelPath.length; i++) {
+        const coord = parseHexKey(curTravelPath[i]);
         if (!coord) continue;
         const center = hexCenter(coord);
         if (i === 0) ctx.moveTo(center.x, center.y);
@@ -726,7 +743,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
 
       // Highlight path hexes with a gold overlay
       ctx.save();
-      for (const key of travelPath) {
+      for (const key of curTravelPath) {
         const coord = parseHexKey(key);
         if (!coord) continue;
         const center = hexCenter(coord);
@@ -762,19 +779,10 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
         ctx.fillStyle = '#000';
         ctx.fillText('P', center.x, center.y);
         ctx.restore();
+        currentFont = '';
+        currentAlign = '';
+        currentBaseline = '';
       }
-    }
-
-    // ========================================================================
-    // WEATHER OVERLAY PASS: Gradient overlay + isobars + fronts (layer visibility gated)
-    // Uses local save/restore to exit world-space without breaking the outer frame
-    // ========================================================================
-    if (layerVisibility.weatherOverlay) {
-      ctx.save();
-      ctx.scale(1 / curZoom, 1 / curZoom);
-      ctx.translate(-curPan.x, -curPan.y);
-      renderWeatherOverlay(ctx, canvas.width, canvas.height, curPan.x, curPan.y, curZoom);
-      ctx.restore();
     }
 
     // ========================================================================
@@ -881,7 +889,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
         tilt
       );
     }
-  }, [campaign, getHex, selectedCoordinate, getTerrainColor, markerDrag.isDragging, markerDrag.state, regions, hexRegionMap, multiSelectedKeys, renderWeatherOverlay, layerVisibility, travelPath]);
+  }, [campaign, getHex, selectedCoordinate, getTerrainColor, markerDrag.isDragging, markerDrag.state, regions, hexRegionMap, multiSelectedKeys, renderWeatherOverlay, layerVisibility]);
 
   // Ref to latest draw for imperative calls from animation loop (avoids stale closures)
   const drawRef = useRef(draw);

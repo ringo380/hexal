@@ -454,6 +454,34 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
       }
     }
 
+    // PASS 6: Party position marker
+    if (campaign.partyPosition) {
+      const posCoord = parseHexKey(campaign.partyPosition);
+      if (posCoord) {
+        const center = hexCenter(posCoord);
+        ctx.save();
+        // Gold circle
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, 8, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 200, 50, 0.9)';
+        ctx.fill();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        // "P" label
+        const labelFont = 'bold 10px sans-serif';
+        if (currentFont !== labelFont) { ctx.font = labelFont; currentFont = labelFont; }
+        if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
+        if (currentBaseline !== 'middle') { ctx.textBaseline = 'middle'; currentBaseline = 'middle'; }
+        ctx.fillStyle = '#000';
+        ctx.fillText('P', center.x, center.y);
+        ctx.restore();
+        currentFont = '';
+        currentAlign = '';
+        currentBaseline = '';
+      }
+    }
+
     ctx.restore();
   }, [campaign, zoomLevel, panOffset, selectedCoord, getTerrainColor, renderWeatherOverlay, playerLayers, updateAudio, regionAdapters]);
 

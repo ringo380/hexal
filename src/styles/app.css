@@ -7611,7 +7611,7 @@ label {
 }
 
 /* Active state for travel button */
-.btn-active {
+.toolbar .btn-active {
   background: rgba(255, 200, 50, 0.2) !important;
   border-color: rgba(255, 200, 50, 0.4) !important;
   color: #ffc832 !important;
