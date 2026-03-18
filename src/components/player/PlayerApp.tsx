@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import type { PlayerCampaign } from '../../services/playerViewFilter';
+import type { ActiveEncounter } from '../../types/Campaign';
 import PlayerView from './PlayerView';
 import '../../styles/player.css';
 
@@ -19,6 +20,7 @@ function PlayerApp() {
   const [playerCampaign, setPlayerCampaign] = useState<PlayerCampaign | null>(null);
   const [state, setState] = useState<PlayerState>('waiting');
   const [messages, setMessages] = useState<DmMessage[]>([]);
+  const [activeEncounter, setActiveEncounter] = useState<ActiveEncounter | null>(null);
 
   useEffect(() => {
     const cleanupUpdate = window.electronAPI.onPlayerViewUpdate((data) => {
@@ -29,6 +31,7 @@ function PlayerApp() {
     const cleanupClosed = window.electronAPI.onPlayerViewCampaignClosed(() => {
       setState('closed');
       setMessages([]);
+      setActiveEncounter(null);
     });
 
     const cleanupMessage = window.electronAPI.onPlayerMessage((data) => {
@@ -36,10 +39,20 @@ function PlayerApp() {
       setMessages(prev => [...prev, msg]);
     });
 
+    const cleanupEncounterReveal = window.electronAPI.onEncounterReveal((data) => {
+      setActiveEncounter(data as ActiveEncounter);
+    });
+
+    const cleanupEncounterDismiss = window.electronAPI.onEncounterDismiss(() => {
+      setActiveEncounter(null);
+    });
+
     return () => {
       cleanupUpdate();
       cleanupClosed();
       cleanupMessage();
+      cleanupEncounterReveal();
+      cleanupEncounterDismiss();
     };
   }, []);
 
@@ -67,7 +80,14 @@ function PlayerApp() {
     );
   }
 
-  return <PlayerView campaign={playerCampaign} messages={messages} />;
+  return (
+    <PlayerView
+      campaign={playerCampaign}
+      messages={messages}
+      activeEncounter={activeEncounter}
+      onEncounterDismiss={() => setActiveEncounter(null)}
+    />
+  );
 }
 
 export default PlayerApp;

@@ -32,6 +32,7 @@ let currentPin = '';
 let currentPort = 0;
 let clients: AuthenticatedClient[] = [];
 let latestState: string | null = null; // JSON-stringified PlayerCampaign
+let activeEncounter: unknown | null = null; // Current revealed encounter
 let pingIntervalHandle: ReturnType<typeof setInterval> | null = null;
 let messageHistory: unknown[] = []; // Session message buffer (max 100)
 
@@ -212,6 +213,10 @@ export function startServer(options: { port: number; pin?: string }): WebServerS
           if (messageHistory.length > 0) {
             sendJson(ws, { type: 'message-history', data: messageHistory });
           }
+          // Send active encounter if any
+          if (activeEncounter) {
+            sendJson(ws, { type: 'encounter-reveal', data: activeEncounter });
+          }
         } else {
           sendJson(ws, { type: 'auth-fail', reason: 'Invalid PIN' });
           ws.close();
@@ -271,6 +276,7 @@ export function stopServer(): void {
   currentPort = 0;
   latestState = null;
   messageHistory = [];
+  activeEncounter = null;
 }
 
 export function getStatus(): WebServerStatus {
@@ -308,10 +314,31 @@ export function broadcastMessage(message: unknown): void {
   });
 }
 
+export function broadcastEncounterReveal(data: unknown): void {
+  activeEncounter = data;
+  const message = JSON.stringify({ type: 'encounter-reveal', data });
+  Array.from(clients).forEach(client => {
+    if (client.authenticated && client.ws.readyState === WebSocket.OPEN) {
+      client.ws.send(message);
+    }
+  });
+}
+
+export function broadcastEncounterDismiss(): void {
+  activeEncounter = null;
+  const message = JSON.stringify({ type: 'encounter-dismiss' });
+  Array.from(clients).forEach(client => {
+    if (client.authenticated && client.ws.readyState === WebSocket.OPEN) {
+      client.ws.send(message);
+    }
+  });
+}
+
 export function broadcastCampaignClosed(): void {
   const message = JSON.stringify({ type: 'campaign-closed' });
   latestState = null;
   messageHistory = [];
+  activeEncounter = null;
   Array.from(clients).forEach(client => {
     if (client.authenticated && client.ws.readyState === WebSocket.OPEN) {
       client.ws.send(message);

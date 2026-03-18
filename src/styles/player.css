@@ -764,3 +764,155 @@
   margin-top: 6px;
   display: block;
 }
+
+/* ============================================================================
+   Encounter Overlay
+   ============================================================================ */
+
+.encounter-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.75);
+  animation: encounter-overlay-fade-in 0.3s ease-out;
+}
+
+@keyframes encounter-overlay-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.encounter-overlay-card {
+  background: #252525;
+  border: 1px solid #444;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  padding: 32px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: encounter-card-slide-in 0.3s ease-out;
+}
+
+@keyframes encounter-card-slide-in {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.encounter-overlay-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.encounter-overlay-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  flex: 1;
+}
+
+.encounter-overlay-type-badge {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.encounter-overlay-context {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: #aaa;
+}
+
+.encounter-overlay-terrain {
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+}
+
+.encounter-overlay-region {
+  padding: 2px 8px;
+  background: rgba(74, 158, 255, 0.12);
+  border-radius: 4px;
+  color: #4a9eff;
+}
+
+.encounter-overlay-description {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #ccc;
+  margin: 0 0 20px;
+}
+
+.encounter-overlay-creatures {
+  margin-top: 8px;
+}
+
+.encounter-overlay-creatures-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+  margin: 0 0 12px;
+}
+
+.encounter-overlay-creatures-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+/* ============================================================================
+   Creature Card
+   ============================================================================ */
+
+.creature-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.creature-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.creature-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.creature-card-count {
+  color: #aaa;
+  font-weight: 500;
+}
+
+.creature-card-cr {
+  padding: 1px 6px;
+  background: rgba(244, 67, 54, 0.15);
+  color: #f44336;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+}

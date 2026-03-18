@@ -145,6 +145,27 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('player-message', handler);
   },
 
+  // Encounter reveal operations
+  revealEncounter: (data: unknown): void => {
+    ipcRenderer.send('reveal-encounter', data);
+  },
+
+  dismissEncounter: (): void => {
+    ipcRenderer.send('dismiss-encounter');
+  },
+
+  onEncounterReveal: (callback: (data: unknown) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+    ipcRenderer.on('encounter-reveal', handler);
+    return () => ipcRenderer.removeListener('encounter-reveal', handler);
+  },
+
+  onEncounterDismiss: (callback: () => void): (() => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('encounter-dismiss', handler);
+    return () => ipcRenderer.removeListener('encounter-dismiss', handler);
+  },
+
   // Settings operations
   getSettings: (): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('get-settings'),
@@ -209,6 +230,11 @@ declare global {
       onPlayerViewCampaignClosed: (callback: () => void) => () => void;
       sendPlayerMessage: (message: unknown) => void;
       onPlayerMessage: (callback: (message: unknown) => void) => () => void;
+      // Encounter reveal
+      revealEncounter: (data: unknown) => void;
+      dismissEncounter: () => void;
+      onEncounterReveal: (callback: (data: unknown) => void) => () => void;
+      onEncounterDismiss: (callback: () => void) => () => void;
       // Templates
       listUserTemplates: () => Promise<{ fileName: string; filePath: string; modifiedAt: string; content: string | null }[]>;
       saveUserTemplate: (envelope: string, fileName: string) => Promise<{ success: boolean; filePath?: string; error?: string }>;

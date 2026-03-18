@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog, Menu, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import Store from 'electron-store';
-import { startServer, stopServer, getStatus as getWebServerStatus, broadcastState, broadcastCampaignClosed, broadcastMessage } from './webServer';
+import { startServer, stopServer, getStatus as getWebServerStatus, broadcastState, broadcastCampaignClosed, broadcastMessage, broadcastEncounterReveal, broadcastEncounterDismiss } from './webServer';
 
 // Session-only message type (not persisted in campaign data)
 interface DmMessage {
@@ -592,6 +592,26 @@ ipcMain.on('send-player-message', (_event, message: DmMessage) => {
     }
   });
   broadcastMessage(message);
+});
+
+// Relay encounter reveal from DM to all player view windows + web clients
+ipcMain.on('reveal-encounter', (_event, data) => {
+  Array.from(playerViewWindows).forEach(win => {
+    if (!win.isDestroyed()) {
+      win.webContents.send('encounter-reveal', data);
+    }
+  });
+  broadcastEncounterReveal(data);
+});
+
+// Relay encounter dismiss from DM to all player view windows + web clients
+ipcMain.on('dismiss-encounter', () => {
+  Array.from(playerViewWindows).forEach(win => {
+    if (!win.isDestroyed()) {
+      win.webContents.send('encounter-dismiss');
+    }
+  });
+  broadcastEncounterDismiss();
 });
 
 // Relay campaign-closed event from DM to all player view windows + web clients

@@ -39,7 +39,7 @@ import CharacterPanelModal from './modals/CharacterPanelModal';
 import CommandPalette from './CommandPalette';
 import DmMessagePanel from './player/DmMessagePanel';
 import Icon from './icons/Icon';
-import { CATEGORY_INFO, type ContentCategory, parseHexKey } from '../types/Campaign';
+import { CATEGORY_INFO, type ContentCategory, parseHexKey, type ActiveEncounter } from '../types/Campaign';
 import { useWeatherSimulation } from '../stores/WeatherSimulationContext';
 import { useToast } from '../stores/ToastContext';
 import { useTimeSince } from '../hooks/useTimeSince';
@@ -93,11 +93,13 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
   const [showCharacterPanel, setShowCharacterPanel] = useState(false);
   const [showDmMessages, setShowDmMessages] = useState(false);
   const [exportSelection, setExportSelection] = useState<Set<string> | null>(null);
+  const [revealedEncounterId, setRevealedEncounterId] = useState<string | null>(null);
 
   // Clear session-only UI state and stop weather simulation when campaign changes
   useEffect(() => {
     clearMultiSelection();
     setExportSelection(null);
+    setRevealedEncounterId(null);
     setLayerVisibility(DEFAULT_LAYER_VISIBILITY);
     if (weatherSim.isRunning) {
       weatherSim.stopSimulation();
@@ -124,6 +126,24 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
     }, 10000);
     return () => clearInterval(interval);
   }, [weatherSim.isRunning, campaign?.weatherSimulation?.config]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Track encounter reveals sent from this window
+  useEffect(() => {
+    const origReveal = window.electronAPI.revealEncounter;
+    window.electronAPI.revealEncounter = (data: unknown) => {
+      const enc = data as ActiveEncounter;
+      setRevealedEncounterId(enc.id);
+      origReveal(data);
+    };
+    return () => {
+      window.electronAPI.revealEncounter = origReveal;
+    };
+  }, []);
+
+  const handleDismissEncounter = () => {
+    setRevealedEncounterId(null);
+    window.electronAPI.dismissEncounter();
+  };
 
   // Toast on save error
   const prevSaveError = useRef(false);
@@ -293,6 +313,15 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
               <Icon name="redo" size={16} />
             </button>
           </div>
+          {revealedEncounterId && (
+            <button
+              className="btn btn-primary btn-small"
+              onClick={handleDismissEncounter}
+              title="Dismiss encounter from player views"
+            >
+              <Icon name="eye-off" size={14} /> Dismiss Encounter
+            </button>
+          )}
           {multiSelectedKeys.size > 0 && (
             <button
               className="btn btn-primary btn-small"
