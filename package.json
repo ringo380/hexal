@@ -30,7 +30,7 @@
     "@supabase/supabase-js": "^2.97.0",
     "dexie": "^4.3.0",
     "electron-store": "^8.1.0",
-    "jspdf": "^4.2.0",
+    "jspdf": "^4.2.1",
     "uuid": "^9.0.0",
     "ws": "^8.19.0"
   },
