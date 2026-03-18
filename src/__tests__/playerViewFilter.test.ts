@@ -511,6 +511,29 @@ describe('filterCampaignForPlayer', () => {
     });
   });
 
+  describe('party position', () => {
+    it('includes partyPosition when set', () => {
+      const campaign = makeCampaign({}, { partyPosition: '3,4' });
+      const result = filterCampaignForPlayer(campaign);
+      expect(result.partyPosition).toBe('3,4');
+    });
+
+    it('omits partyPosition when not set', () => {
+      const campaign = makeCampaign({});
+      const result = filterCampaignForPlayer(campaign);
+      expect(result.partyPosition).toBeUndefined();
+    });
+
+    it('does not expose travelLog', () => {
+      const campaign = makeCampaign({}, {
+        partyPosition: '0,0',
+        travelLog: [{ id: 'tl1', fromHexKey: '0,0', toHexKey: '1,0', timestamp: '2026-01-01', discovered: false }]
+      } as any);
+      const result = filterCampaignForPlayer(campaign);
+      expect((result as any).travelLog).toBeUndefined();
+    });
+  });
+
   describe('multiple hexes', () => {
     it('filters all hexes independently', () => {
       const hexes: Record<string, Hex> = {

@@ -190,9 +190,11 @@ interface IndicatorPosition {
 interface HexGridProps {
   onCreateRegionFromSelection?: () => void;
   onExportSelection?: () => void;
+  travelPath?: string[];
+  hexClickOverride?: React.MutableRefObject<((key: string) => void) | null>;
 }
 
-function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProps) {
+function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, hexClickOverride }: HexGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { campaign, getHex, removeMarker, moveMarker, moveMarkerToPosition, addMarkerAtPosition, regions, addHexToRegion, removeHexFromRegion } = useCampaign();
@@ -278,6 +280,10 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
 
   // Store marker positions for hit testing
   const markerPositionsRef = useRef<MarkerPosition[]>([]);
+
+  // Mirror travelPath prop to ref for draw() (avoid stale closures in animation loop)
+  const travelPathRef = useRef(travelPath);
+  useEffect(() => { travelPathRef.current = travelPath; }, [travelPath]);
 
   // Drag-to-pan state
   const [isDraggingMap, setIsDraggingMap] = useState(false);
@@ -714,6 +720,72 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
     }
 
     // ========================================================================
+    // TRAVEL PATH OVERLAY PASS: Draw planned travel path and party position
+    // ========================================================================
+    const curTravelPath = travelPathRef.current;
+    if (curTravelPath && curTravelPath.length > 1) {
+      // Draw path lines
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 200, 50, 0.8)';
+      ctx.lineWidth = 3 / curZoom;
+      ctx.setLineDash([8 / curZoom, 4 / curZoom]);
+      ctx.beginPath();
+      for (let i = 0; i < curTravelPath.length; i++) {
+        const coord = parseHexKey(curTravelPath[i]);
+        if (!coord) continue;
+        const center = hexCenter(coord);
+        if (i === 0) ctx.moveTo(center.x, center.y);
+        else ctx.lineTo(center.x, center.y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      // Highlight path hexes with a gold overlay
+      ctx.save();
+      for (const key of curTravelPath) {
+        const coord = parseHexKey(key);
+        if (!coord) continue;
+        const center = hexCenter(coord);
+        drawHexPath(ctx, center, HEX_SIZE - 2);
+        ctx.fillStyle = 'rgba(255, 200, 50, 0.15)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 200, 50, 0.6)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Draw party position marker
+    if (campaign?.partyPosition) {
+      const posCoord = parseHexKey(campaign.partyPosition);
+      if (posCoord) {
+        const center = hexCenter(posCoord);
+        ctx.save();
+        // Gold circle
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, 8, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 200, 50, 0.9)';
+        ctx.fill();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        // "P" label
+        const labelFont = `bold 10px sans-serif`;
+        if (currentFont !== labelFont) { ctx.font = labelFont; currentFont = labelFont; }
+        if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
+        if (currentBaseline !== 'middle') { ctx.textBaseline = 'middle'; currentBaseline = 'middle'; }
+        ctx.fillStyle = '#000';
+        ctx.fillText('P', center.x, center.y);
+        ctx.restore();
+        currentFont = '';
+        currentAlign = '';
+        currentBaseline = '';
+      }
+    }
+
+    // ========================================================================
     // PASS 2: Draw all markers (figurines) on top of hex content (layer visibility gated)
     // This ensures markers with free-form positions can overlap adjacent hexes
     // ========================================================================
@@ -928,11 +1000,14 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection }: HexGridProp
             addHexToRegion(regionPaintMode, coord);
           }
         }
+      } else if (hexClickOverride?.current) {
+        // Travel mode or other override: forward click to override callback
+        hexClickOverride.current(hexKey(coord));
       } else {
         selectHex(coord);
       }
     }
-  }, [campaign, selectHex, selectMarker, zoomLevel, panOffset, regionPaintMode, regions, addHexToRegion, removeHexFromRegion]);
+  }, [campaign, selectHex, selectMarker, zoomLevel, panOffset, regionPaintMode, regions, addHexToRegion, removeHexFromRegion, hexClickOverride]);
 
   // Handle mouse down - start potential drag (map or marker)
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
