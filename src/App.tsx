@@ -22,6 +22,7 @@ function App() {
   const exportRef = useRef<(() => void) | null>(null);
   const mapExportRef = useRef<(() => void) | null>(null);
   const exportTemplateRef = useRef<(() => void) | null>(null);
+  const fogOfWarRef = useRef<(() => void) | null>(null);
 
   // Register export handler from MainEditor
   const registerExportHandler = useCallback((handler: () => void) => {
@@ -36,6 +37,11 @@ function App() {
   // Register export template handler from MainEditor
   const registerExportTemplateHandler = useCallback((handler: () => void) => {
     exportTemplateRef.current = handler;
+  }, []);
+
+  // Register fog of war settings handler from MainEditor
+  const registerFogOfWarHandler = useCallback((handler: () => void) => {
+    fogOfWarRef.current = handler;
   }, []);
 
   // Handle menu commands
@@ -100,6 +106,12 @@ function App() {
 
         case 'open-player-view':
           window.electronAPI.openPlayerView();
+          break;
+
+        case 'fog-of-war-settings':
+          if (campaign && fogOfWarRef.current) {
+            fogOfWarRef.current();
+          }
           break;
       }
     });
@@ -240,6 +252,7 @@ function App() {
               onRegisterExport={registerExportHandler}
               onRegisterMapExport={registerMapExportHandler}
               onRegisterExportTemplate={registerExportTemplateHandler}
+              onRegisterFogOfWar={registerFogOfWarHandler}
             />
           </WeatherSimulationProvider>
         </ErrorBoundary>

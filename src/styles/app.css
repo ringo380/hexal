@@ -6929,3 +6929,70 @@ label {
   color: var(--text-muted);
   margin-top: 4px;
 }
+
+/* ============================================================================
+   Fog of War Modal
+   ============================================================================ */
+
+.fog-of-war-modal {
+  width: 380px;
+}
+
+.fog-of-war-modal .modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.fog-of-war-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fog-of-war-modal-field > label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.fog-of-war-modal-range-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fog-of-war-modal-range-row input[type="range"] {
+  flex: 1;
+}
+
+.fog-of-war-modal-range-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 20px;
+  text-align: center;
+}
+
+.fog-of-war-modal-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.fog-of-war-modal-toggle input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.fog-of-war-modal-toggle span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.fog-of-war-modal-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0;
+}

@@ -40,7 +40,8 @@ type MenuCommand =
   | 'export-template'
   | 'undo'
   | 'redo'
-  | 'open-player-view';
+  | 'open-player-view'
+  | 'fog-of-war-settings';
 
 type ExportFormat = 'png' | 'jpeg' | 'pdf';
 

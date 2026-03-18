@@ -167,11 +167,23 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
         const hex = campaign.hexes[key] || null;
         const isSelected = selectedCoord?.q === q && selectedCoord?.r === r;
 
-        // Determine fill color
+        // Determine fill color based on status and adjacency visibility
         let fillColor = 'rgba(50, 50, 50, 0.3)';
+        const adjVis = hex?.adjacencyVisibility;
         if (hex && hex.terrain) {
           const baseColor = getTerrainColor(hex.terrain);
-          const opacity = hex.status === 'undiscovered' ? 0.15 : 0.7;
+          let opacity: number;
+          if (hex.status === 'undiscovered') {
+            if (adjVis === 'silhouette') {
+              opacity = 0.08;
+            } else if (adjVis === 'dim') {
+              opacity = 0.05;
+            } else {
+              opacity = 0.15;
+            }
+          } else {
+            opacity = 0.7;
+          }
           fillColor = hexToRgba(baseColor, opacity);
         }
 
@@ -188,10 +200,18 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
           ctx.fill();
         }
 
-        // Fog overlay for undiscovered
+        // Fog overlay for undiscovered (with adjacency-aware darkening)
         if (hex && hex.status === 'undiscovered') {
           drawHexPath(ctx, center, HEX_SIZE);
-          ctx.fillStyle = hexToRgba('#1e1e1e', 0.6);
+          let fogOpacity: number;
+          if (adjVis === 'silhouette') {
+            fogOpacity = 0.75;
+          } else if (adjVis === 'dim') {
+            fogOpacity = 0.85;
+          } else {
+            fogOpacity = 0.6;
+          }
+          ctx.fillStyle = hexToRgba('#1e1e1e', fogOpacity);
           ctx.fill();
         }
 

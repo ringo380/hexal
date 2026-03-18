@@ -145,6 +145,10 @@ function createApplicationMenu() {
           accelerator: 'CmdOrCtrl+Shift+P',
           click: () => activeWindow?.webContents.send('menu-command', 'open-player-view')
         },
+        {
+          label: 'Fog of War Settings...',
+          click: () => activeWindow?.webContents.send('menu-command', 'fog-of-war-settings')
+        },
         { type: 'separator' },
         { role: 'reload' },
         { role: 'forceReload' },

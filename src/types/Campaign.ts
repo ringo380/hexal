@@ -120,6 +120,12 @@ export interface Campaign {
    * Optional for backward compatibility with legacy campaign files.
    */
   weatherSimulation?: WeatherSimulationState;
+
+  /**
+   * Fog of war configuration for the player view.
+   * Optional for backward compatibility with legacy campaign files.
+   */
+  fogOfWarConfig?: FogOfWarConfig;
 }
 
 export interface Hex {
@@ -309,7 +315,8 @@ export function createCampaign(name: string, gridWidth: number, gridHeight: numb
     sessionLog: [],
     quests: [],
     storyArcs: [],
-    weatherSimulation: createDefaultSimulationState()
+    weatherSimulation: createDefaultSimulationState(),
+    fogOfWarConfig: createDefaultFogOfWarConfig()
   };
 }
 
@@ -676,6 +683,22 @@ export function migrateNpcData(item: ContentItem): Npc {
   };
 }
 
+// ============ FOG OF WAR CONFIG ============
+
+export interface FogOfWarConfig {
+  revealRadius: number;              // 1-3, default 1
+  showAdjacentSilhouettes: boolean;  // default true
+  fadeTransitionEnabled: boolean;     // default true
+}
+
+export function createDefaultFogOfWarConfig(): FogOfWarConfig {
+  return {
+    revealRadius: 1,
+    showAdjacentSilhouettes: true,
+    fadeTransitionEnabled: true
+  };
+}
+
 // ============ REGION SYSTEM ============
 
 export interface Region {
@@ -902,6 +925,7 @@ export function migrateCampaign(campaign: Campaign): Campaign {
     && campaign.storyArcs !== undefined
     && campaign.weatherSimulation !== undefined
     && campaign.weatherSimulation.config.timeMode !== undefined
+    && campaign.fogOfWarConfig !== undefined
   ) return campaign;
 
   const ws = campaign.weatherSimulation ?? createDefaultSimulationState();
@@ -924,7 +948,8 @@ export function migrateCampaign(campaign: Campaign): Campaign {
     weatherSimulation: {
       ...ws,
       config: { ...ws.config, timeMode: ws.config.timeMode ?? 'realtime' }
-    }
+    },
+    fogOfWarConfig: campaign.fogOfWarConfig ?? createDefaultFogOfWarConfig()
   };
 }
 

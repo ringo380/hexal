@@ -34,6 +34,7 @@ import ConnectionStatus from './ui/ConnectionStatus';
 import WebServerStatus from './player/WebServerStatus';
 import CreateRegionFromSelectionModal from './modals/CreateRegionFromSelectionModal';
 import ExportTemplateModal from './modals/ExportTemplateModal';
+import FogOfWarModal from './modals/FogOfWarModal';
 import CommandPalette from './CommandPalette';
 import Icon from './icons/Icon';
 import { CATEGORY_INFO, type ContentCategory, parseHexKey } from '../types/Campaign';
@@ -45,9 +46,10 @@ interface MainEditorProps {
   onRegisterExport?: (handler: () => void) => void;
   onRegisterMapExport?: (handler: () => void) => void;
   onRegisterExportTemplate?: (handler: () => void) => void;
+  onRegisterFogOfWar?: (handler: () => void) => void;
 }
 
-function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTemplate }: MainEditorProps) {
+function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTemplate, onRegisterFogOfWar }: MainEditorProps) {
   const { campaign, saveStatus, saveError, lastSavedAt, saveCampaign, closeCampaign, hasUnsavedChanges, undo, redo, canUndo, canRedo, regions, updateCampaignData } = useCampaign();
   const toast = useToast();
   const timeSince = useTimeSince(lastSavedAt);
@@ -85,6 +87,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
   const [showLogin, setShowLogin] = useState(false);
   const [showCreateRegion, setShowCreateRegion] = useState(false);
   const [showExportTemplate, setShowExportTemplate] = useState(false);
+  const [showFogOfWar, setShowFogOfWar] = useState(false);
   const [exportSelection, setExportSelection] = useState<Set<string> | null>(null);
 
   // Clear session-only UI state and stop weather simulation when campaign changes
@@ -147,6 +150,13 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
       onRegisterExportTemplate(() => setShowExportTemplate(true));
     }
   }, [onRegisterExportTemplate]);
+
+  // Register fog of war settings handler for menu command
+  useEffect(() => {
+    if (onRegisterFogOfWar) {
+      onRegisterFogOfWar(() => setShowFogOfWar(true));
+    }
+  }, [onRegisterFogOfWar]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -489,6 +499,9 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
       )}
       {showWeatherSettings && (
         <WeatherSettingsModal onClose={() => setShowWeatherSettings(false)} />
+      )}
+      {showFogOfWar && (
+        <FogOfWarModal onClose={() => setShowFogOfWar(false)} />
       )}
       {showCloseConfirm && (
         <ConfirmDialog
