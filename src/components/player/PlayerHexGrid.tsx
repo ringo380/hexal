@@ -63,13 +63,20 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
   const [isPotentialDrag, setIsPotentialDrag] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
 
+  // Touch state
+  const touchStartRef = useRef<{ x: number; y: number; time: number; panX: number; panY: number } | null>(null);
+  const pinchStartRef = useRef<{ dist: number; zoom: number } | null>(null);
+
+  // Touch device detection for performance tuning
+  const isTouchDevice = useMemo(() => 'ontouchstart' in window, []);
+
   // Layer visibility (local state — player view has reduced set)
   const [playerLayers, setPlayerLayers] = useState<PlayerLayerVisibility>(DEFAULT_PLAYER_LAYERS);
   const togglePlayerLayer = useCallback((key: keyof PlayerLayerVisibility) => {
     setPlayerLayers(prev => ({ ...prev, [key]: !prev[key] }));
   }, []);
 
-  // Weather overlay with layer visibility applied
+  // Weather overlay with layer visibility applied (halve particle density on touch devices)
   const effectiveWeatherConfig = useMemo(() => {
     if (!weatherConfig) return undefined;
     return {
@@ -77,8 +84,11 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
       showIsobars: weatherConfig.showIsobars && playerLayers.isobars,
       showFronts: weatherConfig.showFronts && playerLayers.fronts,
       showParticles: weatherConfig.showParticles && playerLayers.weatherParticles,
+      ...(isTouchDevice && weatherConfig.particleDensity != null
+        ? { particleDensity: weatherConfig.particleDensity * 0.5 }
+        : {}),
     };
-  }, [weatherConfig, playerLayers.isobars, playerLayers.fronts, playerLayers.weatherParticles]);
+  }, [weatherConfig, playerLayers.isobars, playerLayers.fronts, playerLayers.weatherParticles, isTouchDevice]);
 
   const playerWeatherLayerFlags = useMemo(() => ({
     cloudShadows: playerLayers.cloudShadows,
@@ -656,6 +666,100 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
     return () => window.removeEventListener('keydown', handleZoomKeyDown);
   }, [zoomIn, zoomOut, resetZoom]);
 
+  // Touch handlers for mobile pan, pinch-to-zoom, and tap-to-select
+  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      touchStartRef.current = {
+        x: touch.clientX,
+        y: touch.clientY,
+        time: Date.now(),
+        panX: panOffset.x,
+        panY: panOffset.y
+      };
+      pinchStartRef.current = null;
+    } else if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      pinchStartRef.current = {
+        dist: Math.sqrt(dx * dx + dy * dy),
+        zoom: zoomLevel
+      };
+      touchStartRef.current = null;
+    }
+  }, [panOffset, zoomLevel]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    if (e.touches.length === 1 && touchStartRef.current) {
+      const touch = e.touches[0];
+      const dx = touch.clientX - touchStartRef.current.x;
+      const dy = touch.clientY - touchStartRef.current.y;
+      setPanOffset({
+        x: touchStartRef.current.panX + dx,
+        y: touchStartRef.current.panY + dy
+      });
+    } else if (e.touches.length === 2 && pinchStartRef.current) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const scale = dist / pinchStartRef.current.dist;
+      const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, pinchStartRef.current.zoom * scale));
+
+      const container = containerRef.current;
+      if (container) {
+        const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        const containerRect = container.getBoundingClientRect();
+        const px = cx - containerRect.left;
+        const py = cy - containerRect.top;
+        const worldX = (px - panOffset.x) / zoomLevel;
+        const worldY = (py - panOffset.y) / zoomLevel;
+        setPanOffset({
+          x: px - worldX * newZoom,
+          y: py - worldY * newZoom
+        });
+      }
+      setZoomLevel(newZoom);
+      setTargetZoom(newZoom);
+    }
+  }, [panOffset, zoomLevel]);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (touchStartRef.current && e.changedTouches.length === 1) {
+      const touch = e.changedTouches[0];
+      const dx = touch.clientX - touchStartRef.current.x;
+      const dy = touch.clientY - touchStartRef.current.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const duration = Date.now() - touchStartRef.current.time;
+
+      if (dist < 10 && duration < 300) {
+        // Tap — select hex
+        const canvas = canvasRef.current;
+        if (canvas) {
+          const rect = canvas.getBoundingClientRect();
+          const scaleX = canvas.width / rect.width;
+          const scaleY = canvas.height / rect.height;
+          const canvasX = (touch.clientX - rect.left) * scaleX;
+          const canvasY = (touch.clientY - rect.top) * scaleY;
+          const worldX = (canvasX - panOffset.x) / zoomLevel;
+          const worldY = (canvasY - panOffset.y) / zoomLevel;
+
+          const coord = coordinateAt({ x: worldX, y: worldY }, campaign.gridWidth, campaign.gridHeight);
+          if (coord) {
+            onHexSelect(coord);
+          }
+        }
+      } else {
+        // Drag ended — sync target pan
+        setTargetPan(panOffset);
+      }
+    }
+    touchStartRef.current = null;
+    pinchStartRef.current = null;
+  }, [panOffset, zoomLevel, campaign, onHexSelect]);
+
   return (
     <div className="player-hex-grid-container" ref={containerRef}>
       <canvas
@@ -663,11 +767,15 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
         className={`player-hex-grid-canvas ${isDragging ? 'dragging' : ''}`}
         role="img"
         aria-label="Player hex grid map"
+        style={{ touchAction: 'none' }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
         onWheel={handleWheel}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         tabIndex={0}
       />
       <PlayerLayerControl

@@ -20,6 +20,8 @@ function PlayerView({ campaign }: PlayerViewProps) {
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('presentation');
   const [selectedHexKey, setSelectedHexKey] = useState<string | null>(null);
   const [showQuestLog, setShowQuestLog] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [infoCollapsed, setInfoCollapsed] = useState(false);
 
   const selectedHex = selectedHexKey ? campaign.hexes[selectedHexKey] ?? null : null;
 
@@ -86,13 +88,35 @@ function PlayerView({ campaign }: PlayerViewProps) {
         <div className="player-campaign-name">{campaign.name}</div>
       )}
 
+      {/* Mobile collapse toggles */}
+      {layoutMode === 'explorer' && (
+        <button
+          className="player-collapse-toggle player-collapse-toggle--sidebar"
+          onClick={() => setSidebarCollapsed(prev => !prev)}
+          aria-label={sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
+        >
+          {sidebarCollapsed ? 'Hexes' : 'Hide'}
+        </button>
+      )}
+      {selectedHex && (
+        <button
+          className="player-collapse-toggle player-collapse-toggle--info"
+          onClick={() => setInfoCollapsed(prev => !prev)}
+          aria-label={infoCollapsed ? 'Show hex info' : 'Hide hex info'}
+        >
+          {infoCollapsed ? 'Info' : 'Hide'}
+        </button>
+      )}
+
       {/* Explorer mode sidebar */}
       {layoutMode === 'explorer' && (
-        <PlayerSidebar
-          campaign={campaign}
-          selectedHexKey={selectedHexKey}
-          onSelectHex={handleSidebarSelect}
-        />
+        <div className={sidebarCollapsed ? 'player-sidebar-wrapper collapsed' : 'player-sidebar-wrapper'}>
+          <PlayerSidebar
+            campaign={campaign}
+            selectedHexKey={selectedHexKey}
+            onSelectHex={handleSidebarSelect}
+          />
+        </div>
       )}
 
       {/* Hex grid */}
@@ -112,7 +136,7 @@ function PlayerView({ campaign }: PlayerViewProps) {
 
       {/* Info panel */}
       {selectedHex && (
-        <div className={`player-info-panel player-info-panel--${layoutMode}`}>
+        <div className={`player-info-panel player-info-panel--${layoutMode}${infoCollapsed ? ' collapsed' : ''}`}>
           <PlayerHexInfo
             hex={selectedHex}
             regionName={selectedHexRegion?.name}
