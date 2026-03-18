@@ -9,7 +9,8 @@ import PlayerSidebar from './PlayerSidebar';
 import PlayerQuestLog from './PlayerQuestLog';
 import MessageToast from './MessageToast';
 import MessageHistory from './MessageHistory';
-import type { HexCoordinate } from '../../types';
+import PlayerJournal from './PlayerJournal';
+import type { HexCoordinate, PlayerNote } from '../../types';
 import type { ActiveEncounter } from '../../types/Campaign';
 import { WEATHER_CONDITION_LABELS, TEMPERATURE_LABELS } from '../../types/Weather';
 import EncounterOverlay from './EncounterOverlay';
@@ -29,9 +30,10 @@ interface PlayerViewProps {
   onMessageSeen?: () => void;
   activeEncounter?: ActiveEncounter | null;
   onEncounterDismiss?: () => void;
+  onSaveNote?: (note: PlayerNote) => void;
 }
 
-function PlayerView({ campaign, messages = [], onMessageSeen, activeEncounter, onEncounterDismiss }: PlayerViewProps) {
+function PlayerView({ campaign, messages = [], onMessageSeen, activeEncounter, onEncounterDismiss, onSaveNote }: PlayerViewProps) {
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('presentation');
   const [selectedHexKey, setSelectedHexKey] = useState<string | null>(null);
   const [showQuestLog, setShowQuestLog] = useState(false);
@@ -41,6 +43,10 @@ function PlayerView({ campaign, messages = [], onMessageSeen, activeEncounter, o
   const [showHistory, setShowHistory] = useState(false);
   const [lastSeenCount, setLastSeenCount] = useState(0);
   const prevMessageCountRef = useRef(messages.length);
+  const [showJournal, setShowJournal] = useState(false);
+  const [playerName, setPlayerName] = useState(() => localStorage.getItem('hexal-player-name') || '');
+  const [showNamePrompt, setShowNamePrompt] = useState(false);
+  const [nameInput, setNameInput] = useState('');
 
   // Show toast when a new message arrives (not on initial mount with history)
   useEffect(() => {
@@ -115,6 +121,22 @@ function PlayerView({ campaign, messages = [], onMessageSeen, activeEncounter, o
           onClick={() => setShowQuestLog(!showQuestLog)}
         >
           {showQuestLog ? 'Hide Quests' : 'Quest Log'}
+        </button>
+      )}
+
+      {/* Journal toggle */}
+      {onSaveNote && (
+        <button
+          className="player-journal-toggle"
+          onClick={() => {
+            if (!playerName) {
+              setShowNamePrompt(true);
+            } else {
+              setShowJournal(!showJournal);
+            }
+          }}
+        >
+          {showJournal ? 'Hide Journal' : 'Journal'}
         </button>
       )}
 
@@ -224,6 +246,59 @@ function PlayerView({ campaign, messages = [], onMessageSeen, activeEncounter, o
           encounter={activeEncounter}
           onDismiss={onEncounterDismiss ?? (() => {})}
         />
+      )}
+
+      {/* Journal panel */}
+      {showJournal && onSaveNote && playerName && (
+        <div className="player-journal-panel">
+          <PlayerJournal
+            notes={campaign.playerNotes}
+            playerName={playerName}
+            onSave={onSaveNote}
+            onClose={() => setShowJournal(false)}
+          />
+        </div>
+      )}
+
+      {/* Player name prompt */}
+      {showNamePrompt && (
+        <div className="player-name-prompt-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowNamePrompt(false); }}>
+          <div className="player-name-prompt">
+            <h3>Enter Your Name</h3>
+            <p>This will be used to identify your journal entries.</p>
+            <input
+              type="text"
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              placeholder="Your character or player name"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && nameInput.trim()) {
+                  const name = nameInput.trim();
+                  setPlayerName(name);
+                  localStorage.setItem('hexal-player-name', name);
+                  setShowNamePrompt(false);
+                  setShowJournal(true);
+                }
+              }}
+            />
+            <div className="player-name-prompt-actions">
+              <button onClick={() => setShowNamePrompt(false)}>Cancel</button>
+              <button
+                disabled={!nameInput.trim()}
+                onClick={() => {
+                  const name = nameInput.trim();
+                  setPlayerName(name);
+                  localStorage.setItem('hexal-player-name', name);
+                  setShowNamePrompt(false);
+                  setShowJournal(true);
+                }}
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

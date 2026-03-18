@@ -1,6 +1,6 @@
 // Player View Filter - Strips DM-only data from campaign for player consumption
 
-import type { Campaign, Hex, TerrainType, HexCoordinate, DiscoveryStatus, HexConnections, Faction, NpcAttitude, FogOfWarConfig } from '../types';
+import type { Campaign, Hex, TerrainType, HexCoordinate, DiscoveryStatus, HexConnections, Faction, NpcAttitude, FogOfWarConfig, PlayerNote } from '../types';
 import { createDefaultFogOfWarConfig } from '../types/Campaign';
 import { getHexNeighbors } from './hexGeometry';
 import type { TimeWeatherState, WeatherField } from '../types/Weather';
@@ -123,6 +123,7 @@ export interface PlayerCampaign {
   weatherSimConfig?: PlayerWeatherSimConfig;
   weatherField?: WeatherField;
   fogOfWarConfig?: FogOfWarConfig;
+  playerNotes: PlayerNote[];
 }
 
 /**
@@ -252,7 +253,8 @@ export function filterCampaignForPlayer(campaign: Campaign): PlayerCampaign {
     characters,
     weatherSimConfig,
     weatherField: weatherSimConfig ? campaign.weatherSimulation?.field : undefined,
-    fogOfWarConfig: fogConfig
+    fogOfWarConfig: fogConfig,
+    playerNotes: campaign.playerNotes ?? []
   };
 }
 

@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { PlayerCampaign } from '../../services/playerViewFilter';
 import type { ActiveEncounter } from '../../types/Campaign';
+import type { PlayerNote } from '../../types';
 import PlayerView from './PlayerView';
 
 type ConnectionState =
@@ -116,6 +117,20 @@ function WebPlayerApp() {
         case 'encounter-dismiss':
           setActiveEncounter(null);
           break;
+
+        case 'player-note': {
+          const note = msg.data as PlayerNote;
+          setCampaign(prev => {
+            if (!prev) return prev;
+            const existing = prev.playerNotes ?? [];
+            const idx = existing.findIndex(n => n.id === note.id);
+            const updated = idx >= 0
+              ? existing.map((n, i) => i === idx ? note : n)
+              : [...existing, note];
+            return { ...prev, playerNotes: updated };
+          });
+          break;
+        }
 
         case 'ping':
           if (ws.readyState === WebSocket.OPEN) {
@@ -246,6 +261,23 @@ function WebPlayerApp() {
     );
   }
 
+  const handleSaveNote = useCallback((note: PlayerNote) => {
+    // Send to server via WebSocket
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'player-note-save', data: note }));
+    }
+    // Update local state immediately
+    setCampaign(prev => {
+      if (!prev) return prev;
+      const existing = prev.playerNotes ?? [];
+      const idx = existing.findIndex(n => n.id === note.id);
+      const updated = idx >= 0
+        ? existing.map((n, i) => i === idx ? note : n)
+        : [...existing, note];
+      return { ...prev, playerNotes: updated };
+    });
+  }, []);
+
   // --- Active Campaign ---
   return (
     <PlayerView
@@ -253,6 +285,7 @@ function WebPlayerApp() {
       messages={messages}
       activeEncounter={activeEncounter}
       onEncounterDismiss={() => setActiveEncounter(null)}
+      onSaveNote={handleSaveNote}
     />
   );
 }
