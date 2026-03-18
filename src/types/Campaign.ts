@@ -467,6 +467,19 @@ export interface EncounterTemplate {
   terrainAffinity?: string[];
 }
 
+// ============ ACTIVE ENCOUNTER (session-only, not persisted) ============
+
+export interface ActiveEncounter {
+  id: string;
+  title: string;
+  description: string;
+  encounterType: EncounterType;
+  creatures: { name: string; count: number; cr?: string }[];
+  terrain: string;
+  hexKey: string;
+  regionName?: string;
+}
+
 // Encounter constants
 export const ENCOUNTER_TYPE_INFO: Record<EncounterType, { label: string; icon: IconName; color: string }> = {
   combat: { label: 'Combat', icon: 'sword', color: '#f44336' },

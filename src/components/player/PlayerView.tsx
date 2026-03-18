@@ -10,7 +10,9 @@ import PlayerQuestLog from './PlayerQuestLog';
 import MessageToast from './MessageToast';
 import MessageHistory from './MessageHistory';
 import type { HexCoordinate } from '../../types';
+import type { ActiveEncounter } from '../../types/Campaign';
 import { WEATHER_CONDITION_LABELS, TEMPERATURE_LABELS } from '../../types/Weather';
+import EncounterOverlay from './EncounterOverlay';
 
 interface DmMessage {
   id: string;
@@ -25,9 +27,11 @@ interface PlayerViewProps {
   campaign: PlayerCampaign;
   messages?: DmMessage[];
   onMessageSeen?: () => void;
+  activeEncounter?: ActiveEncounter | null;
+  onEncounterDismiss?: () => void;
 }
 
-function PlayerView({ campaign, messages = [], onMessageSeen }: PlayerViewProps) {
+function PlayerView({ campaign, messages = [], onMessageSeen, activeEncounter, onEncounterDismiss }: PlayerViewProps) {
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('presentation');
   const [selectedHexKey, setSelectedHexKey] = useState<string | null>(null);
   const [showQuestLog, setShowQuestLog] = useState(false);
@@ -211,6 +215,14 @@ function PlayerView({ campaign, messages = [], onMessageSeen }: PlayerViewProps)
         <MessageHistory
           messages={messages}
           onClose={() => setShowHistory(false)}
+        />
+      )}
+
+      {/* Encounter overlay */}
+      {activeEncounter && (
+        <EncounterOverlay
+          encounter={activeEncounter}
+          onDismiss={onEncounterDismiss ?? (() => {})}
         />
       )}
     </div>

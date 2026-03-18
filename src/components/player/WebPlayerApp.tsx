@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { PlayerCampaign } from '../../services/playerViewFilter';
+import type { ActiveEncounter } from '../../types/Campaign';
 import PlayerView from './PlayerView';
 
 type ConnectionState =
@@ -30,6 +31,7 @@ interface DmMessage {
 function WebPlayerApp() {
   const [state, setState] = useState<ConnectionState>('connecting');
   const [campaign, setCampaign] = useState<PlayerCampaign | null>(null);
+  const [activeEncounter, setActiveEncounter] = useState<ActiveEncounter | null>(null);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
   const [messages, setMessages] = useState<DmMessage[]>([]);
@@ -96,6 +98,7 @@ function WebPlayerApp() {
         case 'campaign-closed':
           setState('closed');
           setMessages([]);
+          setActiveEncounter(null);
           break;
 
         case 'dm-message':
@@ -104,6 +107,14 @@ function WebPlayerApp() {
 
         case 'message-history':
           setMessages(msg.data as DmMessage[]);
+          break;
+
+        case 'encounter-reveal':
+          setActiveEncounter(msg.data as ActiveEncounter);
+          break;
+
+        case 'encounter-dismiss':
+          setActiveEncounter(null);
           break;
 
         case 'ping':
@@ -236,7 +247,14 @@ function WebPlayerApp() {
   }
 
   // --- Active Campaign ---
-  return <PlayerView campaign={campaign!} messages={messages} />;
+  return (
+    <PlayerView
+      campaign={campaign!}
+      messages={messages}
+      activeEncounter={activeEncounter}
+      onEncounterDismiss={() => setActiveEncounter(null)}
+    />
+  );
 }
 
 export default WebPlayerApp;

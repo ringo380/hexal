@@ -66,6 +66,11 @@ interface ElectronAPI {
   onPlayerViewCampaignClosed: (callback: () => void) => () => void;
   sendPlayerMessage: (message: unknown) => void;
   onPlayerMessage: (callback: (message: unknown) => void) => () => void;
+  // Encounter reveal
+  revealEncounter: (data: unknown) => void;
+  dismissEncounter: () => void;
+  onEncounterReveal: (callback: (data: unknown) => void) => () => void;
+  onEncounterDismiss: (callback: () => void) => () => void;
   // Templates
   listUserTemplates: () => Promise<{ fileName: string; filePath: string; modifiedAt: string; content: string | null }[]>;
   saveUserTemplate: (envelope: string, fileName: string) => Promise<{ success: boolean; filePath?: string; error?: string }>;

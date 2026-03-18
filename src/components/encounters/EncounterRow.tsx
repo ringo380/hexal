@@ -16,9 +16,10 @@ interface EncounterRowProps {
   onSave: (encounter: Encounter) => void;
   onEditFull: (encounter: Encounter) => void;
   onDelete: () => void;
+  onReveal?: () => void;
 }
 
-function EncounterRow({ encounter, onToggleResolved, onSave, onEditFull, onDelete }: EncounterRowProps) {
+function EncounterRow({ encounter, onToggleResolved, onSave, onEditFull, onDelete, onReveal }: EncounterRowProps) {
   const { isEditing, draft, setDraft, startEditing, save, cancel, containerRef } = useInlineEdit<Encounter>({ onSave });
 
   if (isEditing && draft) {
@@ -107,6 +108,11 @@ function EncounterRow({ encounter, onToggleResolved, onSave, onEditFull, onDelet
         </div>
       </div>
       <div className="item-actions">
+        {onReveal && (
+          <button className="btn-icon-small" onClick={onReveal} title="Reveal to Players" aria-label="Reveal to Players">
+            <Icon name="eye" size={14} />
+          </button>
+        )}
         <button className="edit-btn" onClick={() => startEditing(encounter)} title="Edit" aria-label="Edit">
           <Icon name="pencil" size={14} />
         </button>

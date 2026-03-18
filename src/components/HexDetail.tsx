@@ -4,8 +4,8 @@ import { useCampaign } from '../stores/CampaignContext';
 import { useHexSelection } from '../stores/HexSelectionContext';
 import type { Hex, ContentItem, DiscoveryStatus, HexMarker, MarkerType, Npc } from '../types';
 import { createContentItem, createNpc, createHex } from '../types';
-import type { Encounter, EncounterTemplate } from '../types/Campaign';
-import { createEncounter, instantiateFromTemplate } from '../types/Campaign';
+import type { Encounter, EncounterTemplate, ActiveEncounter } from '../types/Campaign';
+import { createEncounter, instantiateFromTemplate, hexKey as toHexKey } from '../types/Campaign';
 import { deleteNpcCleanup } from '../services/npcService';
 import { getQuestsForHex, removeNpcFromQuests, removeEncounterFromQuests, removeClueFromQuests } from '../services/questService';
 import { getEntriesForHex } from '../services/sessionLog';
@@ -49,9 +49,10 @@ const categoryConfig: Record<ContentCategory, { title: string; icon: IconName }>
 
 interface HexDetailProps {
   onOpenQuestManager?: () => void;
+  onRevealEncounter?: (encounter: ActiveEncounter) => void;
 }
 
-function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
+function HexDetail({ onOpenQuestManager, onRevealEncounter }: HexDetailProps = {}) {
   const {
     campaign,
     getHex,
@@ -476,6 +477,22 @@ function HexDetail({ onOpenQuestManager }: HexDetailProps = {}) {
           onSave={saveEncounterInline}
           onEditFull={(encounter) => setEditingEncounter(encounter)}
           onDelete={(id) => deleteItem('encounters', id)}
+          onReveal={(encounter) => {
+            if (!selectedCoordinate || !hex) return;
+            const key = toHexKey(selectedCoordinate);
+            const region = getRegionForHex(selectedCoordinate);
+            const active: ActiveEncounter = {
+              id: encounter.id,
+              title: encounter.title,
+              description: encounter.description,
+              encounterType: encounter.encounterType,
+              creatures: encounter.creatures.map(c => ({ name: c.name, count: c.count, cr: c.cr })),
+              terrain: hex.terrain,
+              hexKey: key,
+              regionName: region?.name,
+            };
+            onRevealEncounter?.(active);
+          }}
         />
 
         {/* NPC Section (dedicated) */}
@@ -570,11 +587,12 @@ interface EncounterSectionProps {
   onSave: (encounter: Encounter) => void;
   onEditFull: (encounter: Encounter) => void;
   onDelete: (id: string) => void;
+  onReveal?: (encounter: Encounter) => void;
 }
 
 function EncounterSection({
   encounters, templates, showTemplatePicker, onToggleTemplatePicker,
-  onAdd, onAddFromTemplate, onToggleResolved, onSave, onEditFull, onDelete
+  onAdd, onAddFromTemplate, onToggleResolved, onSave, onEditFull, onDelete, onReveal
 }: EncounterSectionProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -597,6 +615,7 @@ function EncounterSection({
               onSave={onSave}
               onEditFull={onEditFull}
               onDelete={() => onDelete(encounter.id)}
+              onReveal={onReveal ? () => onReveal(encounter) : undefined}
             />
           ))}
           <div className="encounter-add-buttons">
