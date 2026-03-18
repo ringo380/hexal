@@ -531,7 +531,12 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
 
         const coord = coordinateAt({ x: worldX, y: worldY }, campaign.gridWidth, campaign.gridHeight);
         if (coord) {
-          onHexSelect(coord);
+          const key = `${coord.q},${coord.r}`;
+          const hex = campaign.hexes[key];
+          // Only allow selecting discovered/cleared hexes — prevent leaking terrain info
+          if (hex && hex.status !== 'undiscovered') {
+            onHexSelect(coord);
+          }
         }
       }
     }
