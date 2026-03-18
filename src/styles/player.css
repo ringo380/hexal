@@ -440,3 +440,162 @@
   color: #666;
   font-size: 12px;
 }
+
+/* ============================================================================
+   Sidebar Wrapper (for collapse support)
+   ============================================================================ */
+
+.player-sidebar-wrapper {
+  display: contents;
+}
+
+.player-sidebar-wrapper.collapsed > .player-sidebar {
+  display: none;
+}
+
+/* ============================================================================
+   Collapsible Panel States
+   ============================================================================ */
+
+.player-info-panel.collapsed {
+  display: none;
+}
+
+/* Collapse toggle buttons — hidden by default, shown on mobile */
+.player-collapse-toggle {
+  display: none;
+  position: absolute;
+  z-index: 25;
+  padding: 6px 10px;
+  background: rgba(50, 50, 50, 0.9);
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #ccc;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.player-collapse-toggle:hover {
+  background: rgba(70, 70, 70, 0.9);
+  color: #fff;
+}
+
+.player-collapse-toggle--sidebar {
+  top: 80px;
+  left: 8px;
+}
+
+.player-collapse-toggle--info {
+  top: 80px;
+  right: 8px;
+}
+
+/* ============================================================================
+   Mobile Responsive
+   ============================================================================ */
+
+/* Tablet (< 768px) */
+@media (max-width: 768px) {
+  .player-sidebar {
+    width: 200px;
+    min-width: 200px;
+  }
+
+  .player-info-panel--explorer {
+    width: 220px;
+  }
+
+  .player-info-panel--presentation {
+    width: 240px;
+    max-height: 280px;
+  }
+
+  .player-campaign-name {
+    font-size: 14px;
+  }
+}
+
+/* Phone (< 480px) */
+@media (max-width: 480px) {
+  .player-view--explorer {
+    flex-direction: column;
+  }
+
+  .player-sidebar {
+    width: 100%;
+    min-width: 100%;
+    max-height: 35vh;
+    border-right: none;
+    border-bottom: 1px solid #333;
+  }
+
+  .player-info-panel--explorer {
+    width: 100%;
+    max-height: 35vh;
+    border-left: none;
+    border-top: 1px solid #333;
+  }
+
+  .player-info-panel--presentation {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: 40vh;
+    border-radius: 12px 12px 0 0;
+    border-bottom: none;
+  }
+
+  .player-layout-toggle {
+    top: 8px;
+    right: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  .player-quest-log-toggle {
+    top: 8px;
+    right: auto;
+    left: 8px;
+  }
+
+  .player-campaign-name {
+    display: none;
+  }
+
+  .player-weather-bar {
+    font-size: 11px;
+    height: 28px;
+  }
+
+  .player-hex-grid-canvas {
+    cursor: default;
+  }
+
+  .player-collapse-toggle {
+    display: block;
+  }
+}
+
+/* Landscape orientation on phones */
+@media (max-width: 480px) and (orientation: landscape) {
+  .player-view--explorer {
+    flex-direction: row;
+  }
+
+  .player-sidebar {
+    width: 180px;
+    min-width: 180px;
+    max-height: none;
+    border-right: 1px solid #333;
+    border-bottom: none;
+  }
+
+  .player-info-panel--explorer {
+    width: 200px;
+    max-height: none;
+    border-top: none;
+    border-left: 1px solid #333;
+  }
+}
