@@ -150,11 +150,13 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
   }, [saveError, toast]);
 
   // Listen for player notes from player views
+  const playerNotesRef = useRef(campaign?.playerNotes);
+  playerNotesRef.current = campaign?.playerNotes;
   useEffect(() => {
     if (!campaign) return;
     const cleanup = window.electronAPI.onPlayerNoteReceived((data) => {
       const note = data as PlayerNote;
-      const existing = campaign.playerNotes ?? [];
+      const existing = playerNotesRef.current ?? [];
       const idx = existing.findIndex(n => n.id === note.id);
       const updated = idx >= 0
         ? existing.map((n, i) => i === idx ? note : n)
@@ -162,7 +164,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
       updateCampaignData({ playerNotes: updated });
     });
     return cleanup;
-  }, [campaign?.playerNotes]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [campaign?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Register export handler for menu command
   useEffect(() => {

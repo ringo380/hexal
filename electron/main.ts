@@ -615,16 +615,16 @@ ipcMain.on('dismiss-encounter', () => {
 });
 
 // Relay player note from player window to DM renderer + other player windows + web clients
-ipcMain.on('player-note-save', (_event, note) => {
+ipcMain.on('player-note-save', (event, note) => {
   // Send to DM windows (non-player windows)
   Array.from(windows).forEach(win => {
     if (!win.isDestroyed()) {
       win.webContents.send('player-note-received', note);
     }
   });
-  // Send to other player view windows
+  // Send to other player view windows (exclude sender)
   Array.from(playerViewWindows).forEach(win => {
-    if (!win.isDestroyed()) {
+    if (!win.isDestroyed() && win.webContents !== event.sender) {
       win.webContents.send('player-note-received', note);
     }
   });
