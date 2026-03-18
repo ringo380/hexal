@@ -7204,3 +7204,108 @@ label {
 .character-panel__member-remove:hover {
   color: #f44336;
 }
+
+/* ============================================================================
+   DM Message Panel (floating panel for sending messages to player view)
+   ============================================================================ */
+
+.dm-message-panel {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  width: 360px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+.dm-message-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid #444;
+}
+
+.dm-message-panel-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.dm-message-panel-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dm-message-panel-body textarea {
+  width: 100%;
+  background: #1e1e1e;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #e0e0e0;
+  padding: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 60px;
+}
+
+.dm-message-panel-body textarea:focus {
+  outline: none;
+  border-color: #4a9eff;
+}
+
+.dm-message-preview {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.dm-message-preview img {
+  max-width: 100%;
+  max-height: 120px;
+  border-radius: 4px;
+  display: block;
+}
+
+.dm-message-preview button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dm-message-panel-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.dm-message-panel-actions .btn-secondary {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.dm-message-panel-actions .btn-primary {
+  padding: 6px 16px;
+  font-size: 12px;
+}

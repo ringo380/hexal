@@ -20,11 +20,19 @@ function getWsUrl(): string {
   return `${proto}//${window.location.host}`;
 }
 
+interface DmMessage {
+  id: string;
+  text: string;
+  timestamp: number;
+  imageDataUrl?: string;
+}
+
 function WebPlayerApp() {
   const [state, setState] = useState<ConnectionState>('connecting');
   const [campaign, setCampaign] = useState<PlayerCampaign | null>(null);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
+  const [messages, setMessages] = useState<DmMessage[]>([]);
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -87,6 +95,15 @@ function WebPlayerApp() {
 
         case 'campaign-closed':
           setState('closed');
+          setMessages([]);
+          break;
+
+        case 'dm-message':
+          setMessages(prev => [...prev, msg.data as DmMessage]);
+          break;
+
+        case 'message-history':
+          setMessages(msg.data as DmMessage[]);
           break;
 
         case 'ping':
@@ -219,7 +236,7 @@ function WebPlayerApp() {
   }
 
   // --- Active Campaign ---
-  return <PlayerView campaign={campaign!} />;
+  return <PlayerView campaign={campaign!} messages={messages} />;
 }
 
 export default WebPlayerApp;

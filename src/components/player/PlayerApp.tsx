@@ -8,9 +8,17 @@ import '../../styles/player.css';
 
 type PlayerState = 'waiting' | 'active' | 'closed';
 
+interface DmMessage {
+  id: string;
+  text: string;
+  timestamp: number;
+  imageDataUrl?: string;
+}
+
 function PlayerApp() {
   const [playerCampaign, setPlayerCampaign] = useState<PlayerCampaign | null>(null);
   const [state, setState] = useState<PlayerState>('waiting');
+  const [messages, setMessages] = useState<DmMessage[]>([]);
 
   useEffect(() => {
     const cleanupUpdate = window.electronAPI.onPlayerViewUpdate((data) => {
@@ -20,11 +28,18 @@ function PlayerApp() {
 
     const cleanupClosed = window.electronAPI.onPlayerViewCampaignClosed(() => {
       setState('closed');
+      setMessages([]);
+    });
+
+    const cleanupMessage = window.electronAPI.onPlayerMessage((data) => {
+      const msg = data as DmMessage;
+      setMessages(prev => [...prev, msg]);
     });
 
     return () => {
       cleanupUpdate();
       cleanupClosed();
+      cleanupMessage();
     };
   }, []);
 
@@ -52,7 +67,7 @@ function PlayerApp() {
     );
   }
 
-  return <PlayerView campaign={playerCampaign} />;
+  return <PlayerView campaign={playerCampaign} messages={messages} />;
 }
 
 export default PlayerApp;

@@ -135,6 +135,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('player-view-campaign-closed', handler);
   },
 
+  sendPlayerMessage: (message: unknown): void => {
+    ipcRenderer.send('send-player-message', message);
+  },
+
+  onPlayerMessage: (callback: (message: unknown) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, message: unknown) => callback(message);
+    ipcRenderer.on('player-message', handler);
+    return () => ipcRenderer.removeListener('player-message', handler);
+  },
+
   // Settings operations
   getSettings: (): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('get-settings'),
@@ -197,6 +207,8 @@ declare global {
       notifyPlayerViewCampaignClosed: () => void;
       onPlayerViewUpdate: (callback: (data: unknown) => void) => () => void;
       onPlayerViewCampaignClosed: (callback: () => void) => () => void;
+      sendPlayerMessage: (message: unknown) => void;
+      onPlayerMessage: (callback: (message: unknown) => void) => () => void;
       // Templates
       listUserTemplates: () => Promise<{ fileName: string; filePath: string; modifiedAt: string; content: string | null }[]>;
       saveUserTemplate: (envelope: string, fileName: string) => Promise<{ success: boolean; filePath?: string; error?: string }>;
