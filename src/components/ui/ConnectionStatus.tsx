@@ -1,12 +1,20 @@
-// ConnectionStatus — Toolbar indicator for online/offline and sync state.
-// Currently reads navigator.onLine only. Sync status will be integrated
-// when the cloud sync engine is wired up.
+// ConnectionStatus — Toolbar indicator for sync state.
+// Reads from SyncContext when cloud sync is enabled, falls back to
+// navigator.onLine for local-only mode.
 
 import { useState, useEffect } from 'react';
+import { useSyncContext } from '../../stores/SyncContext';
 
-type Status = 'synced' | 'syncing' | 'offline' | 'conflict' | 'error';
+const STATUS_CONFIG = {
+  synced:   { label: 'Synced',    dotClass: 'connection-dot--synced' },
+  syncing:  { label: 'Syncing...', dotClass: 'connection-dot--syncing' },
+  offline:  { label: 'Offline',   dotClass: 'connection-dot--offline' },
+  conflict: { label: 'Conflict',  dotClass: 'connection-dot--conflict' },
+  error:    { label: 'Sync Error', dotClass: 'connection-dot--error' },
+} as const;
 
 function ConnectionStatus() {
+  const { syncStatus, queueCount } = useSyncContext();
   const [online, setOnline] = useState(navigator.onLine);
 
   useEffect(() => {
@@ -20,15 +28,29 @@ function ConnectionStatus() {
     };
   }, []);
 
-  // For now, status is derived solely from navigator.onLine.
-  // Once the sync engine is integrated, this will read from a SyncContext
-  // that provides granular status: synced | syncing | offline | conflict | error.
-  const status: Status = online ? 'synced' : 'offline';
-  const label = online ? 'Online' : 'Offline';
+  // Use sync status when available, otherwise derive from navigator.onLine
+  const effectiveStatus = syncStatus;
+  const config = STATUS_CONFIG[effectiveStatus];
+
+  // Append pending count for offline status
+  let label: string = config.label;
+  if (effectiveStatus === 'offline' && queueCount > 0) {
+    label = `Offline (${queueCount} pending)`;
+  }
+
+  // In local-only mode (no SyncProvider), show basic online/offline
+  if (!online && effectiveStatus === 'synced') {
+    return (
+      <div className="connection-status" title="Offline">
+        <span className="connection-dot connection-dot--offline" />
+        <span>Offline</span>
+      </div>
+    );
+  }
 
   return (
     <div className="connection-status" title={label}>
-      <span className={`connection-dot connection-dot--${status}`} />
+      <span className={`connection-dot ${config.dotClass}`} />
       <span>{label}</span>
     </div>
   );

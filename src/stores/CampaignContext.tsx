@@ -8,6 +8,7 @@ import { getTemplateById } from '../data/campaignTemplates';
 import { applyCustomizations } from '../services/templateService';
 import { migrateCampaign } from '../types/Campaign';
 import type { PersistenceAdapter } from '../services/persistence';
+import type { SyncEngine } from '../services/syncEngine';
 import { createMarker, createCustomMarkerType, DEFAULT_MARKER_TYPES } from '../types/Markers';
 import {
   TimeWeatherState,
@@ -101,6 +102,27 @@ const initialState: CampaignState = {
   future: []
 };
 
+// Helper to create a new state with updated campaign and history tracking
+function updateWithHistory(state: CampaignState, updates: Partial<Campaign>): CampaignState {
+  if (!state.campaign) return state;
+
+  const updatedCampaign = {
+    ...state.campaign,
+    ...updates,
+    modifiedAt: new Date().toISOString()
+  };
+  const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
+
+  return {
+    ...state,
+    campaign: updatedCampaign,
+    saveStatus: 'unsaved',
+    hasUnsavedChanges: true,
+    past: newPast,
+    future: []  // Clear redo stack on new action
+  };
+}
+
 // Reducer
 function campaignReducer(state: CampaignState, action: CampaignAction): CampaignState {
   switch (action.type) {
@@ -119,42 +141,15 @@ function campaignReducer(state: CampaignState, action: CampaignAction): Campaign
     case 'UPDATE_HEX': {
       if (!state.campaign) return state;
       const key = coordinateKey(action.hex.coordinate);
-      // Save current state to history before mutation
-      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
-      return {
-        ...state,
-        campaign: {
-          ...state.campaign,
-          hexes: {
-            ...state.campaign.hexes,
-            [key]: action.hex
-          },
-          modifiedAt: new Date().toISOString()
-        },
-        saveStatus: 'unsaved',
-        hasUnsavedChanges: true,
-        past: newPast,
-        future: []  // Clear redo stack on new action
+      const newHexes = {
+        ...state.campaign.hexes,
+        [key]: action.hex
       };
+      return updateWithHistory(state, { hexes: newHexes });
     }
 
-    case 'UPDATE_CAMPAIGN': {
-      if (!state.campaign) return state;
-      // Save current state to history before mutation
-      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
-      return {
-        ...state,
-        campaign: {
-          ...state.campaign,
-          ...action.updates,
-          modifiedAt: new Date().toISOString()
-        },
-        saveStatus: 'unsaved',
-        hasUnsavedChanges: true,
-        past: newPast,
-        future: []  // Clear redo stack on new action
-      };
-    }
+    case 'UPDATE_CAMPAIGN':
+      return updateWithHistory(state, action.updates);
 
     case 'MARK_SAVED':
       return {
@@ -235,168 +230,86 @@ function campaignReducer(state: CampaignState, action: CampaignAction): Campaign
     case 'INIT_TIME_WEATHER': {
       if (!state.campaign) return state;
       if (state.campaign.timeWeather) return state; // Already initialized
-      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
-      return {
-        ...state,
-        campaign: {
-          ...state.campaign,
-          timeWeather: createDefaultTimeWeather(),
-          modifiedAt: new Date().toISOString()
-        },
-        saveStatus: 'unsaved',
-        hasUnsavedChanges: true,
-        past: newPast,
-        future: []
-      };
+      return updateWithHistory(state, { timeWeather: createDefaultTimeWeather() });
     }
 
     case 'SET_CALENDAR': {
       if (!state.campaign?.timeWeather) return state;
-      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
-      return {
-        ...state,
-        campaign: {
-          ...state.campaign,
-          timeWeather: {
-            ...state.campaign.timeWeather,
-            calendar: action.calendar
-          },
-          modifiedAt: new Date().toISOString()
-        },
-        saveStatus: 'unsaved',
-        hasUnsavedChanges: true,
-        past: newPast,
-        future: []
-      };
+      return updateWithHistory(state, {
+        timeWeather: {
+          ...state.campaign.timeWeather,
+          calendar: action.calendar
+        }
+      });
     }
 
     case 'SET_TIME': {
       if (!state.campaign?.timeWeather) return state;
-      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
-      return {
-        ...state,
-        campaign: {
-          ...state.campaign,
-          timeWeather: {
-            ...state.campaign.timeWeather,
-            currentTime: action.time
-          },
-          modifiedAt: new Date().toISOString()
-        },
-        saveStatus: 'unsaved',
-        hasUnsavedChanges: true,
-        past: newPast,
-        future: []
-      };
+      return updateWithHistory(state, {
+        timeWeather: {
+          ...state.campaign.timeWeather,
+          time: action.time
+        }
+      });
     }
 
     case 'ADVANCE_TIME': {
       if (!state.campaign?.timeWeather) return state;
       const tw = state.campaign.timeWeather;
       const newTime = advanceTime(tw.calendar, tw.currentTime, action.hours, action.minutes || 0);
-      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
-      return {
-        ...state,
-        campaign: {
-          ...state.campaign,
-          timeWeather: {
-            ...tw,
-            currentTime: newTime
-          },
-          modifiedAt: new Date().toISOString()
-        },
-        saveStatus: 'unsaved',
-        hasUnsavedChanges: true,
-        past: newPast,
-        future: []
-      };
+      return updateWithHistory(state, {
+        timeWeather: {
+          ...tw,
+          currentTime: newTime
+        }
+      });
     }
 
     case 'SET_GLOBAL_WEATHER': {
       if (!state.campaign?.timeWeather) return state;
-      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
-      return {
-        ...state,
-        campaign: {
-          ...state.campaign,
-          timeWeather: {
-            ...state.campaign.timeWeather,
-            globalWeather: action.weather
-          },
-          modifiedAt: new Date().toISOString()
-        },
-        saveStatus: 'unsaved',
-        hasUnsavedChanges: true,
-        past: newPast,
-        future: []
-      };
+      return updateWithHistory(state, {
+        timeWeather: {
+          ...state.campaign.timeWeather,
+          globalWeather: action.weather
+        }
+      });
     }
 
     case 'SET_ZONE_WEATHER': {
       if (!state.campaign?.timeWeather) return state;
-      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
-      return {
-        ...state,
-        campaign: {
-          ...state.campaign,
-          timeWeather: {
-            ...state.campaign.timeWeather,
-            zoneWeathers: {
-              ...state.campaign.timeWeather.zoneWeathers,
-              [action.zoneId]: action.weather
-            }
-          },
-          modifiedAt: new Date().toISOString()
-        },
-        saveStatus: 'unsaved',
-        hasUnsavedChanges: true,
-        past: newPast,
-        future: []
-      };
+      return updateWithHistory(state, {
+        timeWeather: {
+          ...state.campaign.timeWeather,
+          zoneWeathers: {
+            ...state.campaign.timeWeather.zoneWeathers,
+            [action.zoneId]: action.weather
+          }
+        }
+      });
     }
 
     case 'SET_HEX_WEATHER': {
       if (!state.campaign?.timeWeather) return state;
-      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
-      return {
-        ...state,
-        campaign: {
-          ...state.campaign,
-          timeWeather: {
-            ...state.campaign.timeWeather,
-            hexWeatherOverrides: {
-              ...state.campaign.timeWeather.hexWeatherOverrides,
-              [action.hexKey]: action.weather
-            }
-          },
-          modifiedAt: new Date().toISOString()
-        },
-        saveStatus: 'unsaved',
-        hasUnsavedChanges: true,
-        past: newPast,
-        future: []
-      };
+      return updateWithHistory(state, {
+        timeWeather: {
+          ...state.campaign.timeWeather,
+          hexWeatherOverrides: {
+            ...state.campaign.timeWeather.hexWeatherOverrides,
+            [action.hexKey]: action.weather
+          }
+        }
+      });
     }
 
     case 'CLEAR_HEX_WEATHER': {
       if (!state.campaign?.timeWeather) return state;
       const { [action.hexKey]: _, ...remainingOverrides } = state.campaign.timeWeather.hexWeatherOverrides;
-      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
-      return {
-        ...state,
-        campaign: {
-          ...state.campaign,
-          timeWeather: {
-            ...state.campaign.timeWeather,
-            hexWeatherOverrides: remainingOverrides
-          },
-          modifiedAt: new Date().toISOString()
-        },
-        saveStatus: 'unsaved',
-        hasUnsavedChanges: true,
-        past: newPast,
-        future: []
-      };
+      return updateWithHistory(state, {
+        timeWeather: {
+          ...state.campaign.timeWeather,
+          hexWeatherOverrides: remainingOverrides
+        }
+      });
     }
 
     case 'GENERATE_WEATHER': {
@@ -405,22 +318,12 @@ function campaignReducer(state: CampaignState, action: CampaignAction): Campaign
       const season = getCurrentSeason(tw.calendar, tw.currentTime.month);
       const terrain = action.terrain || 'Plains';
       const newWeather = generateWeather(terrain, season);
-      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
-      return {
-        ...state,
-        campaign: {
-          ...state.campaign,
-          timeWeather: {
-            ...tw,
-            globalWeather: newWeather
-          },
-          modifiedAt: new Date().toISOString()
-        },
-        saveStatus: 'unsaved',
-        hasUnsavedChanges: true,
-        past: newPast,
-        future: []
-      };
+      return updateWithHistory(state, {
+        timeWeather: {
+          ...tw,
+          globalWeather: newWeather
+        }
+      });
     }
 
     case 'LOG_WEATHER': {
@@ -443,22 +346,12 @@ function campaignReducer(state: CampaignState, action: CampaignAction): Campaign
 
     case 'UPDATE_WEATHER_SETTINGS': {
       if (!state.campaign?.timeWeather) return state;
-      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
-      return {
-        ...state,
-        campaign: {
-          ...state.campaign,
-          timeWeather: {
-            ...state.campaign.timeWeather,
-            ...action.settings
-          },
-          modifiedAt: new Date().toISOString()
-        },
-        saveStatus: 'unsaved',
-        hasUnsavedChanges: true,
-        past: newPast,
-        future: []
-      };
+      return updateWithHistory(state, {
+        timeWeather: {
+          ...state.campaign.timeWeather,
+          ...action.settings
+        }
+      });
     }
 
     // ============ MARKER ACTIONS ============
@@ -468,22 +361,12 @@ function campaignReducer(state: CampaignState, action: CampaignAction): Campaign
       const key = coordinateKey(action.coord);
       const hex = state.campaign.hexes[key] || createHex(action.coord);
       const markers = [...(hex.markers || []), action.marker];
-      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
-      return {
-        ...state,
-        campaign: {
-          ...state.campaign,
-          hexes: {
-            ...state.campaign.hexes,
-            [key]: { ...hex, markers }
-          },
-          modifiedAt: new Date().toISOString()
-        },
-        saveStatus: 'unsaved',
-        hasUnsavedChanges: true,
-        past: newPast,
-        future: []
-      };
+      return updateWithHistory(state, {
+        hexes: {
+          ...state.campaign.hexes,
+          [key]: { ...hex, markers }
+        }
+      });
     }
 
     case 'REMOVE_MARKER': {
@@ -492,22 +375,12 @@ function campaignReducer(state: CampaignState, action: CampaignAction): Campaign
       const hex = state.campaign.hexes[key];
       if (!hex || !hex.markers) return state;
       const markers = hex.markers.filter(m => m.id !== action.markerId);
-      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
-      return {
-        ...state,
-        campaign: {
-          ...state.campaign,
-          hexes: {
-            ...state.campaign.hexes,
-            [key]: { ...hex, markers }
-          },
-          modifiedAt: new Date().toISOString()
-        },
-        saveStatus: 'unsaved',
-        hasUnsavedChanges: true,
-        past: newPast,
-        future: []
-      };
+      return updateWithHistory(state, {
+        hexes: {
+          ...state.campaign.hexes,
+          [key]: { ...hex, markers }
+        }
+      });
     }
 
     case 'MOVE_MARKER': {
@@ -527,23 +400,13 @@ function campaignReducer(state: CampaignState, action: CampaignAction): Campaign
       const toHex = state.campaign.hexes[toKey] || createHex(action.toCoord);
       const toMarkers = [...(toHex.markers || []), movedMarker];
 
-      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
-      return {
-        ...state,
-        campaign: {
-          ...state.campaign,
-          hexes: {
-            ...state.campaign.hexes,
-            [fromKey]: { ...fromHex, markers: fromMarkers },
-            [toKey]: { ...toHex, markers: toMarkers }
-          },
-          modifiedAt: new Date().toISOString()
-        },
-        saveStatus: 'unsaved',
-        hasUnsavedChanges: true,
-        past: newPast,
-        future: []
-      };
+      return updateWithHistory(state, {
+        hexes: {
+          ...state.campaign.hexes,
+          [fromKey]: { ...fromHex, markers: fromMarkers },
+          [toKey]: { ...toHex, markers: toMarkers }
+        }
+      });
     }
 
     case 'MOVE_MARKER_TO_POSITION': {
@@ -559,22 +422,12 @@ function campaignReducer(state: CampaignState, action: CampaignAction): Campaign
           : m
       );
 
-      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
-      return {
-        ...state,
-        campaign: {
-          ...state.campaign,
-          hexes: {
-            ...state.campaign.hexes,
-            [key]: { ...hex, markers }
-          },
-          modifiedAt: new Date().toISOString()
-        },
-        saveStatus: 'unsaved',
-        hasUnsavedChanges: true,
-        past: newPast,
-        future: []
-      };
+      return updateWithHistory(state, {
+        hexes: {
+          ...state.campaign.hexes,
+          [key]: { ...hex, markers }
+        }
+      });
     }
 
     case 'UPDATE_MARKER': {
@@ -585,59 +438,25 @@ function campaignReducer(state: CampaignState, action: CampaignAction): Campaign
       const markers = hex.markers.map(m =>
         m.id === action.marker.id ? action.marker : m
       );
-      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
-      return {
-        ...state,
-        campaign: {
-          ...state.campaign,
-          hexes: {
-            ...state.campaign.hexes,
-            [key]: { ...hex, markers }
-          },
-          modifiedAt: new Date().toISOString()
-        },
-        saveStatus: 'unsaved',
-        hasUnsavedChanges: true,
-        past: newPast,
-        future: []
-      };
+      return updateWithHistory(state, {
+        hexes: {
+          ...state.campaign.hexes,
+          [key]: { ...hex, markers }
+        }
+      });
     }
 
     case 'ADD_CUSTOM_MARKER_TYPE': {
       if (!state.campaign) return state;
       const markerTypes = [...(state.campaign.markerTypes || DEFAULT_MARKER_TYPES), action.markerType];
-      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
-      return {
-        ...state,
-        campaign: {
-          ...state.campaign,
-          markerTypes,
-          modifiedAt: new Date().toISOString()
-        },
-        saveStatus: 'unsaved',
-        hasUnsavedChanges: true,
-        past: newPast,
-        future: []
-      };
+      return updateWithHistory(state, { markerTypes });
     }
 
     case 'REMOVE_MARKER_TYPE': {
       if (!state.campaign) return state;
       const markerTypes = (state.campaign.markerTypes || DEFAULT_MARKER_TYPES)
         .filter(t => t.id !== action.markerTypeId);
-      const newPast = [...state.past, state.campaign].slice(-MAX_HISTORY_SIZE);
-      return {
-        ...state,
-        campaign: {
-          ...state.campaign,
-          markerTypes,
-          modifiedAt: new Date().toISOString()
-        },
-        saveStatus: 'unsaved',
-        hasUnsavedChanges: true,
-        past: newPast,
-        future: []
-      };
+      return updateWithHistory(state, { markerTypes });
     }
 
     default:
@@ -753,11 +572,13 @@ interface CampaignContextValue {
 const CampaignContext = createContext<CampaignContextValue | null>(null);
 
 // Provider component
-export function CampaignProvider({ children, adapter }: { children: React.ReactNode; adapter: PersistenceAdapter }) {
+export function CampaignProvider({ children, adapter, syncEngine }: { children: React.ReactNode; adapter: PersistenceAdapter; syncEngine?: SyncEngine | null }) {
   const [state, dispatch] = useReducer(campaignReducer, initialState);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Autosave effect (2 second debounce)
+  // When syncEngine is available, routes through it for version-checked saves.
+  // Otherwise falls back to the persistence adapter directly.
   useEffect(() => {
     if (state.hasUnsavedChanges && state.campaign) {
       // Clear existing timeout
@@ -765,24 +586,41 @@ export function CampaignProvider({ children, adapter }: { children: React.ReactN
         clearTimeout(saveTimeoutRef.current);
       }
 
-      // Set new timeout for autosave
-      saveTimeoutRef.current = setTimeout(async () => {
-        if (state.campaign) {
-          dispatch({ type: 'MARK_SAVING' });
-          try {
-            const result = await adapter.save(
-              state.campaign,
-              state.currentFilePath ?? undefined
-            );
-            if (result.success) {
-              dispatch({ type: 'MARK_SAVED', filePath: result.path });
+      if (syncEngine) {
+        // Route through SyncEngine — it handles its own debounce, cache, and version checking
+        saveTimeoutRef.current = setTimeout(async () => {
+          if (state.campaign) {
+            dispatch({ type: 'MARK_SAVING' });
+            try {
+              await syncEngine.saveCampaign(state.campaign);
+              dispatch({ type: 'MARK_SAVED', filePath: state.currentFilePath ?? undefined });
+            } catch (error) {
+              console.error('Autosave via SyncEngine failed:', error);
+              dispatch({ type: 'SAVE_FAILED' });
             }
-          } catch (error) {
-            console.error('Autosave failed:', error);
-            dispatch({ type: 'SAVE_FAILED' });
           }
-        }
-      }, 2000);
+        }, 100); // Short delay — SyncEngine has its own 2s debounce for remote push
+      } else {
+        // Direct adapter save (local-only mode)
+        saveTimeoutRef.current = setTimeout(async () => {
+          if (state.campaign) {
+            dispatch({ type: 'MARK_SAVING' });
+            try {
+              const result = await adapter.save(
+                state.campaign,
+                state.currentFilePath ?? undefined,
+                { compact: true }
+              );
+              if (result.success) {
+                dispatch({ type: 'MARK_SAVED', filePath: result.path });
+              }
+            } catch (error) {
+              console.error('Autosave failed:', error);
+              dispatch({ type: 'SAVE_FAILED' });
+            }
+          }
+        }, 2000);
+      }
     }
 
     return () => {
@@ -790,7 +628,19 @@ export function CampaignProvider({ children, adapter }: { children: React.ReactN
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [state.hasUnsavedChanges, state.campaign, state.currentFilePath, adapter]);
+  }, [state.hasUnsavedChanges, state.campaign, state.currentFilePath, adapter, syncEngine]);
+
+  // Listen for SyncEngine reload events (keep-remote conflict resolution)
+  useEffect(() => {
+    if (!syncEngine) return;
+    return syncEngine.onCampaignReload((campaign) => {
+      dispatch({
+        type: 'SET_CAMPAIGN',
+        campaign,
+        filePath: state.currentFilePath ?? undefined,
+      });
+    });
+  }, [syncEngine, state.currentFilePath]);
 
   // Create new campaign
   const newCampaign = useCallback((
@@ -849,14 +699,15 @@ export function CampaignProvider({ children, adapter }: { children: React.ReactN
   }, [adapter]);
 
   // Save campaign
-  const saveCampaign = useCallback(async () => {
+  const saveCampaign = useCallback(async (options?: { compact?: boolean }) => {
     if (!state.campaign) return;
 
     dispatch({ type: 'MARK_SAVING' });
     try {
       const result = await adapter.save(
         state.campaign,
-        state.currentFilePath ?? undefined
+        state.currentFilePath ?? undefined,
+        options
       );
       if (result.success) {
         dispatch({ type: 'MARK_SAVED', filePath: result.path });
@@ -1282,7 +1133,7 @@ export function CampaignProvider({ children, adapter }: { children: React.ReactN
     [adapter]
   );
 
-  const value: CampaignContextValue = {
+  const value: CampaignContextValue = useMemo(() => ({
     state,
     newCampaign,
     loadCampaign,
@@ -1380,7 +1231,72 @@ export function CampaignProvider({ children, adapter }: { children: React.ReactN
     updateTerrainType,
     deleteTerrainType,
     renameTerrainType
-  };
+  }), [
+    state,
+    newCampaign,
+    loadCampaign,
+    saveCampaign,
+    saveAs,
+    closeCampaign,
+    getHex,
+    getOrCreateHex,
+    updateHex,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    initTimeWeather,
+    setCalendar,
+    setTime,
+    advanceTimeBy,
+    setGlobalWeather,
+    setHexWeather,
+    clearHexWeather,
+    generateNewWeather,
+    updateWeatherSettings,
+    timeWeather,
+    currentSeason,
+    currentTimeOfDay,
+    formattedTime,
+    formattedDate,
+    weatherSummary,
+    getWeatherForHex,
+    getWeatherEffectsForHex,
+    addMarker,
+    addMarkerAtPosition,
+    removeMarker,
+    moveMarker,
+    moveMarkerToPosition,
+    updateMarker,
+    addCustomMarkerType,
+    removeMarkerType,
+    markerTypes,
+    listCampaigns,
+    deleteCampaignFile,
+    updateCampaignData,
+    toggleBookmark,
+    isBookmarked,
+    bookmarkedHexes,
+    encounterTemplates,
+    allNpcs,
+    factions,
+    sessions,
+    sessionLog,
+    quests,
+    storyArcs,
+    regions,
+    addRegion,
+    updateRegion,
+    deleteRegion,
+    addHexToRegion,
+    removeHexFromRegion,
+    getRegionForHexFn,
+    terrainTypes,
+    addTerrainType,
+    updateTerrainType,
+    deleteTerrainType,
+    renameTerrainType
+  ]);
 
   return (
     <CampaignContext.Provider value={value}>

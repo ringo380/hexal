@@ -290,6 +290,78 @@ export async function saveCloudCampaign(
   return {};
 }
 
+/** Result from a version-checked save attempt. */
+export interface VersionedSaveResult {
+  error?: string;
+  conflict?: boolean;
+  serverVersion?: number;
+  newVersion?: number;
+}
+
+/**
+ * Save a campaign with optimistic concurrency control via the
+ * upsert_campaign_versioned RPC. Rejects the write if the server's
+ * current version doesn't match expectedVersion.
+ */
+export async function saveCloudCampaignVersioned(
+  client: SupabaseClient,
+  campaign: Campaign,
+  userId: string,
+  expectedVersion: number
+): Promise<VersionedSaveResult> {
+  // Build hex rows as JSON for the RPC
+  const hexRows = Object.entries(campaign.hexes).map(([hexKey, hex]) => ({
+    hex_key: hexKey,
+    data: hex,
+  }));
+
+  // Build region rows as JSON for the RPC
+  const regionRows = (campaign.regions ?? []).map(region => ({
+    name: region.name,
+    color: region.color,
+    description: region.description ?? '',
+    hexKeys: region.hexKeys ?? [],
+    tags: region.tags ?? [],
+    isDiscovered: region.isDiscovered ?? false,
+    notes: region.notes ?? '',
+  }));
+
+  const { data, error } = await client.rpc('upsert_campaign_versioned', {
+    p_id: campaign.id,
+    p_owner_id: userId,
+    p_name: campaign.name,
+    p_grid_width: campaign.gridWidth,
+    p_grid_height: campaign.gridHeight,
+    p_terrain_types: campaign.terrainTypes,
+    p_encounter_tables: campaign.encounterTables,
+    p_time_weather: campaign.timeWeather ?? null,
+    p_marker_types: campaign.markerTypes ?? null,
+    p_encounter_templates: campaign.encounterTemplates ?? [],
+    p_bookmarked_hexes: campaign.bookmarkedHexes ?? [],
+    p_generation_config: campaign.generationConfig ?? null,
+    p_landmark_tables: campaign.landmarkTables ?? [],
+    p_factions: campaign.factions ?? [],
+    p_sessions: campaign.sessions ?? [],
+    p_session_log: campaign.sessionLog ?? [],
+    p_schema_version: campaign.schemaVersion ?? CAMPAIGN_SCHEMA_VERSION,
+    p_expected_version: expectedVersion,
+    p_last_modified_by: userId,
+    p_hex_rows: hexRows,
+    p_region_rows: regionRows,
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  const result = data as { conflict: boolean; new_version?: number; server_version?: number };
+  if (result.conflict) {
+    return { conflict: true, serverVersion: result.server_version };
+  }
+
+  return { conflict: false, newVersion: result.new_version };
+}
+
 /**
  * Delete a campaign (cascade handles hexes/regions via Supabase FK rules).
  */

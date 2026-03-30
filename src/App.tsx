@@ -6,8 +6,10 @@ import MainEditor from './components/MainEditor';
 import { WeatherSimulationProvider } from './stores/WeatherSimulationContext';
 import UnsavedChangesDialog from './components/modals/UnsavedChangesDialog';
 import AlertDialog from './components/modals/AlertDialog';
+import ConflictResolutionModal from './components/modals/ConflictResolutionModal';
 import { filterCampaignForPlayer } from './services/playerViewFilter';
 import ErrorBoundary from './components/ErrorBoundary';
+import { useSyncContext } from './stores/SyncContext';
 
 type PendingAction = {
   type: 'open' | 'open-new-window' | 'new-campaign';
@@ -19,6 +21,7 @@ function App() {
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { pendingConflict, resolveConflict } = useSyncContext();
   const exportRef = useRef<(() => void) | null>(null);
   const mapExportRef = useRef<(() => void) | null>(null);
   const exportTemplateRef = useRef<(() => void) | null>(null);
@@ -275,6 +278,13 @@ function App() {
           message={errorMessage}
           variant="error"
           onClose={() => setErrorMessage(null)}
+        />
+      )}
+
+      {pendingConflict && (
+        <ConflictResolutionModal
+          conflict={pendingConflict}
+          onResolve={resolveConflict}
         />
       )}
     </div>
