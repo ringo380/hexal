@@ -4,4 +4,5 @@ export * from './LayerVisibility';
 export * from './MapExport';
 export * from './Markers';
 export * from './Quest';
+export * from './Sync';
 export * from './Weather';

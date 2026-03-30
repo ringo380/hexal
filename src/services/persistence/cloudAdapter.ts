@@ -38,7 +38,7 @@ export class CloudPersistenceAdapter implements PersistenceAdapter {
     }));
   }
 
-  async save(campaign: Campaign, _identifier?: string): Promise<SaveResult> {
+  async save(campaign: Campaign, _identifier?: string, _options?: { compact?: boolean }): Promise<SaveResult> {
     try {
       // Always cache locally first
       await cacheCampaign(campaign, campaign.version ?? 1);
@@ -84,18 +84,43 @@ export class CloudPersistenceAdapter implements PersistenceAdapter {
     }
   }
 
-  onRemoteChange(callback: (campaign: Campaign) => void): () => void {
+  onRemoteChange(_callback: (campaign: Campaign) => void): () => void {
+    // No-op when campaignId is unknown — use subscribeToRemoteChanges instead
+    return () => {};
+  }
+
+  /**
+   * Subscribe to Realtime changes for a specific campaign.
+   * Call this when a campaign is loaded and the ID is known.
+   * Returns an unsubscribe function.
+   *
+   * @param campaignId - The UUID of the loaded campaign
+   * @param onCampaignUpdate - Called with the full campaign when a remote change arrives
+   * @param onVersionConflict - Called when remote version is higher than local
+   */
+  subscribeToRemoteChanges(
+    campaignId: string,
+    onCampaignUpdate: (campaign: Campaign) => void,
+    onVersionConflict?: (remoteVersion: number) => void
+  ): () => void {
+    if (!campaignId) return () => {};
+
     return subscribeToChanges(
       this.client,
-      '', // Campaign ID not known at subscribe time — callers should subscribe per-campaign
+      campaignId,
       (_hexPayload: HexChangePayload) => {
         // Hex-level changes handled by sync engine, not here
       },
       async (campaignPayload: CampaignChangePayload) => {
+        // Notify about the version change
+        if (onVersionConflict) {
+          onVersionConflict(campaignPayload.version);
+        }
+
         // Reload full campaign on campaign-level change
         const result = await loadCloudCampaign(this.client, campaignPayload.campaignId);
         if (result.campaign) {
-          callback(migrateCampaign(result.campaign));
+          onCampaignUpdate(migrateCampaign(result.campaign));
         }
       }
     );

@@ -10,9 +10,10 @@ import type { Campaign } from '../types';
 /** Cached campaign metadata and full data */
 export interface CachedCampaign {
   id: string;           // campaign UUID (primary key)
-  data: unknown;        // full Campaign object
+  data: unknown;        // full Campaign object (working local copy)
   version: number;      // last known server version
   lastSynced: number;   // timestamp ms
+  lastSyncedData?: unknown; // campaign snapshot at last confirmed remote sync (base for 3-way diff)
 }
 
 /** Cached hex data (individual hex granularity) */
@@ -46,6 +47,12 @@ class HexalCache extends Dexie {
   constructor() {
     super('hexal-cache');
     this.version(1).stores({
+      campaigns: 'id',
+      hexes: 'id, campaignId',
+      syncQueue: '++id, campaignId, type',
+    });
+    // v2: adds lastSyncedData field to campaigns (no index change needed)
+    this.version(2).stores({
       campaigns: 'id',
       hexes: 'id, campaignId',
       syncQueue: '++id, campaignId, type',
@@ -139,6 +146,36 @@ export async function getSyncQueue(campaignId?: string): Promise<SyncQueueEntry[
  */
 export async function clearSyncQueue(ids: number[]): Promise<void> {
   await cache.syncQueue.bulkDelete(ids);
+}
+
+/**
+ * Update the base snapshot for a campaign — the last state confirmed synced
+ * with the server. Called after a successful remote save or remote load.
+ */
+export async function updateBaseSnapshot(campaignId: string, campaign: Campaign): Promise<void> {
+  const existing = await cache.campaigns.get(campaignId);
+  if (existing) {
+    await cache.campaigns.update(campaignId, { lastSyncedData: campaign });
+  }
+}
+
+/**
+ * Retrieve the base snapshot (last confirmed server state) for a campaign.
+ * Returns null if no base snapshot exists (first sync or never synced).
+ */
+export async function getBaseSnapshot(campaignId: string): Promise<Campaign | null> {
+  const entry = await cache.campaigns.get(campaignId);
+  return (entry?.lastSyncedData as Campaign) ?? null;
+}
+
+/**
+ * Get the number of pending sync queue entries, optionally filtered by campaign.
+ */
+export async function getSyncQueueCount(campaignId?: string): Promise<number> {
+  if (campaignId) {
+    return cache.syncQueue.where('campaignId').equals(campaignId).count();
+  }
+  return cache.syncQueue.count();
 }
 
 /**
