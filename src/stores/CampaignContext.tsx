@@ -248,7 +248,7 @@ function campaignReducer(state: CampaignState, action: CampaignAction): Campaign
       return updateWithHistory(state, {
         timeWeather: {
           ...state.campaign.timeWeather,
-          time: action.time
+          currentTime: action.time
         }
       });
     }

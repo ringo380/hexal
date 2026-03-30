@@ -59,23 +59,17 @@ function coalesceQueue(entries: SyncQueueEntry[]): SyncQueueEntry[] {
     }
   }
 
-  // Rebuild: campaign entries first, then hex entries, preserving campaign order
+  // Rebuild: campaign entries first, then hex entries
   const result: SyncQueueEntry[] = [];
-  const allIds = new Set<number>();
 
-  // Campaign entries first
   Array.from(campaignMap.values()).forEach(entry => {
     result.push(entry);
-    if (entry.id !== undefined) allIds.add(entry.id);
   });
 
-  // Hex entries second
   Array.from(hexMap.values()).forEach(entry => {
     result.push(entry);
-    if (entry.id !== undefined) allIds.add(entry.id);
   });
 
-  // Collect IDs of entries that were coalesced away (not in the final set)
   result.sort((a, b) => a.timestamp - b.timestamp);
 
   return result;
@@ -338,6 +332,14 @@ export class SyncEngine {
         const updatedCampaign = { ...conflict.localCampaign, version: result.newVersion };
         await cacheCampaign(updatedCampaign, result.newVersion ?? conflict.remoteVersion + 1);
         await updateBaseSnapshot(conflict.campaignId, updatedCampaign);
+        // Clear stale queue entries for this campaign
+        const entries = await getSyncQueue(conflict.campaignId);
+        const ids = entries.map(e => e.id).filter((id): id is number => id !== undefined);
+        if (ids.length > 0) {
+          await clearSyncQueue(ids);
+        }
+        // Notify CampaignContext to update in-memory version
+        this.notifyReload(updatedCampaign);
       } else if (resolution.strategy === 'keep-remote') {
         // Discard local changes — replace with remote
         const remote = conflict.remoteCampaign;
@@ -541,11 +543,13 @@ export class SyncEngine {
    */
   private async handleVersionConflict(
     localCampaign: Campaign,
-    serverVersion: number
+    _serverVersion: number
   ): Promise<void> {
     this.queuePaused = true;
 
     try {
+      // Fetch the latest remote state (may be newer than _serverVersion if
+      // another write landed between the RPC rejection and this fetch)
       const { campaign: remoteCampaign } = await loadCloudCampaign(
         this.client,
         localCampaign.id
@@ -555,10 +559,8 @@ export class SyncEngine {
         return;
       }
 
+      // computeCampaignConflict already populates versions from the campaigns
       const conflict = computeCampaignConflict(localCampaign, remoteCampaign);
-      // Override versions from the actual server state
-      conflict.remoteVersion = serverVersion;
-      conflict.localVersion = localCampaign.version ?? 0;
 
       this.setPendingConflict(conflict);
       this.setStatus('conflict');

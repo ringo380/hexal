@@ -65,9 +65,9 @@ function HexConflictList({ hexConflicts }: { hexConflicts: HexConflict[] }) {
         aria-label={`${hexConflicts.length} hex conflicts, click to ${expanded ? 'collapse' : 'expand'}`}
       >
         <span className="conflict-toggle-icon">{expanded ? '\u25BC' : '\u25B6'}</span>
-        <h4 className="conflict-section-title">
+        <span className="conflict-section-title">
           Hex Conflicts ({hexConflicts.length})
-        </h4>
+        </span>
       </button>
       {expanded && (
         <ul className="conflict-hex-list">
@@ -98,7 +98,6 @@ function AutoMergedSummary({ count }: { count: number }) {
 
 function ConflictResolutionModal({ conflict, onResolve }: ConflictResolutionModalProps) {
   const [resolving, setResolving] = useState(false);
-  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: undefined });
 
   const handleResolve = async (resolution: ConflictResolution) => {
     setResolving(true);
@@ -108,6 +107,14 @@ function ConflictResolutionModal({ conflict, onResolve }: ConflictResolutionModa
       setResolving(false);
     }
   };
+
+  // Escape dismisses by accepting remote changes (safe default — no data push)
+  const handleEscape = () => {
+    if (!resolving) {
+      handleResolve({ strategy: 'keep-remote' });
+    }
+  };
+  const focusTrapRef = useFocusTrap<HTMLDivElement>({ onEscape: handleEscape });
 
   const hasMetadataDiffs = conflict.metadataDiffs.length > 0;
   const hasHexConflicts = conflict.hexConflicts.length > 0;

@@ -52,23 +52,27 @@ export function SyncProvider({ engine, children }: SyncProviderProps) {
   useEffect(() => {
     if (!engine) return;
 
+    let mounted = true;
+    const safeSetQueueCount = (count: number) => { if (mounted) setQueueCount(count); };
+
     setSyncStatus(engine.getStatus());
     setPendingConflict(engine.getPendingConflict());
 
     const unsubStatus = engine.onStatusChange((status) => {
-      setSyncStatus(status);
+      if (mounted) setSyncStatus(status);
       // Refresh queue count on status change
-      engine.getQueueCount().then(setQueueCount).catch(() => {});
+      engine.getQueueCount().then(safeSetQueueCount).catch(() => {});
     });
 
     const unsubConflict = engine.onConflictChange((conflict) => {
-      setPendingConflict(conflict);
+      if (mounted) setPendingConflict(conflict);
     });
 
     // Initial queue count
-    engine.getQueueCount().then(setQueueCount).catch(() => {});
+    engine.getQueueCount().then(safeSetQueueCount).catch(() => {});
 
     return () => {
+      mounted = false;
       unsubStatus();
       unsubConflict();
     };
@@ -77,9 +81,12 @@ export function SyncProvider({ engine, children }: SyncProviderProps) {
   const resolveConflict = useCallback(
     async (resolution: ConflictResolution) => {
       if (!engine) return;
-      await engine.resolveConflict(resolution);
-      const count = await engine.getQueueCount();
-      setQueueCount(count);
+      try {
+        await engine.resolveConflict(resolution);
+      } finally {
+        // Always refresh queue count, even on error
+        engine.getQueueCount().then(setQueueCount).catch(() => {});
+      }
     },
     [engine]
   );

@@ -149,9 +149,6 @@ export async function clearSyncQueue(ids: number[]): Promise<void> {
 }
 
 /**
- * Remove all cached data for a campaign: campaign entry, hexes, and queue entries.
- */
-/**
  * Update the base snapshot for a campaign — the last state confirmed synced
  * with the server. Called after a successful remote save or remote load.
  */
