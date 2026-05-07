@@ -12,10 +12,10 @@ export class LocalPersistenceAdapter implements PersistenceAdapter {
     return window.electronAPI.listCampaigns();
   }
 
-  async save(campaign: Campaign, identifier?: string): Promise<SaveResult> {
+  async save(campaign: Campaign, identifier?: string, options?: { compact?: boolean }): Promise<SaveResult> {
     // Increment version counter on each save for future sync conflict detection
     const toSave = { ...campaign, version: (campaign.version ?? 0) + 1 };
-    return window.electronAPI.saveCampaign(toSave, identifier);
+    return window.electronAPI.saveCampaign(toSave, identifier, options?.compact);
   }
 
   async load(identifier: string): Promise<LoadResult> {

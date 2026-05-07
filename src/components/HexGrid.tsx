@@ -23,9 +23,10 @@ import {
   renderDraggingMarker
 } from '../services/hexRenderer';
 import { createHexRegionMap, getRegionBorderSegments } from '../services/regions';
-import { figurineCache } from '../services/markerFigurines';
 import { markerAudio } from '../services/audioService';
+import { figurineCache } from '../services/markerFigurines';
 import { useMarkerDrag } from '../hooks/useMarkerDrag';
+import { useGridNavigation } from '../hooks/useGridNavigation';
 import type { HexCoordinate, ContentCategory, MarkerPosition } from '../types';
 import { DEFAULT_MARKER_TYPES } from '../types/Markers';
 import HexContextMenu from './HexContextMenu';
@@ -260,41 +261,45 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
   // Track shift key at mouseDown time (read in mouseUp to decide multi-select vs normal)
   const clickWasShiftRef = useRef(false);
 
-  // Zoom state - both current and target for smooth animation
-  // Refs are the source of truth during animation; state is synced periodically for React UI
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [targetZoom, setTargetZoom] = useState(1);
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  const [targetPan, setTargetPan] = useState({ x: 0, y: 0 });
-  const zoomRef = useRef(1);
-  const panRef = useRef({ x: 0, y: 0 });
-  // Keep refs in sync when state is set outside of animation (e.g. initial values, drag)
-  zoomRef.current = zoomLevel;
-  panRef.current = panOffset;
-  const animationFrameRef = useRef<number | null>(null);
-  const isAnimatingRef = useRef(false);
-  const lastStateSyncRef = useRef(0);
+  // drawRef is set just below the draw definition; the hook reads it via the
+  // closure to redraw on every animation frame (refs are source of truth).
+  const drawRef = useRef<() => void>(() => {});
+
+  // Grid navigation hook (zoom + pan animation). Drag state is owned by HexGrid below.
+  const {
+    zoomLevel, panOffset, targetZoom,
+    zoomRef, panRef,
+    handleZoom,
+    setPanOffset, setTargetZoom, setTargetPan
+  } = useGridNavigation({
+    minZoom: MIN_ZOOM,
+    maxZoom: MAX_ZOOM,
+    zoomStep: ZOOM_STEP,
+    animationSpeed: ZOOM_ANIMATION_SPEED,
+    dragThresholdEmpty: DRAG_THRESHOLD_EMPTY,
+    dragThresholdHex: DRAG_THRESHOLD_HEX,
+    initialZoom: 1,
+    initialPan: { x: 0, y: 0 },
+    onTick: () => drawRef.current()
+  });
+
+  // Local map-drag state (not in hook because HexGrid integrates drag with marker
+  // drag, multi-select shift-click, and tooltip suppression).
+  const [isPotentialDrag, setIsPotentialDrag] = useState(false);
+  const [isDraggingMap, setIsDraggingMap] = useState(false);
+  const dragMapStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0, onActiveHex: false });
+
+  // Mirror the latest travel path into a ref so the draw() callback stays stable.
+  const travelPathRef = useRef<string[] | undefined>(travelPath);
+  useEffect(() => {
+    travelPathRef.current = travelPath;
+  }, [travelPath]);
 
   // Store indicator positions for mouse hover detection
   const indicatorPositionsRef = useRef<IndicatorPosition[]>([]);
 
   // Store marker positions for hit testing
   const markerPositionsRef = useRef<MarkerPosition[]>([]);
-
-  // Mirror travelPath prop to ref for draw() (avoid stale closures in animation loop)
-  const travelPathRef = useRef(travelPath);
-  useEffect(() => { travelPathRef.current = travelPath; }, [travelPath]);
-
-  // Drag-to-pan state
-  const [isDraggingMap, setIsDraggingMap] = useState(false);
-  const [isPotentialDrag, setIsPotentialDrag] = useState(false);
-  const dragMapStartRef = useRef({
-    x: 0,
-    y: 0,
-    panX: 0,
-    panY: 0,
-    onActiveHex: false
-  });
 
   // Marker drag state machine with free-form positioning
   const markerDrag = useMarkerDrag({
@@ -891,8 +896,9 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
     }
   }, [campaign, getHex, selectedCoordinate, getTerrainColor, markerDrag.isDragging, markerDrag.state, regions, hexRegionMap, multiSelectedKeys, renderWeatherOverlay, layerVisibility]);
 
-  // Ref to latest draw for imperative calls from animation loop (avoids stale closures)
-  const drawRef = useRef(draw);
+  // Keep drawRef pointing at the latest draw on every render so the hook's
+  // onTick callback (registered above with the initial drawRef) calls the
+  // current closure each frame.
   drawRef.current = draw;
 
   // Track container size for responsive canvas
@@ -1386,11 +1392,8 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
 
         if (panDelta.x !== 0 || panDelta.y !== 0) {
           e.preventDefault();
-          // Use targetPan for smooth animated panning
+          // Use targetPan for smooth animated panning; the hook starts the animation loop.
           setTargetPan(prev => ({ x: prev.x + panDelta.x, y: prev.y + panDelta.y }));
-          if (!isAnimatingRef.current) {
-            isAnimatingRef.current = true;
-          }
           return;
         }
       }
@@ -1400,112 +1403,30 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [campaign, clearSelection, selectedMarker, removeMarker, selectMarker, regionPaintMode, setRegionPaintMode, multiSelectedKeys, clearMultiSelection]);
 
-  // Smooth zoom and pan animation loop - uses refs to avoid React re-renders per frame.
-  // Only syncs to React state every ~100ms (for zoom label, etc.) and on animation end.
-  useEffect(() => {
-    const animate = () => {
-      const curZoom = zoomRef.current;
-      const curPan = panRef.current;
-
-      const zoomDiff = Math.abs(targetZoom - curZoom);
-      const panDiffX = Math.abs(targetPan.x - curPan.x);
-      const panDiffY = Math.abs(targetPan.y - curPan.y);
-
-      // Snap thresholds
-      const zoomDone = zoomDiff < 0.001;
-      const panDone = panDiffX < 0.5 && panDiffY < 0.5;
-
-      if (zoomDone && panDone) {
-        // Snap to final values and sync state
-        zoomRef.current = targetZoom;
-        panRef.current = targetPan;
-        setZoomLevel(targetZoom);
-        setPanOffset(targetPan);
-        isAnimatingRef.current = false;
-        drawRef.current();
-        return;
-      }
-
-      // Lerp both zoom and pan together
-      const newZoom = curZoom + (targetZoom - curZoom) * ZOOM_ANIMATION_SPEED;
-      const newPanX = curPan.x + (targetPan.x - curPan.x) * ZOOM_ANIMATION_SPEED;
-      const newPanY = curPan.y + (targetPan.y - curPan.y) * ZOOM_ANIMATION_SPEED;
-
-      // Update refs (no React re-render)
-      zoomRef.current = newZoom;
-      panRef.current = { x: newPanX, y: newPanY };
-
-      // Throttle React state sync to ~10fps for UI elements (zoom label)
-      const now = performance.now();
-      if (now - lastStateSyncRef.current > 100) {
-        lastStateSyncRef.current = now;
-        setZoomLevel(newZoom);
-        setPanOffset({ x: newPanX, y: newPanY });
-      }
-
-      // Redraw canvas directly from refs
-      drawRef.current();
-
-      animationFrameRef.current = requestAnimationFrame(animate);
-    };
-
-    if (isAnimatingRef.current) {
-      animationFrameRef.current = requestAnimationFrame(animate);
-    }
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [targetZoom, targetPan]);
-
   // Handle wheel zoom (centered on selected hex, or cursor if no selection)
   const handleWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
     e.preventDefault();
 
     const container = containerRef.current;
     if (!container) return;
+    const containerRect = container.getBoundingClientRect();
 
-    // Determine zoom direction
-    const zoomDelta = e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
-    const newTargetZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, targetZoom + zoomDelta));
-
-    if (newTargetZoom !== targetZoom) {
-      const containerRect = container.getBoundingClientRect();
-
-      if (selectedCoordinate) {
-        // If a hex is selected, zoom toward it (center it in viewport)
-        const hexWorld = hexCenter(selectedCoordinate);
-        const viewportCenterX = containerRect.width / 2;
-        const viewportCenterY = containerRect.height / 2;
-        const newPanX = viewportCenterX - hexWorld.x * newTargetZoom;
-        const newPanY = viewportCenterY - hexWorld.y * newTargetZoom;
-        setTargetPan({ x: newPanX, y: newPanY });
-      } else {
-        // No selection - zoom toward cursor position
-        // Get cursor position relative to container
-        const cursorX = e.clientX - containerRect.left;
-        const cursorY = e.clientY - containerRect.top;
-
-        // Convert cursor to world coordinates using current pan/zoom
-        const worldX = (cursorX - targetPan.x) / targetZoom;
-        const worldY = (cursorY - targetPan.y) / targetZoom;
-
-        // Calculate new pan to keep the world point under cursor after zoom
-        const newPanX = cursorX - worldX * newTargetZoom;
-        const newPanY = cursorY - worldY * newTargetZoom;
-        setTargetPan({ x: newPanX, y: newPanY });
-      }
-
-      setTargetZoom(newTargetZoom);
-
-      // Start animation if not already running
-      if (!isAnimatingRef.current) {
-        isAnimatingRef.current = true;
-      }
+    if (selectedCoordinate) {
+      // If a hex is selected, zoom toward it (center it in viewport)
+      const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, targetZoom + (e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP)));
+      const hexWorld = hexCenter(selectedCoordinate);
+      const viewportCenterX = containerRect.width / 2;
+      const viewportCenterY = containerRect.height / 2;
+      const newPanX = viewportCenterX - hexWorld.x * newZoom;
+      const newPanY = viewportCenterY - hexWorld.y * newZoom;
+      
+      setTargetZoom(newZoom);
+      setTargetPan({ x: newPanX, y: newPanY });
+    } else {
+      // No selection - zoom toward cursor position using hook
+      handleZoom(e.deltaY, e.clientX, e.clientY, containerRect);
     }
-  }, [targetZoom, targetPan, selectedCoordinate]);
+  }, [targetZoom, selectedCoordinate, handleZoom, setTargetZoom, setTargetPan]);
 
   // Zoom control functions for keyboard shortcuts (centered on selected hex)
   const zoomIn = useCallback(() => {
@@ -1523,13 +1444,9 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
         const newPanY = viewportCenterY - hexWorld.y * newTargetZoom;
         setTargetPan({ x: newPanX, y: newPanY });
       }
-
       setTargetZoom(newTargetZoom);
-      if (!isAnimatingRef.current) {
-        isAnimatingRef.current = true;
-      }
     }
-  }, [targetZoom, selectedCoordinate]);
+  }, [targetZoom, selectedCoordinate, setTargetZoom, setTargetPan]);
 
   const zoomOut = useCallback(() => {
     const container = containerRef.current;
@@ -1546,21 +1463,14 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
         const newPanY = viewportCenterY - hexWorld.y * newTargetZoom;
         setTargetPan({ x: newPanX, y: newPanY });
       }
-
       setTargetZoom(newTargetZoom);
-      if (!isAnimatingRef.current) {
-        isAnimatingRef.current = true;
-      }
     }
-  }, [targetZoom, selectedCoordinate]);
+  }, [targetZoom, selectedCoordinate, setTargetZoom, setTargetPan]);
 
   const resetZoom = useCallback(() => {
     setTargetZoom(1);
     setTargetPan({ x: 0, y: 0 });
-    if (!isAnimatingRef.current) {
-      isAnimatingRef.current = true;
-    }
-  }, []);
+  }, [setTargetZoom, setTargetPan]);
 
   // Keyboard shortcuts for zoom
   useEffect(() => {
@@ -1588,10 +1498,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
   const handleZoomSliderChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newZoom = parseFloat(e.target.value);
     setTargetZoom(newZoom);
-    if (!isAnimatingRef.current) {
-      isAnimatingRef.current = true;
-    }
-  }, []);
+  }, [setTargetZoom]);
 
   if (!campaign) return null;
 

@@ -312,35 +312,53 @@ app.on('activate', () => {
 ipcMain.handle('list-campaigns', async () => {
   const hexalFolder = getHexalFolder();
   try {
-    const files = fs.readdirSync(hexalFolder);
-    const campaigns = files
-      .filter(f => f.endsWith('.hexal'))
-      .map(f => {
-        const filePath = path.join(hexalFolder, f);
-        const stats = fs.statSync(filePath);
-        return {
-          name: f.replace('.hexal', ''),
-          path: filePath,
-          modifiedAt: stats.mtime.toISOString()
-        };
-      })
-      .sort((a, b) => new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime());
-    return campaigns;
+    const files = await fs.promises.readdir(hexalFolder);
+    const campaigns = await Promise.all(
+      files
+        .filter(f => f.endsWith('.hexal'))
+        .map(async f => {
+          const filePath = path.join(hexalFolder, f);
+          const stats = await fs.promises.stat(filePath);
+          return {
+            name: f.replace('.hexal', ''),
+            path: filePath,
+            modifiedAt: stats.mtime.toISOString()
+          };
+        })
+    );
+    return campaigns.sort((a, b) => new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime());
   } catch {
     return [];
   }
 });
 
 // Save campaign
-ipcMain.handle('save-campaign', async (_event, { campaign, filePath }) => {
+ipcMain.handle('save-campaign', async (_event, { campaign, filePath, compact = false }) => {
   try {
     let savePath = filePath;
     if (!savePath) {
       const hexalFolder = getHexalFolder();
-      const safeName = campaign.name.replace(/\//g, '-');
+      const safeName = campaign.name.replace(/[/\\]/g, '-');
       savePath = path.join(hexalFolder, `${safeName}.hexal`);
     }
-    fs.writeFileSync(savePath, JSON.stringify(campaign, null, 2), 'utf-8');
+
+    // Security check: for autosaves (no caller-supplied filePath) the resolved
+    // path must stay inside the Hexal folder. A crafted campaign.name like
+    // "../../etc/foo" would otherwise let the renderer write outside it.
+    // dialog-derived filePaths are trusted because the user picked them.
+    if (!filePath) {
+      const resolvedPath = path.resolve(savePath);
+      const hexalFolder = getHexalFolder();
+      if (!resolvedPath.startsWith(hexalFolder + path.sep)) {
+        return { success: false, error: 'Path outside Hexal folder' };
+      }
+    }
+
+    const content = compact 
+      ? JSON.stringify(campaign) 
+      : JSON.stringify(campaign, null, 2);
+
+    await fs.promises.writeFile(savePath, content, 'utf-8');
     return { success: true, path: savePath };
   } catch (error) {
     return { success: false, error: String(error) };
@@ -350,7 +368,7 @@ ipcMain.handle('save-campaign', async (_event, { campaign, filePath }) => {
 // Load campaign
 ipcMain.handle('load-campaign', async (_event, filePath) => {
   try {
-    const data = fs.readFileSync(filePath, 'utf-8');
+    const data = await fs.promises.readFile(filePath, 'utf-8');
     const campaign = JSON.parse(data);
     return { success: true, campaign, path: filePath };
   } catch (error) {
@@ -359,9 +377,15 @@ ipcMain.handle('load-campaign', async (_event, filePath) => {
 });
 
 // Delete campaign
-ipcMain.handle('delete-campaign', async (_event, filePath) => {
+ipcMain.handle('delete-campaign', async (_event, filePath: string) => {
   try {
-    fs.unlinkSync(filePath);
+    // Sanity check: only allow deleting .hexal campaign files. The renderer's
+    // current delete UI only surfaces files from list-campaigns (Hexal folder),
+    // but dialog-loaded campaigns from elsewhere should still be deletable.
+    if (typeof filePath !== 'string' || !filePath.endsWith('.hexal')) {
+      return { success: false, error: 'Only .hexal files can be deleted' };
+    }
+    await fs.promises.unlink(filePath);
     return { success: true };
   } catch (error) {
     return { success: false, error: String(error) };
@@ -420,7 +444,7 @@ ipcMain.handle('save-as-dialog', async (_event, defaultName: string) => {
 // Save file (for export)
 ipcMain.handle('save-file', async (_event, { filePath, content }) => {
   try {
-    fs.writeFileSync(filePath, content, 'utf-8');
+    await fs.promises.writeFile(filePath, content, 'utf-8');
     return { success: true };
   } catch (error) {
     return { success: false, error: String(error) };
@@ -438,7 +462,7 @@ ipcMain.handle('save-binary-file', async (_event, { filePath, data }: { filePath
   try {
     // data is a base64 string from Blob
     const buffer = Buffer.from(data, 'base64');
-    fs.writeFileSync(filePath, buffer);
+    await fs.promises.writeFile(filePath, buffer);
     return { success: true };
   } catch (error) {
     return { success: false, error: String(error) };
@@ -473,22 +497,23 @@ ipcMain.handle('export-file-dialog', async (_event, { defaultName, format }: { d
 ipcMain.handle('list-user-templates', async () => {
   try {
     const folder = getTemplatesFolder();
-    const files = fs.readdirSync(folder).filter(f => f.endsWith('.hexal-template'));
-    return files.map(f => {
+    const files = (await fs.promises.readdir(folder)).filter(f => f.endsWith('.hexal-template'));
+    return Promise.all(files.map(async f => {
       const filePath = path.join(folder, f);
       let content: string | null = null;
       try {
-        content = fs.readFileSync(filePath, 'utf-8');
+        content = await fs.promises.readFile(filePath, 'utf-8');
       } catch {
         // Skip unreadable files
       }
+      const stats = await fs.promises.stat(filePath);
       return {
         fileName: f,
         filePath,
-        modifiedAt: fs.statSync(filePath).mtime.toISOString(),
+        modifiedAt: stats.mtime.toISOString(),
         content,
       };
-    });
+    }));
   } catch (err: any) {
     return [];
   }
@@ -503,7 +528,7 @@ ipcMain.handle('save-user-template', async (_event, { envelope, fileName }: { en
     if (!filePath.startsWith(folder + path.sep)) {
       return { success: false, error: 'Invalid file name' };
     }
-    fs.writeFileSync(filePath, envelope, 'utf-8');
+    await fs.promises.writeFile(filePath, envelope, 'utf-8');
     return { success: true, filePath };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -518,7 +543,7 @@ ipcMain.handle('delete-user-template', async (_event, filePath: string) => {
     if (!filePath.startsWith(folder + path.sep)) {
       return { success: false, error: 'File is not in the templates folder' };
     }
-    fs.unlinkSync(filePath);
+    await fs.promises.unlink(filePath);
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -541,7 +566,7 @@ ipcMain.handle('import-template-dialog', async () => {
   }
 
   try {
-    const content = fs.readFileSync(result.filePaths[0], 'utf-8');
+    const content = await fs.promises.readFile(result.filePaths[0], 'utf-8');
     return content;
   } catch (err: any) {
     return null;

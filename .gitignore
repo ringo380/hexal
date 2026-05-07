@@ -8,6 +8,10 @@ CLAUDE.md
 .plugin-config/
 docs/plans/
 
+# Other AI assistant config
+AGENTS.md
+.junie/
+
 # Worktrees
 .worktrees/
 
