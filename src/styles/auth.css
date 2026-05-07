@@ -48,6 +48,115 @@
   line-height: 1.4;
 }
 
+/* Login Modal — Email/password forms */
+
+.login-modal .auth-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.login-modal .auth-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.login-modal .auth-tab:hover {
+  color: var(--text-primary);
+}
+
+.login-modal .auth-tab.active {
+  color: var(--accent-color);
+  border-bottom-color: var(--accent-color);
+}
+
+.login-modal .auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.login-modal .auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.login-modal .auth-field span {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.login-modal .auth-field input {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 8px 10px;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.login-modal .auth-field input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.login-modal .auth-submit {
+  margin-top: 4px;
+  width: 100%;
+}
+
+.login-modal .auth-links {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.login-modal .auth-link {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 4px 0;
+  text-decoration: underline;
+}
+
+.login-modal .auth-link:hover {
+  color: var(--accent-color);
+}
+
+/* Account Modal — Clerk UserProfile wrapper */
+
+.account-modal {
+  width: min(880px, 96vw);
+  max-height: 90vh;
+}
+
+.account-modal .account-modal-body {
+  padding: 0;
+  overflow: auto;
+  max-height: calc(90vh - 56px);
+}
+
+.account-modal .account-modal-body .cl-rootBox,
+.account-modal .account-modal-body .cl-card {
+  width: 100%;
+  box-shadow: none;
+  background: transparent;
+}
+
 /* Profile Menu */
 
 .profile-menu {

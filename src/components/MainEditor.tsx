@@ -29,6 +29,7 @@ import SessionLogModal from './modals/SessionLogModal';
 import QuestManagerModal from './modals/QuestManagerModal';
 import SettingsModal from './modals/SettingsModal';
 import LoginModal from './auth/LoginModal';
+import AccountModal from './auth/AccountModal';
 import ProfileMenu from './auth/ProfileMenu';
 import ConnectionStatus from './ui/ConnectionStatus';
 import WebServerStatus from './player/WebServerStatus';
@@ -90,6 +91,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
   const [showQuestManager, setShowQuestManager] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
   const [showCreateRegion, setShowCreateRegion] = useState(false);
   const [showExportTemplate, setShowExportTemplate] = useState(false);
   const [showFogOfWar, setShowFogOfWar] = useState(false);
@@ -518,7 +520,10 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
           </button>
           <ConnectionStatus />
           <WebServerStatus />
-          <ProfileMenu onOpenLogin={() => setShowLogin(true)} />
+          <ProfileMenu
+            onOpenLogin={() => setShowLogin(true)}
+            onOpenAccount={() => setShowAccount(true)}
+          />
           <button className="btn btn-icon" onClick={() => setShowSettings(true)} title="Settings" aria-label="Settings">
             <Icon name="settings" size={18} />
           </button>
@@ -650,6 +655,9 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
       )}
       {showLogin && (
         <LoginModal onClose={() => setShowLogin(false)} />
+      )}
+      {showAccount && (
+        <AccountModal onClose={() => setShowAccount(false)} />
       )}
       {showCreateRegion && multiSelectedKeys.size > 0 && (
         <CreateRegionFromSelectionModal

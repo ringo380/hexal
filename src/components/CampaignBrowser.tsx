@@ -9,6 +9,7 @@ import type { Campaign } from '../types';
 import NewCampaignModal from './modals/NewCampaignModal';
 import ConfirmDialog from './modals/ConfirmDialog';
 import LoginModal from './auth/LoginModal';
+import AccountModal from './auth/AccountModal';
 import ProfileMenu from './auth/ProfileMenu';
 import Icon from './icons/Icon';
 import { useToast } from '../stores/ToastContext';
@@ -36,6 +37,7 @@ function CampaignBrowser() {
   const [cloudCampaigns, setCloudCampaigns] = useState<CloudCampaignInfo[]>([]);
   const [showNewModal, setShowNewModal] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
   const [loading, setLoading] = useState(true);
   const [cloudLoading, setCloudLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ path: string; name: string } | null>(null);
@@ -257,7 +259,10 @@ function CampaignBrowser() {
             <p className="subtitle">D&D Hex Crawl Campaign Manager</p>
           </div>
           <div className="browser-header-auth">
-            <ProfileMenu onOpenLogin={() => setShowLogin(true)} />
+            <ProfileMenu
+              onOpenLogin={() => setShowLogin(true)}
+              onOpenAccount={() => setShowAccount(true)}
+            />
           </div>
         </div>
       </div>
@@ -394,6 +399,10 @@ function CampaignBrowser() {
 
       {showLogin && (
         <LoginModal onClose={() => setShowLogin(false)} />
+      )}
+
+      {showAccount && (
+        <AccountModal onClose={() => setShowAccount(false)} />
       )}
 
       {deleteConfirm && (
