@@ -60,8 +60,9 @@ function LoginModal({ onClose }: LoginModalProps) {
     if (!signIn) return;
     setError('');
     setSubmitting(true);
+    let popup: Window | null = null;
     try {
-      const popup = window.open('about:blank', '_blank', 'width=500,height=700');
+      popup = window.open('about:blank', '_blank', 'width=500,height=700');
       if (!popup) {
         throw new Error('Could not open popup window. Check your popup blocker settings.');
       }
@@ -78,12 +79,15 @@ function LoginModal({ onClose }: LoginModalProps) {
         await signIn.finalize();
         onClose();
       } else {
+        setError('Additional verification required. Try a different method.');
         setSubmitting(false);
       }
     } catch (err) {
       setError(errorMessage(err, 'Sign-in failed. Please try again.'));
       console.error('OAuth error:', err);
       setSubmitting(false);
+    } finally {
+      if (popup && !popup.closed) popup.close();
     }
   };
 
@@ -102,7 +106,9 @@ function LoginModal({ onClose }: LoginModalProps) {
         await signIn.finalize();
         onClose();
       } else {
-        setError('Additional verification is required. Please complete sign-in via OAuth.');
+        setError(
+          'Additional verification is required to complete sign-in. Manage 2FA in your account settings.'
+        );
       }
     } catch (err) {
       setError(errorMessage(err, 'Invalid email or password.'));
@@ -220,6 +226,12 @@ function LoginModal({ onClose }: LoginModalProps) {
   const switchMode = (next: EmailMode) => {
     resetState();
     setMode(next);
+  };
+
+  const switchTab = (next: AuthTab) => {
+    setTab(next);
+    setMode('signin');
+    resetState();
   };
 
   const renderEmailTab = () => {
@@ -402,8 +414,19 @@ function LoginModal({ onClose }: LoginModalProps) {
             <button className="btn btn-primary auth-submit" type="submit" disabled={submitting}>
               {submitting ? 'Saving...' : 'Set password & sign in'}
             </button>
+            <div className="auth-links">
+              <button type="button" className="auth-link" onClick={() => switchMode('signin')}>
+                Back to sign in
+              </button>
+            </div>
           </form>
         );
+
+      default: {
+        const _exhaustive: never = mode;
+        void _exhaustive;
+        return null;
+      }
     }
   };
 
@@ -452,10 +475,7 @@ function LoginModal({ onClose }: LoginModalProps) {
               role="tab"
               aria-selected={tab === 'email'}
               className={`auth-tab ${tab === 'email' ? 'active' : ''}`}
-              onClick={() => {
-                setTab('email');
-                resetState();
-              }}
+              onClick={() => switchTab('email')}
             >
               Email
             </button>
@@ -463,10 +483,7 @@ function LoginModal({ onClose }: LoginModalProps) {
               role="tab"
               aria-selected={tab === 'oauth'}
               className={`auth-tab ${tab === 'oauth' ? 'active' : ''}`}
-              onClick={() => {
-                setTab('oauth');
-                resetState();
-              }}
+              onClick={() => switchTab('oauth')}
             >
               OAuth
             </button>

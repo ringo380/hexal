@@ -6,7 +6,7 @@ import Icon from '../icons/Icon';
 
 interface ProfileMenuProps {
   onOpenLogin: () => void;
-  onOpenAccount?: () => void;
+  onOpenAccount: () => void;
 }
 
 // Deterministic color from display name for avatar circle
@@ -75,18 +75,16 @@ function ProfileMenu({ onOpenLogin, onOpenAccount }: ProfileMenuProps) {
           <div className="profile-dropdown-name">{user.displayName}</div>
           <div className="profile-dropdown-email">{user.email}</div>
           <div className="profile-dropdown-divider" />
-          {onOpenAccount && (
-            <button
-              className="btn btn-secondary"
-              onClick={() => {
-                setOpen(false);
-                onOpenAccount();
-              }}
-              style={{ width: '100%', fontSize: 12, padding: '6px 8px', marginBottom: 4 }}
-            >
-              Account settings
-            </button>
-          )}
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              setOpen(false);
+              onOpenAccount();
+            }}
+            style={{ width: '100%', fontSize: 12, padding: '6px 8px', marginBottom: 4 }}
+          >
+            Account settings
+          </button>
           <button
             className="btn btn-secondary"
             onClick={handleSignOut}
