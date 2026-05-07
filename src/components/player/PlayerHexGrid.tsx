@@ -14,6 +14,15 @@ import {
   getVisibleHexRange
 } from '../../services/hexGeometry';
 import { hexToRgba, renderMarkers } from '../../services/hexRenderer';
+import { useGridNavigation } from '../../hooks/useGridNavigation';
+import {
+  IndicatorPosition,
+  RenderContext,
+  renderHexBackgrounds,
+  renderHexContent,
+  renderAllConnections,
+  renderAllMarkers
+} from '../../services/gridRenderer';
 import { figurineCache } from '../../services/markerFigurines';
 import { createHexRegionMap, getRegionBorderSegments } from '../../services/regions';
 import type { Region } from '../../types';
@@ -51,18 +60,23 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
     prevWeatherFieldRef.current = weatherField;
   }
 
-  // Zoom/pan state
-  const [zoomLevel, setZoomLevel] = useState(0.8);
-  const [targetZoom, setTargetZoom] = useState(0.8);
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  const [targetPan, setTargetPan] = useState({ x: 0, y: 0 });
-  const animationFrameRef = useRef<number | null>(null);
-  const isAnimatingRef = useRef(false);
-
-  // Drag state
-  const [isDragging, setIsDragging] = useState(false);
-  const [isPotentialDrag, setIsPotentialDrag] = useState(false);
-  const dragStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+  // Grid navigation hook
+  const {
+    zoomLevel, panOffset, targetZoom, targetPan,
+    zoomRef, panRef, isDragging, isPotentialDrag,
+    handleZoom, handlePan, handleDragStart, handleDragMove, handleDragEnd,
+    setZoomLevel, setPanOffset, setTargetZoom, setTargetPan
+  } = useGridNavigation({
+    minZoom: MIN_ZOOM,
+    maxZoom: MAX_ZOOM,
+    zoomStep: ZOOM_STEP,
+    animationSpeed: ZOOM_ANIMATION_SPEED,
+    panSpeed: PAN_SPEED,
+    dragThresholdEmpty: DRAG_THRESHOLD,
+    dragThresholdHex: DRAG_THRESHOLD,
+    initialZoom: 0.8,
+    initialPan: { x: 0, y: 0 }
+  });
 
   // Touch state
   const touchStartRef = useRef<{ x: number; y: number; time: number; panX: number; panY: number } | null>(null);
@@ -522,114 +536,41 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
     });
   }, [campaign.markerTypes, draw]);
 
-  // Smooth animation loop
-  useEffect(() => {
-    const animate = () => {
-      const zoomDiff = Math.abs(targetZoom - zoomLevel);
-      const panDiffX = Math.abs(targetPan.x - panOffset.x);
-      const panDiffY = Math.abs(targetPan.y - panOffset.y);
-
-      if (zoomDiff < 0.001 && panDiffX < 0.5 && panDiffY < 0.5) {
-        if (zoomLevel !== targetZoom) setZoomLevel(targetZoom);
-        if (panOffset.x !== targetPan.x || panOffset.y !== targetPan.y) {
-          setPanOffset(targetPan);
-        }
-        isAnimatingRef.current = false;
-        return;
-      }
-
-      setZoomLevel(zoomLevel + (targetZoom - zoomLevel) * ZOOM_ANIMATION_SPEED);
-      setPanOffset({
-        x: panOffset.x + (targetPan.x - panOffset.x) * ZOOM_ANIMATION_SPEED,
-        y: panOffset.y + (targetPan.y - panOffset.y) * ZOOM_ANIMATION_SPEED
-      });
-
-      animationFrameRef.current = requestAnimationFrame(animate);
-    };
-
-    if (isAnimatingRef.current) {
-      animationFrameRef.current = requestAnimationFrame(animate);
-    }
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [zoomLevel, targetZoom, panOffset, targetPan]);
-
   // Wheel zoom
   const handleWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     const container = containerRef.current;
     if (!container) return;
-
-    const zoomDelta = e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
-    const newTargetZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, targetZoom + zoomDelta));
-
-    if (newTargetZoom !== targetZoom) {
-      const containerRect = container.getBoundingClientRect();
-      const cursorX = e.clientX - containerRect.left;
-      const cursorY = e.clientY - containerRect.top;
-      const worldX = (cursorX - targetPan.x) / targetZoom;
-      const worldY = (cursorY - targetPan.y) / targetZoom;
-      const newPanX = cursorX - worldX * newTargetZoom;
-      const newPanY = cursorY - worldY * newTargetZoom;
-
-      setTargetPan({ x: newPanX, y: newPanY });
-      setTargetZoom(newTargetZoom);
-
-      if (!isAnimatingRef.current) {
-        isAnimatingRef.current = true;
-      }
-    }
-  }, [targetZoom, targetPan]);
+    const containerRect = container.getBoundingClientRect();
+    handleZoom(e.deltaY, e.clientX, e.clientY, containerRect);
+  }, [handleZoom]);
 
   // Mouse handlers for pan + click-to-select
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (e.button !== 0) return;
-    setIsPotentialDrag(true);
-    dragStartRef.current = {
-      x: e.clientX,
-      y: e.clientY,
-      panX: panOffset.x,
-      panY: panOffset.y
-    };
-  }, [panOffset]);
+    handleDragStart(e.clientX, e.clientY);
+  }, [handleDragStart]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isPotentialDrag && !isDragging) return;
-
-    if (isPotentialDrag && !isDragging) {
-      const dx = e.clientX - dragStartRef.current.x;
-      const dy = e.clientY - dragStartRef.current.y;
-      if (Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) {
-        setIsDragging(true);
-      }
-    }
-
-    if (isDragging) {
-      const dx = e.clientX - dragStartRef.current.x;
-      const dy = e.clientY - dragStartRef.current.y;
-      setPanOffset({
-        x: dragStartRef.current.panX + dx,
-        y: dragStartRef.current.panY + dy
-      });
-    }
-  }, [isPotentialDrag, isDragging]);
+    handleDragMove(e.clientX, e.clientY);
+  }, [handleDragMove]);
 
   const handleMouseUp = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (isPotentialDrag && !isDragging) {
-      // Click — select hex
+    const wasDragging = handleDragEnd();
+
+    if (!wasDragging) {
+      // It was a click: handle hex selection
       const canvas = canvasRef.current;
-      if (canvas) {
+      if (canvas && campaign) {
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
         const canvasX = (e.clientX - rect.left) * scaleX;
         const canvasY = (e.clientY - rect.top) * scaleY;
-        const worldX = (canvasX - panOffset.x) / zoomLevel;
-        const worldY = (canvasY - panOffset.y) / zoomLevel;
+
+        // Convert to world coordinates using refs to ensure latest values
+        const worldX = (canvasX - panRef.current.x) / zoomRef.current;
+        const worldY = (canvasY - panRef.current.y) / zoomRef.current;
 
         const coord = coordinateAt({ x: worldX, y: worldY }, campaign.gridWidth, campaign.gridHeight);
         if (coord) {
@@ -638,64 +579,57 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
           // Only allow selecting discovered/cleared hexes — prevent leaking terrain info
           if (hex && hex.status !== 'undiscovered') {
             onHexSelect(coord);
+          } else {
+            onHexDeselect();
           }
+        } else {
+          onHexDeselect();
         }
       }
     }
-    if (isDragging) {
-      setTargetPan(panOffset);
-    }
-    setIsPotentialDrag(false);
-    setIsDragging(false);
-  }, [isPotentialDrag, isDragging, panOffset, zoomLevel, campaign, onHexSelect]);
+  }, [campaign, onHexSelect, onHexDeselect, panRef, zoomRef]);
 
   const handleMouseLeave = useCallback(() => {
-    setIsPotentialDrag(false);
-    setIsDragging(false);
-  }, []);
+    handleDragEnd();
+  }, [handleDragEnd]);
 
   // Zoom control functions for keyboard shortcuts
-  const selectedCoordForZoom = selectedCoord;
-
   const zoomIn = useCallback(() => {
     const container = containerRef.current;
     const newTargetZoom = Math.min(MAX_ZOOM, targetZoom + ZOOM_STEP);
     if (newTargetZoom !== targetZoom) {
-      if (selectedCoordForZoom && container) {
+      if (selectedCoord && container) {
         const containerRect = container.getBoundingClientRect();
-        const hexWorld = hexCenter(selectedCoordForZoom);
+        const hexWorld = hexCenter(selectedCoord);
         setTargetPan({
           x: containerRect.width / 2 - hexWorld.x * newTargetZoom,
           y: containerRect.height / 2 - hexWorld.y * newTargetZoom
         });
       }
       setTargetZoom(newTargetZoom);
-      if (!isAnimatingRef.current) isAnimatingRef.current = true;
     }
-  }, [targetZoom, selectedCoordForZoom]);
+  }, [targetZoom, selectedCoord, setTargetPan, setTargetZoom]);
 
   const zoomOut = useCallback(() => {
     const container = containerRef.current;
     const newTargetZoom = Math.max(MIN_ZOOM, targetZoom - ZOOM_STEP);
     if (newTargetZoom !== targetZoom) {
-      if (selectedCoordForZoom && container) {
+      if (selectedCoord && container) {
         const containerRect = container.getBoundingClientRect();
-        const hexWorld = hexCenter(selectedCoordForZoom);
+        const hexWorld = hexCenter(selectedCoord);
         setTargetPan({
           x: containerRect.width / 2 - hexWorld.x * newTargetZoom,
           y: containerRect.height / 2 - hexWorld.y * newTargetZoom
         });
       }
       setTargetZoom(newTargetZoom);
-      if (!isAnimatingRef.current) isAnimatingRef.current = true;
     }
-  }, [targetZoom, selectedCoordForZoom]);
+  }, [targetZoom, selectedCoord, setTargetPan, setTargetZoom]);
 
   const resetZoom = useCallback(() => {
-    setTargetZoom(1);
+    setTargetZoom(0.8);
     setTargetPan({ x: 0, y: 0 });
-    if (!isAnimatingRef.current) isAnimatingRef.current = true;
-  }, []);
+  }, [setTargetPan, setTargetZoom]);
 
   // Keyboard navigation: WSAD/Arrow pan, Escape deselect
   useEffect(() => {
@@ -733,8 +667,7 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
 
       if (panDelta.x !== 0 || panDelta.y !== 0) {
         e.preventDefault();
-        setTargetPan(prev => ({ x: prev.x + panDelta.x, y: prev.y + panDelta.y }));
-        if (!isAnimatingRef.current) isAnimatingRef.current = true;
+        handlePan(panDelta.x, panDelta.y);
       }
     };
 
@@ -763,17 +696,17 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
     return () => window.removeEventListener('keydown', handleZoomKeyDown);
   }, [zoomIn, zoomOut, resetZoom]);
 
-  // Touch handlers for mobile pan, pinch-to-zoom, and tap-to-select
   const handleTouchStart = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     if (e.touches.length === 1) {
       const touch = e.touches[0];
+      handleDragStart(touch.clientX, touch.clientY);
       touchStartRef.current = {
         x: touch.clientX,
         y: touch.clientY,
         time: Date.now(),
-        panX: panOffset.x,
-        panY: panOffset.y
+        panX: panRef.current.x,
+        panY: panRef.current.y
       };
       pinchStartRef.current = null;
     } else if (e.touches.length === 2) {
@@ -781,22 +714,17 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       pinchStartRef.current = {
         dist: Math.sqrt(dx * dx + dy * dy),
-        zoom: zoomLevel
+        zoom: zoomRef.current
       };
       touchStartRef.current = null;
     }
-  }, [panOffset, zoomLevel]);
+  }, [handleDragStart, panRef, zoomRef]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     if (e.touches.length === 1 && touchStartRef.current) {
       const touch = e.touches[0];
-      const dx = touch.clientX - touchStartRef.current.x;
-      const dy = touch.clientY - touchStartRef.current.y;
-      setPanOffset({
-        x: touchStartRef.current.panX + dx,
-        y: touchStartRef.current.panY + dy
-      });
+      handleDragMove(touch.clientX, touch.clientY);
     } else if (e.touches.length === 2 && pinchStartRef.current) {
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -811,27 +739,26 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
         const containerRect = container.getBoundingClientRect();
         const px = cx - containerRect.left;
         const py = cy - containerRect.top;
-        const worldX = (px - panOffset.x) / zoomLevel;
-        const worldY = (py - panOffset.y) / zoomLevel;
-        setPanOffset({
+        const worldX = (px - panRef.current.x) / zoomRef.current;
+        const worldY = (py - panRef.current.y) / zoomRef.current;
+        
+        setTargetZoom(newZoom);
+        setTargetPan({
           x: px - worldX * newZoom,
           y: py - worldY * newZoom
         });
       }
-      setZoomLevel(newZoom);
-      setTargetZoom(newZoom);
     }
-  }, [panOffset, zoomLevel]);
+  }, [handleDragMove, panRef, zoomRef, setTargetZoom, setTargetPan]);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
-    if (touchStartRef.current && e.changedTouches.length === 1) {
+    const wasDragging = handleDragEnd();
+
+    if (!wasDragging && touchStartRef.current && e.changedTouches.length === 1) {
       const touch = e.changedTouches[0];
-      const dx = touch.clientX - touchStartRef.current.x;
-      const dy = touch.clientY - touchStartRef.current.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
       const duration = Date.now() - touchStartRef.current.time;
 
-      if (dist < 10 && duration < 300) {
+      if (duration < 300) {
         // Tap — select hex
         const canvas = canvasRef.current;
         if (canvas) {
@@ -840,22 +767,19 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
           const scaleY = canvas.height / rect.height;
           const canvasX = (touch.clientX - rect.left) * scaleX;
           const canvasY = (touch.clientY - rect.top) * scaleY;
-          const worldX = (canvasX - panOffset.x) / zoomLevel;
-          const worldY = (canvasY - panOffset.y) / zoomLevel;
+          const worldX = (canvasX - panRef.current.x) / zoomRef.current;
+          const worldY = (canvasY - panRef.current.y) / zoomRef.current;
 
           const coord = coordinateAt({ x: worldX, y: worldY }, campaign.gridWidth, campaign.gridHeight);
           if (coord) {
             onHexSelect(coord);
           }
         }
-      } else {
-        // Drag ended — sync target pan
-        setTargetPan(panOffset);
       }
     }
     touchStartRef.current = null;
     pinchStartRef.current = null;
-  }, [panOffset, zoomLevel, campaign, onHexSelect]);
+  }, [handleDragEnd, campaign, onHexSelect, panRef, zoomRef]);
 
   return (
     <div className="player-hex-grid-container" ref={containerRef}>
