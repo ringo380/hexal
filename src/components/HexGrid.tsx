@@ -23,16 +23,8 @@ import {
   renderDraggingMarker
 } from '../services/hexRenderer';
 import { createHexRegionMap, getRegionBorderSegments } from '../services/regions';
-import {
-  IndicatorPosition,
-  RenderContext,
-  renderHexBackgrounds,
-  renderHexContent,
-  renderMultiSelection,
-  renderAllConnections,
-  renderAllMarkers
-} from '../services/gridRenderer';
 import { markerAudio } from '../services/audioService';
+import { figurineCache } from '../services/markerFigurines';
 import { useMarkerDrag } from '../hooks/useMarkerDrag';
 import { useGridNavigation } from '../hooks/useGridNavigation';
 import type { HexCoordinate, ContentCategory, MarkerPosition } from '../types';
@@ -269,23 +261,34 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
   // Track shift key at mouseDown time (read in mouseUp to decide multi-select vs normal)
   const clickWasShiftRef = useRef(false);
 
-  // Grid navigation hook
+  // Grid navigation hook (zoom + pan animation). Drag state is owned by HexGrid below.
   const {
-    zoomLevel, panOffset, targetZoom, targetPan,
-    zoomRef, panRef, isDragging: isDraggingMap, isPotentialDrag,
-    handleZoom, handlePan, handleDragStart, handleDragMove, handleDragEnd,
-    setZoomLevel, setPanOffset, setTargetZoom, setTargetPan
+    zoomLevel, panOffset, targetZoom,
+    zoomRef, panRef,
+    handleZoom,
+    setPanOffset, setTargetZoom, setTargetPan
   } = useGridNavigation({
     minZoom: MIN_ZOOM,
     maxZoom: MAX_ZOOM,
     zoomStep: ZOOM_STEP,
     animationSpeed: ZOOM_ANIMATION_SPEED,
-    panSpeed: PAN_SPEED,
     dragThresholdEmpty: DRAG_THRESHOLD_EMPTY,
     dragThresholdHex: DRAG_THRESHOLD_HEX,
     initialZoom: 1,
     initialPan: { x: 0, y: 0 }
   });
+
+  // Local map-drag state (not in hook because HexGrid integrates drag with marker
+  // drag, multi-select shift-click, and tooltip suppression).
+  const [isPotentialDrag, setIsPotentialDrag] = useState(false);
+  const [isDraggingMap, setIsDraggingMap] = useState(false);
+  const dragMapStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0, onActiveHex: false });
+
+  // Mirror the latest travel path into a ref so the draw() callback stays stable.
+  const travelPathRef = useRef<string[] | undefined>(travelPath);
+  useEffect(() => {
+    travelPathRef.current = travelPath;
+  }, [travelPath]);
 
   // Store indicator positions for mouse hover detection
   const indicatorPositionsRef = useRef<IndicatorPosition[]>([]);
@@ -1383,11 +1386,8 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
 
         if (panDelta.x !== 0 || panDelta.y !== 0) {
           e.preventDefault();
-          // Use targetPan for smooth animated panning
+          // Use targetPan for smooth animated panning; the hook starts the animation loop.
           setTargetPan(prev => ({ x: prev.x + panDelta.x, y: prev.y + panDelta.y }));
-          if (!isAnimatingRef.current) {
-            isAnimatingRef.current = true;
-          }
           return;
         }
       }
@@ -1492,10 +1492,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
   const handleZoomSliderChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newZoom = parseFloat(e.target.value);
     setTargetZoom(newZoom);
-    if (!isAnimatingRef.current) {
-      isAnimatingRef.current = true;
-    }
-  }, []);
+  }, [setTargetZoom]);
 
   if (!campaign) return null;
 

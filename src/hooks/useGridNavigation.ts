@@ -10,7 +10,6 @@ interface GridNavigationOptions {
   maxZoom?: number;
   zoomStep?: number;
   animationSpeed?: number;
-  panSpeed?: number;
   dragThresholdEmpty?: number;
   dragThresholdHex?: number;
   initialZoom?: number;
@@ -23,7 +22,6 @@ export function useGridNavigation(options: GridNavigationOptions = {}) {
     maxZoom = 5.0,
     zoomStep = 0.03,
     animationSpeed = 0.12,
-    panSpeed = 20,
     dragThresholdEmpty = 3,
     dragThresholdHex = 8,
     initialZoom = 1,
@@ -64,13 +62,6 @@ export function useGridNavigation(options: GridNavigationOptions = {}) {
     zoomRef.current = zoomLevel;
     panRef.current = panOffset;
   }, [zoomLevel, panOffset]);
-
-  // Sync target refs with state
-  useEffect(() => {
-    targetZoomRef.current = targetZoom;
-    targetPanRef.current = targetPan;
-    startAnimation();
-  }, [targetZoom, targetPan, startAnimation]);
 
   const startAnimation = useCallback(() => {
     if (isAnimatingRef.current) return;
@@ -120,6 +111,13 @@ export function useGridNavigation(options: GridNavigationOptions = {}) {
 
     animationFrameRef.current = requestAnimationFrame(animate);
   }, [animationSpeed]);
+
+  // Sync target refs with state and kick the animation loop
+  useEffect(() => {
+    targetZoomRef.current = targetZoom;
+    targetPanRef.current = targetPan;
+    startAnimation();
+  }, [targetZoom, targetPan, startAnimation]);
 
   const handleZoom = useCallback((deltaY: number, clientX: number, clientY: number, containerRect: DOMRect) => {
     const zoomFactor = deltaY > 0 ? (1 - zoomStep) : (1 + zoomStep);

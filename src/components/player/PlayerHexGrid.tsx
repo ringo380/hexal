@@ -15,14 +15,6 @@ import {
 } from '../../services/hexGeometry';
 import { hexToRgba, renderMarkers } from '../../services/hexRenderer';
 import { useGridNavigation } from '../../hooks/useGridNavigation';
-import {
-  IndicatorPosition,
-  RenderContext,
-  renderHexBackgrounds,
-  renderHexContent,
-  renderAllConnections,
-  renderAllMarkers
-} from '../../services/gridRenderer';
 import { figurineCache } from '../../services/markerFigurines';
 import { createHexRegionMap, getRegionBorderSegments } from '../../services/regions';
 import type { Region } from '../../types';
@@ -38,6 +30,7 @@ const ZOOM_STEP = 0.03;
 const ZOOM_ANIMATION_SPEED = 0.12;
 const DRAG_THRESHOLD = 3;
 const PAN_SPEED = 20;
+
 
 interface PlayerHexGridProps {
   campaign: PlayerCampaign;
@@ -62,16 +55,15 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
 
   // Grid navigation hook
   const {
-    zoomLevel, panOffset, targetZoom, targetPan,
-    zoomRef, panRef, isDragging, isPotentialDrag,
+    zoomLevel, panOffset, targetZoom,
+    zoomRef, panRef, isDragging,
     handleZoom, handlePan, handleDragStart, handleDragMove, handleDragEnd,
-    setZoomLevel, setPanOffset, setTargetZoom, setTargetPan
+    setTargetZoom, setTargetPan
   } = useGridNavigation({
     minZoom: MIN_ZOOM,
     maxZoom: MAX_ZOOM,
     zoomStep: ZOOM_STEP,
     animationSpeed: ZOOM_ANIMATION_SPEED,
-    panSpeed: PAN_SPEED,
     dragThresholdEmpty: DRAG_THRESHOLD,
     dragThresholdHex: DRAG_THRESHOLD,
     initialZoom: 0.8,

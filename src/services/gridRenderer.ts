@@ -1,5 +1,5 @@
-import { HexCoordinate, Campaign, Hex, ContentCategory, MarkerType, MarkerPosition } from '../types';
-import { hexCenter, drawHexPath, HEX_SIZE } from './hexGeometry';
+import { HexCoordinate, Campaign, ContentCategory, MarkerPosition } from '../types';
+import { hexCenter, drawHexPath, hexPoints, HEX_SIZE } from './hexGeometry';
 import { hexToRgba, getContentSummary, CONTENT_INDICATORS, renderMarkers } from './hexRenderer';
 
 export interface IndicatorPosition {
