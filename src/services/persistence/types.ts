@@ -36,7 +36,7 @@ export interface PersistenceAdapter {
   list(): Promise<CampaignListItem[]>;
 
   /** Save a campaign, optionally at a specific path/identifier */
-  save(campaign: Campaign, identifier?: string): Promise<SaveResult>;
+  save(campaign: Campaign, identifier?: string, options?: { compact?: boolean }): Promise<SaveResult>;
 
   /** Load a campaign by path/identifier */
   load(identifier: string): Promise<LoadResult>;

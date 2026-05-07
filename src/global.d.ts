@@ -47,7 +47,7 @@ type ExportFormat = 'png' | 'jpeg' | 'pdf';
 
 interface ElectronAPI {
   listCampaigns: () => Promise<CampaignInfo[]>;
-  saveCampaign: (campaign: unknown, filePath?: string) => Promise<SaveResult>;
+  saveCampaign: (campaign: unknown, filePath?: string, compact?: boolean) => Promise<SaveResult>;
   loadCampaign: (filePath: string) => Promise<LoadResult>;
   deleteCampaign: (filePath: string) => Promise<DeleteResult>;
   openFileDialog: () => Promise<string | null>;

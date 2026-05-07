@@ -61,8 +61,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   listCampaigns: (): Promise<CampaignInfo[]> =>
     ipcRenderer.invoke('list-campaigns'),
 
-  saveCampaign: (campaign: unknown, filePath?: string): Promise<SaveResult> =>
-    ipcRenderer.invoke('save-campaign', { campaign, filePath }),
+  saveCampaign: (campaign: unknown, filePath?: string, compact?: boolean): Promise<SaveResult> =>
+    ipcRenderer.invoke('save-campaign', { campaign, filePath, compact }),
 
   loadCampaign: (filePath: string): Promise<LoadResult> =>
     ipcRenderer.invoke('load-campaign', filePath),
@@ -222,7 +222,7 @@ declare global {
   interface Window {
     electronAPI: {
       listCampaigns: () => Promise<CampaignInfo[]>;
-      saveCampaign: (campaign: unknown, filePath?: string) => Promise<SaveResult>;
+      saveCampaign: (campaign: unknown, filePath?: string, compact?: boolean) => Promise<SaveResult>;
       loadCampaign: (filePath: string) => Promise<LoadResult>;
       deleteCampaign: (filePath: string) => Promise<DeleteResult>;
       openFileDialog: () => Promise<string | null>;
