@@ -261,6 +261,10 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
   // Track shift key at mouseDown time (read in mouseUp to decide multi-select vs normal)
   const clickWasShiftRef = useRef(false);
 
+  // drawRef is set just below the draw definition; the hook reads it via the
+  // closure to redraw on every animation frame (refs are source of truth).
+  const drawRef = useRef<() => void>(() => {});
+
   // Grid navigation hook (zoom + pan animation). Drag state is owned by HexGrid below.
   const {
     zoomLevel, panOffset, targetZoom,
@@ -275,7 +279,8 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
     dragThresholdEmpty: DRAG_THRESHOLD_EMPTY,
     dragThresholdHex: DRAG_THRESHOLD_HEX,
     initialZoom: 1,
-    initialPan: { x: 0, y: 0 }
+    initialPan: { x: 0, y: 0 },
+    onTick: () => drawRef.current()
   });
 
   // Local map-drag state (not in hook because HexGrid integrates drag with marker
@@ -891,8 +896,9 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
     }
   }, [campaign, getHex, selectedCoordinate, getTerrainColor, markerDrag.isDragging, markerDrag.state, regions, hexRegionMap, multiSelectedKeys, renderWeatherOverlay, layerVisibility]);
 
-  // Ref to latest draw for imperative calls from animation loop (avoids stale closures)
-  const drawRef = useRef(draw);
+  // Keep drawRef pointing at the latest draw on every render so the hook's
+  // onTick callback (registered above with the initial drawRef) calls the
+  // current closure each frame.
   drawRef.current = draw;
 
   // Track container size for responsive canvas

@@ -14,6 +14,20 @@ interface GridNavigationOptions {
   dragThresholdHex?: number;
   initialZoom?: number;
   initialPan?: Point;
+  /**
+   * Invoked on every animation frame after refs are updated. Use to redraw
+   * a canvas that reads zoom/pan from refs (so the canvas stays smooth
+   * while React state is throttled for UI labels).
+   */
+  onTick?: () => void;
+  /**
+   * Throttle for syncing zoomLevel/panOffset React state during animation
+   * (ms). Defaults to 100ms (matches the documented HexGrid pattern).
+   * Consumers whose draw() reads zoom/pan from React state (rather than
+   * refs) should pass a smaller value (e.g. 16) to keep their canvas
+   * smooth at the cost of more re-renders.
+   */
+  stateSyncIntervalMs?: number;
 }
 
 export function useGridNavigation(options: GridNavigationOptions = {}) {
@@ -25,8 +39,14 @@ export function useGridNavigation(options: GridNavigationOptions = {}) {
     dragThresholdEmpty = 3,
     dragThresholdHex = 8,
     initialZoom = 1,
-    initialPan = { x: 0, y: 0 }
+    initialPan = { x: 0, y: 0 },
+    onTick,
+    stateSyncIntervalMs = 100
   } = options;
+
+  // Mirror onTick into a ref so the animation callback stays stable.
+  const onTickRef = useRef(onTick);
+  useEffect(() => { onTickRef.current = onTick; }, [onTick]);
 
   // State for React UI
   const [zoomLevel, setZoomLevel] = useState(initialZoom);
@@ -90,27 +110,32 @@ export function useGridNavigation(options: GridNavigationOptions = {}) {
         panRef.current = { ...targetPanRef.current };
       }
 
-      // Throttle React state updates to ~60fps (or less) to keep UI responsive
-      // while the animation loop runs as fast as possible for smooth canvas rendering
-      if (time - lastStateSyncRef.current > 16) {
+      // Throttle React state updates (default ~10fps for zoom labels) — the
+      // canvas redraws every frame via onTick using the refs directly, so
+      // React state doesn't need to update on every animation frame.
+      if (time - lastStateSyncRef.current > stateSyncIntervalMs) {
         setZoomLevel(zoomRef.current);
         setPanOffset({ ...panRef.current });
         lastStateSyncRef.current = time;
       }
+
+      // Per-frame canvas redraw (consumer reads from zoomRef/panRef).
+      onTickRef.current?.();
 
       if (needsMoreFrames) {
         animationFrameRef.current = requestAnimationFrame(animate);
       } else {
         isAnimatingRef.current = false;
         animationFrameRef.current = null;
-        // Final sync
+        // Final sync to lock React state on the exact target.
         setZoomLevel(zoomRef.current);
         setPanOffset({ ...panRef.current });
+        onTickRef.current?.();
       }
     };
 
     animationFrameRef.current = requestAnimationFrame(animate);
-  }, [animationSpeed]);
+  }, [animationSpeed, stateSyncIntervalMs]);
 
   // Sync target refs with state and kick the animation loop
   useEffect(() => {

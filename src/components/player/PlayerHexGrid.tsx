@@ -53,7 +53,12 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
     prevWeatherFieldRef.current = weatherField;
   }
 
-  // Grid navigation hook
+  // drawRef tracks the latest draw closure so the hook can redraw every frame.
+  const drawRef = useRef<() => void>(() => {});
+
+  // Grid navigation hook. PlayerHexGrid's draw() reads zoom/pan from React
+  // state (not refs), so we sync state every animation frame (~16ms) instead
+  // of the default 100ms. The redraw still happens via onTick below.
   const {
     zoomLevel, panOffset, targetZoom,
     zoomRef, panRef, isDragging,
@@ -67,7 +72,9 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
     dragThresholdEmpty: DRAG_THRESHOLD,
     dragThresholdHex: DRAG_THRESHOLD,
     initialZoom: 0.8,
-    initialPan: { x: 0, y: 0 }
+    initialPan: { x: 0, y: 0 },
+    stateSyncIntervalMs: 16,
+    onTick: () => drawRef.current()
   });
 
   // Touch state
@@ -491,6 +498,9 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
     ctx.restore();
   }, [campaign, zoomLevel, panOffset, selectedCoord, getTerrainColor, renderWeatherOverlay, playerLayers, updateAudio, regionAdapters]);
 
+  // Keep drawRef pointing at the latest draw closure for the hook's onTick.
+  drawRef.current = draw;
+
   // Track container size for responsive canvas
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
@@ -749,8 +759,13 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
     if (!wasDragging && touchStartRef.current && e.changedTouches.length === 1) {
       const touch = e.changedTouches[0];
       const duration = Date.now() - touchStartRef.current.time;
+      const dx = touch.clientX - touchStartRef.current.x;
+      const dy = touch.clientY - touchStartRef.current.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
 
-      if (duration < 300) {
+      // Hysteresis: noisy touches that drift past the 3px DRAG_THRESHOLD but
+      // stay under 10px should still register as taps rather than drags.
+      if (dist < 10 && duration < 300) {
         // Tap — select hex
         const canvas = canvasRef.current;
         if (canvas) {

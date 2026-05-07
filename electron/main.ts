@@ -342,12 +342,16 @@ ipcMain.handle('save-campaign', async (_event, { campaign, filePath, compact = f
       savePath = path.join(hexalFolder, `${safeName}.hexal`);
     }
 
-    // Security check: validate path
-    const resolvedPath = path.resolve(savePath);
-    const hexalFolder = getHexalFolder();
-    if (!resolvedPath.startsWith(hexalFolder + path.sep) && !filePath) {
-      // If filePath was provided, we assume it came from a safe dialog
-      // but we still want to be careful. For autosaves (no filePath), we restrict to Hexal folder.
+    // Security check: for autosaves (no caller-supplied filePath) the resolved
+    // path must stay inside the Hexal folder. A crafted campaign.name like
+    // "../../etc/foo" would otherwise let the renderer write outside it.
+    // dialog-derived filePaths are trusted because the user picked them.
+    if (!filePath) {
+      const resolvedPath = path.resolve(savePath);
+      const hexalFolder = getHexalFolder();
+      if (!resolvedPath.startsWith(hexalFolder + path.sep)) {
+        return { success: false, error: 'Path outside Hexal folder' };
+      }
     }
 
     const content = compact 
@@ -373,16 +377,16 @@ ipcMain.handle('load-campaign', async (_event, filePath) => {
 });
 
 // Delete campaign
-ipcMain.handle('delete-campaign', async (_event, filePath) => {
+ipcMain.handle('delete-campaign', async (_event, filePath: string) => {
   try {
-    // Security check: only delete .hexal files in Hexal folder if not from dialog
-    const resolvedPath = path.resolve(filePath);
-    const hexalFolder = getHexalFolder();
-    if (resolvedPath.startsWith(hexalFolder + path.sep) && filePath.endsWith('.hexal')) {
-      await fs.promises.unlink(filePath);
-      return { success: true };
+    // Sanity check: only allow deleting .hexal campaign files. The renderer's
+    // current delete UI only surfaces files from list-campaigns (Hexal folder),
+    // but dialog-loaded campaigns from elsewhere should still be deletable.
+    if (typeof filePath !== 'string' || !filePath.endsWith('.hexal')) {
+      return { success: false, error: 'Only .hexal files can be deleted' };
     }
-    return { success: false, error: 'Unauthorized delete' };
+    await fs.promises.unlink(filePath);
+    return { success: true };
   } catch (error) {
     return { success: false, error: String(error) };
   }
