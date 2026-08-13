@@ -1,176 +1,51 @@
-import { HexCoordinate, Campaign, ContentCategory, MarkerPosition } from '../types';
+// gridRenderer - Canvas render passes shared by HexGrid (DM) and PlayerHexGrid.
+//
+// Only passes whose behavior is genuinely identical between the two grids live
+// here; per-view differences are parameterized (skipUndiscovered, dimInvisible).
+// The PASS 1 background/content loops stay inline in each grid on purpose:
+// the player view's fog-of-war, adjacency opacity, and undiscovered gating are
+// intentional divergence, not drift.
+
+import { Region, MarkerPosition, Hex } from '../types';
+import type { MarkerType } from '../types/Markers';
 import { hexCenter, drawHexPath, hexPoints, HEX_SIZE } from './hexGeometry';
-import { hexToRgba, getContentSummary, CONTENT_INDICATORS, renderMarkers } from './hexRenderer';
+import { hexToRgba, renderMarkers } from './hexRenderer';
+import { getRegionBorderSegments } from './regions';
 
-export interface IndicatorPosition {
-  x: number;
-  y: number;
-  radius: number;
-  coord: HexCoordinate;
-  category: ContentCategory;
+export interface HexRange {
+  qMin: number;
+  qMax: number;
+  rMin: number;
+  rMax: number;
 }
 
-export interface RenderContext {
-  ctx: CanvasRenderingContext2D;
-  campaign: Campaign;
-  zoomLevel: number;
-  panOffset: { x: number; y: number };
-  lod: any; // Level of Detail settings
-  layerVisibility: any;
-  selectedCoordinate?: HexCoordinate | null;
-  selectedMarkerId?: string | null;
-  hexRegionMap: Map<string, any>;
-  getTerrainColor: (terrain: string) => string;
+/** Minimal hex shape needed by the connection pass (DM Hex and PlayerHex both satisfy it). */
+interface ConnectableHex {
+  status: string;
+  connections?: { rivers: number[]; roads: number[] };
 }
+
+/** Minimal region shape needed by the label pass (Region and PlayerRegion both satisfy it). */
+interface LabeledRegion {
+  name: string;
+  color: string;
+  hexKeys: string[];
+}
+
+/** Character token shape (DM PlayerCharacter and player PlayerCharacterToken both satisfy it). */
+export interface CharacterToken {
+  hexKey?: string | null;
+  color: string;
+  icon: string;
+  name: string;
+  isVisible?: boolean;
+}
+
+// Neighbor-to-edge index mapping for region border rendering
+const NEIGHBOR_TO_EDGE = [5, 0, 1, 2, 3, 4];
 
 /**
- * Render hex backgrounds (terrain fills and selection highlights)
- */
-export function renderHexBackgrounds(
-  context: RenderContext,
-  visibleRange: { qMin: number; qMax: number; rMin: number; rMax: number }
-) {
-  const { ctx, campaign, selectedCoordinate, hexRegionMap, getTerrainColor, lod } = context;
-
-  for (let q = visibleRange.qMin; q <= visibleRange.qMax; q++) {
-    for (let r = visibleRange.rMin; r <= visibleRange.rMax; r++) {
-      const coord: HexCoordinate = { q, r };
-      const center = hexCenter(coord);
-      const hex = campaign.hexes[`${q},${r}`];
-      const isSelected = selectedCoordinate?.q === q && selectedCoordinate?.r === r;
-
-      // Determine fill color
-      let fillColor = 'rgba(50, 50, 50, 0.3)'; // Empty/inactive hex
-      if (hex && hex.terrain) {
-        const baseColor = getTerrainColor(hex.terrain);
-        const opacity = hex.status === 'undiscovered' ? 0.3 : 0.7;
-        fillColor = hexToRgba(baseColor, opacity);
-      }
-
-      // Draw hex fill
-      drawHexPath(ctx, center, HEX_SIZE);
-      ctx.fillStyle = fillColor;
-      ctx.fill();
-
-      // Region overlay
-      const region = hexRegionMap.get(`${q},${r}`);
-      if (region) {
-        drawHexPath(ctx, center, HEX_SIZE);
-        ctx.fillStyle = hexToRgba(region.color, 0.25);
-        ctx.fill();
-      }
-
-      // Draw border (LOD-controlled)
-      if (lod.showBorders || isSelected) {
-        ctx.strokeStyle = isSelected ? '#4a9eff' : '#555555';
-        ctx.lineWidth = isSelected ? 3 : lod.borderWidth;
-        ctx.stroke();
-      }
-    }
-  }
-}
-
-/**
- * Render hex content indicators and labels
- */
-export function renderHexContent(
-  context: RenderContext,
-  visibleRange: { qMin: number; qMax: number; rMin: number; rMax: number },
-  indicatorPositions: IndicatorPosition[]
-) {
-  const { ctx, campaign, lod, layerVisibility } = context;
-
-  let currentFont = '';
-  let currentAlign = '';
-  let currentBaseline = '';
-
-  for (let q = visibleRange.qMin; q <= visibleRange.qMax; q++) {
-    for (let r = visibleRange.rMin; r <= visibleRange.rMax; r++) {
-      const coord: HexCoordinate = { q, r };
-      const center = hexCenter(coord);
-      const hex = campaign.hexes[`${q},${r}`];
-      if (!hex) continue;
-
-      // Draw status indicator (LOD-controlled + layer visibility)
-      if (lod.showStatusDot && layerVisibility.statusIndicators && hex.status !== 'undiscovered') {
-        ctx.beginPath();
-        ctx.arc(center.x, center.y, lod.statusDotRadius, 0, Math.PI * 2);
-        ctx.fillStyle = hex.status === 'discovered' ? 'rgba(74, 158, 255, 0.7)' : 'rgba(76, 175, 80, 0.7)';
-        ctx.fill();
-      }
-
-      // Draw content indicators
-      if (lod.showIndicators && layerVisibility.contentIndicators) {
-        const summary = getContentSummary(hex);
-        if (summary.length > 0) {
-          const totalWidth = (summary.length - 1) * lod.indicatorSpacing;
-          const startX = center.x - totalWidth / 2;
-          const rowY = center.y + lod.indicatorY;
-
-          summary.forEach((item, index) => {
-            const config = CONTENT_INDICATORS[item.category];
-            const isFullyResolved = item.unresolved === 0;
-            const indicatorX = startX + index * lod.indicatorSpacing;
-
-            indicatorPositions.push({
-              x: indicatorX,
-              y: rowY,
-              radius: lod.indicatorRadius,
-              coord,
-              category: item.category
-            });
-
-            ctx.beginPath();
-            ctx.arc(indicatorX, rowY, lod.indicatorRadius, 0, Math.PI * 2);
-            ctx.fillStyle = isFullyResolved ? hexToRgba(config.color, 0.4) : config.color;
-            ctx.fill();
-
-            if (lod.showIndicatorLetters && lod.indicatorFont > 0) {
-              const wantFont = `bold ${lod.indicatorFont}px sans-serif`;
-              if (currentFont !== wantFont) { ctx.font = wantFont; currentFont = wantFont; }
-              if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
-              if (currentBaseline !== 'middle') { ctx.textBaseline = 'middle'; currentBaseline = 'middle'; }
-              ctx.fillStyle = '#ffffff';
-              ctx.fillText(config.letter, indicatorX, rowY);
-            }
-          });
-        }
-      }
-      
-      // Terrain Label
-      if (lod.showTerrainLabels && layerVisibility.terrainLabels && hex.terrain) {
-        const wantFont = `bold ${lod.terrainFontSize}px sans-serif`;
-        if (currentFont !== wantFont) { ctx.font = wantFont; currentFont = wantFont; }
-        if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
-        if (currentBaseline !== 'middle') { ctx.textBaseline = 'middle'; currentBaseline = 'middle'; }
-        
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-        ctx.shadowBlur = 3;
-        ctx.fillText(hex.terrain, center.x, center.y + lod.terrainLabelY);
-        ctx.shadowBlur = 0;
-      }
-
-      // Coordinates
-      if (lod.showCoords && layerVisibility.coordinates) {
-        const wantFont = `${lod.coordFontSize}px sans-serif`;
-        if (currentFont !== wantFont) { ctx.font = wantFont; currentFont = wantFont; }
-        if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
-        if (currentBaseline !== 'alphabetic') { ctx.textBaseline = 'alphabetic'; currentBaseline = 'alphabetic'; }
-        
-        ctx.fillStyle = 'rgba(136, 136, 136, 0.7)';
-        ctx.fillText(`${q},${r}`, center.x, center.y + lod.coordY);
-      }
-    }
-  }
-  
-  // Reset text properties after restoration
-  ctx.textAlign = 'start';
-  ctx.textBaseline = 'alphabetic';
-}
-
-/**
- * Render multi-selection overlay
+ * Render multi-selection overlay (DM view only)
  */
 export function renderMultiSelection(
   ctx: CanvasRenderingContext2D,
@@ -193,23 +68,27 @@ export function renderMultiSelection(
 }
 
 /**
- * Render connections (rivers and roads)
+ * Render connections (rivers and roads). Caller gates on layer visibility;
+ * the zoom gates live here (pass at 0.25, roads at 0.40).
  */
 export function renderAllConnections(
-  context: RenderContext,
-  visibleRange: { qMin: number; qMax: number; rMin: number; rMax: number }
+  ctx: CanvasRenderingContext2D,
+  getHex: (q: number, r: number) => ConnectableHex | null | undefined,
+  visibleRange: HexRange,
+  zoomLevel: number,
+  skipUndiscovered = false
 ) {
-  const { ctx, campaign, zoomLevel, layerVisibility } = context;
-  if (!layerVisibility.connections || zoomLevel < 0.25) return;
+  if (zoomLevel < 0.25) return;
 
   for (let q = visibleRange.qMin; q <= visibleRange.qMax; q++) {
     for (let r = visibleRange.rMin; r <= visibleRange.rMax; r++) {
-      const hex = campaign.hexes[`${q},${r}`];
+      const hex = getHex(q, r);
       if (!hex?.connections) continue;
+      if (skipUndiscovered && hex.status === 'undiscovered') continue;
       const center = hexCenter({ q, r });
       const points = hexPoints(center, HEX_SIZE);
 
-      // Draw rivers
+      // Draw rivers (blue curved lines)
       if (hex.connections.rivers.length > 0) {
         ctx.strokeStyle = '#4a9eff';
         ctx.lineWidth = 2;
@@ -224,6 +103,7 @@ export function renderAllConnections(
 
           ctx.beginPath();
           ctx.moveTo(edgeMidX, edgeMidY);
+          // Curve through hex center for organic look
           const cpX = center.x + (edgeMidX - center.x) * 0.3;
           const cpY = center.y + (edgeMidY - center.y) * 0.3;
           ctx.quadraticCurveTo(cpX, cpY, center.x, center.y);
@@ -231,7 +111,7 @@ export function renderAllConnections(
         }
       }
 
-      // Draw roads
+      // Draw roads (brown dashed lines)
       if (hex.connections.roads.length > 0 && zoomLevel >= 0.40) {
         ctx.strokeStyle = '#8B7355';
         ctx.lineWidth = 1.5;
@@ -249,6 +129,7 @@ export function renderAllConnections(
           ctx.lineTo(center.x, center.y);
           ctx.stroke();
         }
+
         ctx.setLineDash([]);
       }
     }
@@ -256,30 +137,192 @@ export function renderAllConnections(
 }
 
 /**
- * Render markers for all visible hexes
+ * Render region boundary edges. Caller gates on layer visibility.
+ */
+export function renderRegionBorders(
+  ctx: CanvasRenderingContext2D,
+  regions: Region[]
+) {
+  for (const region of regions) {
+    if (region.hexKeys.length === 0) continue;
+    const borderSegments = getRegionBorderSegments(region);
+
+    ctx.strokeStyle = hexToRgba(region.color, 0.6);
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+
+    for (const segment of borderSegments) {
+      const center = hexCenter(segment.coord);
+      const points = hexPoints(center, HEX_SIZE);
+      const edgeIndex = NEIGHBOR_TO_EDGE[segment.edgeIndex];
+      const p1 = points[edgeIndex];
+      const p2 = points[(edgeIndex + 1) % 6];
+
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+    }
+  }
+}
+
+/**
+ * Render region name labels at overview zoom levels. Caller gates on layer
+ * visibility; the zoom window (0.25 - 0.80) lives here.
+ */
+export function renderRegionLabels(
+  ctx: CanvasRenderingContext2D,
+  regions: LabeledRegion[],
+  zoomLevel: number
+) {
+  if (zoomLevel < 0.25 || zoomLevel > 0.80) return;
+
+  let currentFont = '';
+  let currentAlign = '';
+  let currentBaseline = '';
+
+  for (const region of regions) {
+    if (region.hexKeys.length === 0) continue;
+
+    // Calculate bounding box center of region hexes
+    let sumX = 0, sumY = 0;
+    for (const key of region.hexKeys) {
+      const parsed = key.split(',');
+      const rq = parseInt(parsed[0], 10);
+      const rr = parseInt(parsed[1], 10);
+      const c = hexCenter({ q: rq, r: rr });
+      sumX += c.x;
+      sumY += c.y;
+    }
+    const cx = sumX / region.hexKeys.length;
+    const cy = sumY / region.hexKeys.length;
+
+    const fontSize = Math.max(8, Math.min(14, 10 / zoomLevel));
+    const wantFont = `bold ${fontSize}px sans-serif`;
+    if (currentFont !== wantFont) { ctx.font = wantFont; currentFont = wantFont; }
+    if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
+    if (currentBaseline !== 'middle') { ctx.textBaseline = 'middle'; currentBaseline = 'middle'; }
+    ctx.fillStyle = hexToRgba(region.color, 0.9);
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    ctx.shadowBlur = 4;
+    ctx.fillText(region.name, cx, cy);
+    ctx.shadowBlur = 0;
+  }
+}
+
+/**
+ * Render markers (figurines) for all visible hexes. Caller gates on LOD and
+ * layer visibility, and filters via getHex (return null to skip a hex).
  */
 export function renderAllMarkers(
-  context: RenderContext,
-  visibleRange: { qMin: number; qMax: number; rMin: number; rMax: number },
-  markerPositions: MarkerPosition[]
+  ctx: CanvasRenderingContext2D,
+  getHex: (q: number, r: number) => Hex | null | undefined,
+  visibleRange: HexRange,
+  zoomLevel: number,
+  markerTypes: MarkerType[],
+  options?: { selectedMarkerId?: string; markerPositions?: MarkerPosition[] }
 ) {
-  const { ctx, campaign, zoomLevel, selectedMarkerId } = context;
-  const markerTypes = campaign.markerTypes || [];
-
   for (let q = visibleRange.qMin; q <= visibleRange.qMax; q++) {
     for (let r = visibleRange.rMin; r <= visibleRange.rMax; r++) {
-      const hex = campaign.hexes[`${q},${r}`];
-      if (hex) {
+      const hex = getHex(q, r);
+      if (hex && hex.markers && hex.markers.length > 0) {
         const positions = renderMarkers(
           ctx,
           hex,
           hexCenter({ q, r }),
           markerTypes,
           zoomLevel,
-          selectedMarkerId || undefined
+          options?.selectedMarkerId
         );
-        markerPositions.push(...positions);
+        options?.markerPositions?.push(...positions);
       }
     }
   }
+}
+
+/**
+ * Render character tokens (player characters on the map).
+ * dimInvisible: DM view renders tokens with isVisible=false at reduced opacity.
+ * skipUndiscovered: player view hides tokens on undiscovered hexes.
+ */
+export function renderCharacterTokens(
+  ctx: CanvasRenderingContext2D,
+  characters: CharacterToken[],
+  getHexByKey: (key: string) => { status: string } | null | undefined,
+  visibleRange: HexRange,
+  zoomLevel: number,
+  options?: { dimInvisible?: boolean; skipUndiscovered?: boolean }
+) {
+  let currentFont = '';
+  let currentAlign = '';
+  let currentBaseline = '';
+
+  for (const char of characters) {
+    if (!char.hexKey) continue;
+    const hex = getHexByKey(char.hexKey);
+    if (!hex) continue;
+    if (options?.skipUndiscovered && hex.status === 'undiscovered') continue;
+
+    const parts = char.hexKey.split(',');
+    const cq = parseInt(parts[0], 10);
+    const cr = parseInt(parts[1], 10);
+    if (cq < visibleRange.qMin || cq > visibleRange.qMax || cr < visibleRange.rMin || cr > visibleRange.rMax) continue;
+
+    const center = hexCenter({ q: cq, r: cr });
+    const dimmed = options?.dimInvisible === true && !char.isVisible;
+
+    // Draw circular token (slightly transparent for invisible characters in DM view)
+    const tokenRadius = 8;
+    ctx.beginPath();
+    ctx.arc(center.x, center.y - 10, tokenRadius, 0, Math.PI * 2);
+    ctx.fillStyle = dimmed ? hexToRgba(char.color, 0.4) : char.color;
+    ctx.fill();
+    ctx.strokeStyle = dimmed ? 'rgba(255, 255, 255, 0.4)' : '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Draw icon
+    const wantFont = '10px sans-serif';
+    if (currentFont !== wantFont) { ctx.font = wantFont; currentFont = wantFont; }
+    if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
+    if (currentBaseline !== 'middle') { ctx.textBaseline = 'middle'; currentBaseline = 'middle'; }
+    ctx.fillStyle = dimmed ? 'rgba(255, 255, 255, 0.4)' : '#fff';
+    ctx.fillText(char.icon, center.x, center.y - 10);
+
+    // Draw name label if zoomed in enough
+    if (zoomLevel >= 0.6) {
+      const nameFont = 'bold 5px sans-serif';
+      if (currentFont !== nameFont) { ctx.font = nameFont; currentFont = nameFont; }
+      ctx.fillStyle = dimmed ? hexToRgba(char.color, 0.4) : char.color;
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+      ctx.shadowBlur = 2;
+      ctx.fillText(char.name, center.x, center.y - 1);
+      ctx.shadowBlur = 0;
+    }
+  }
+}
+
+/**
+ * Render the party position marker (gold circle with "P" label).
+ */
+export function renderPartyMarker(
+  ctx: CanvasRenderingContext2D,
+  partyCenter: { x: number; y: number }
+) {
+  ctx.save();
+  // Gold circle
+  ctx.beginPath();
+  ctx.arc(partyCenter.x, partyCenter.y, 8, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255, 200, 50, 0.9)';
+  ctx.fill();
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  // "P" label
+  ctx.font = 'bold 10px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#000';
+  ctx.fillText('P', partyCenter.x, partyCenter.y);
+  ctx.restore();
 }
