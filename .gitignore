@@ -1,20 +1,6 @@
 # Dependencies
 node_modules/
 
-# Claude Code
-CLAUDE.md
-.claude/
-.claude-dev-helper/
-.plugin-config/
-docs/plans/
-
-# Other AI assistant config
-AGENTS.md
-.junie/
-
-# Worktrees
-.worktrees/
-
 # Build output
 dist/
 dist-electron/
