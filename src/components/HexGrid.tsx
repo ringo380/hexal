@@ -28,13 +28,15 @@ import {
   renderRegionLabels,
   renderAllMarkers,
   renderCharacterTokens,
-  renderPartyMarker
+  renderPartyMarker,
+  renderTokenDragGhost,
+  type TokenPosition
 } from '../services/gridRenderer';
 import { markerAudio } from '../services/audioService';
 import { figurineCache } from '../services/markerFigurines';
 import { useMarkerDrag } from '../hooks/useMarkerDrag';
 import { useGridNavigation } from '../hooks/useGridNavigation';
-import type { HexCoordinate, ContentCategory, MarkerPosition } from '../types';
+import type { HexCoordinate, ContentCategory, MarkerPosition, PlayerCharacter } from '../types';
 import { DEFAULT_MARKER_TYPES } from '../types/Markers';
 import HexContextMenu from './HexContextMenu';
 import Icon from './icons/Icon';
@@ -205,7 +207,7 @@ interface HexGridProps {
 function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, hexClickOverride }: HexGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { campaign, getHex, removeMarker, moveMarker, moveMarkerToPosition, addMarkerAtPosition, regions, addHexToRegion, removeHexFromRegion } = useCampaign();
+  const { campaign, getHex, removeMarker, moveMarker, moveMarkerToPosition, addMarkerAtPosition, regions, addHexToRegion, removeHexFromRegion, updateCampaignData } = useCampaign();
   const { selectedCoordinate, selectedMarker, selectHex, selectMarker, clearSelection, regionPaintMode, setRegionPaintMode, multiSelectedKeys, toggleMultiSelectHex, setMultiSelection, clearMultiSelection } = useHexSelection();
   const { layerVisibility, weatherAudioEnabled, weatherAudioVolume } = useLayerVisibility();
   const announce = useAnnounce();
@@ -262,8 +264,8 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
   // Tooltip state
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
-  // Context menu state
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  // Context menu state (hexKey is the right-clicked hex, when it resolved to one)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; hexKey: string | null } | null>(null);
 
   // Track shift key at mouseDown time (read in mouseUp to decide multi-select vs normal)
   const clickWasShiftRef = useRef(false);
@@ -307,6 +309,19 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
 
   // Store marker positions for hit testing
   const markerPositionsRef = useRef<MarkerPosition[]>([]);
+
+  // Store character token positions for hit testing
+  const tokenPositionsRef = useRef<TokenPosition[]>([]);
+
+  // Character token drag state (ref: read by draw() at 60fps, mutated by mouse handlers)
+  const tokenDragRef = useRef<{
+    characterId: string;
+    startX: number;
+    startY: number;
+    currentX: number;
+    currentY: number;
+    dragging: boolean;
+  } | null>(null);
 
   // Marker drag state machine with free-form positioning
   const markerDrag = useMarkerDrag({
@@ -678,16 +693,22 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
     // ========================================================================
     // PASS 3: Character tokens (player characters on map)
     // ========================================================================
+    const tokenPositions: TokenPosition[] = [];
+    const curTokenDrag = tokenDragRef.current;
+    const allCharacters = campaign.playerCharacters ?? [];
     renderCharacterTokens(
       ctx,
-      campaign.playerCharacters ?? [],
+      // Hide the token being dragged at its origin; the ghost follows the cursor
+      curTokenDrag?.dragging
+        ? allCharacters.filter(pc => pc.id !== curTokenDrag.characterId)
+        : allCharacters,
       (key) => {
         const coord = parseHexKey(key);
         return coord ? getHex(coord) : null;
       },
       visibleRange,
       curZoom,
-      { dimInvisible: true }
+      { dimInvisible: true, tokenPositions }
     );
 
     // Restore canvas transform state
@@ -698,6 +719,25 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
 
     // Store marker positions for hit testing
     markerPositionsRef.current = markerPositions;
+
+    // Store character token positions for hit testing
+    tokenPositionsRef.current = tokenPositions;
+
+    // Render dragging character token ghost (in screen coordinates)
+    if (curTokenDrag?.dragging) {
+      const draggedChar = allCharacters.find(pc => pc.id === curTokenDrag.characterId);
+      if (draggedChar) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        renderTokenDragGhost(
+          ctx,
+          draggedChar,
+          { x: curTokenDrag.currentX * scaleX, y: curTokenDrag.currentY * scaleY },
+          curZoom
+        );
+      }
+    }
 
     // Render dragging marker overlay (in screen coordinates)
     if (markerDrag.isDragging && markerDrag.state.marker && markerDrag.state.currentPosition) {
@@ -893,6 +933,35 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
       }
     }
 
+    // Check for character token hit (for token dragging). Skipped in region
+    // paint and click-override (travel pick) modes so those clicks land on the
+    // hex instead of silently relocating a character. Nearest center wins so
+    // the visually topmost token in a crowded fan-out is the one picked up.
+    if (!regionPaintMode && !hexClickOverride?.current) {
+      let hitToken: TokenPosition | null = null;
+      let hitDist = Infinity;
+      for (const t of tokenPositionsRef.current) {
+        const dx = worldX - t.x;
+        const dy = worldY - t.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist <= t.radius + 2 && dist < hitDist) {
+          hitToken = t;
+          hitDist = dist;
+        }
+      }
+      if (hitToken) {
+        tokenDragRef.current = {
+          characterId: hitToken.characterId,
+          startX: e.clientX,
+          startY: e.clientY,
+          currentX: e.clientX - rect.left,
+          currentY: e.clientY - rect.top,
+          dragging: false
+        };
+        return; // Don't start map pan
+      }
+    }
+
     // Check if clicking on an active hex
     const coord = coordinateAt({ x: worldX, y: worldY }, campaign.gridWidth, campaign.gridHeight);
     const hex = coord ? getHex(coord) : null;
@@ -913,10 +982,77 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
       panY: panOffset.y,
       onActiveHex: !!hasContent
     };
-  }, [campaign, getHex, panOffset, zoomLevel, markerDrag]);
+  }, [campaign, getHex, panOffset, zoomLevel, markerDrag, regionPaintMode, hexClickOverride]);
+
+  // Shared plain-click handling: shift-aware hex select / multi-select toggle
+  const handlePlainClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (clickWasShiftRef.current && !regionPaintMode) {
+      const canvas = canvasRef.current;
+      if (canvas && campaign) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const canvasX = (e.clientX - rect.left) * scaleX;
+        const canvasY = (e.clientY - rect.top) * scaleY;
+        const worldX = (canvasX - panOffset.x) / zoomLevel;
+        const worldY = (canvasY - panOffset.y) / zoomLevel;
+        const coord = coordinateAt({ x: worldX, y: worldY }, campaign.gridWidth, campaign.gridHeight);
+        if (coord) {
+          toggleMultiSelectHex(coord);
+          selectHex(coord);
+        }
+      }
+    } else {
+      if (multiSelectedKeys.size > 0) {
+        clearMultiSelection();
+      }
+      selectHexAtPosition(e);
+    }
+  }, [campaign, regionPaintMode, panOffset, zoomLevel, toggleMultiSelectHex, selectHex, multiSelectedKeys, clearMultiSelection, selectHexAtPosition]);
 
   // Handle mouse up - either complete drag or select hex
   const handleMouseUp = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    // Handle character token drag end
+    const tokenDragState = tokenDragRef.current;
+    if (tokenDragState) {
+      tokenDragRef.current = null;
+      if (!tokenDragState.dragging) {
+        // Plain click on a token: behave like a normal hex click
+        handlePlainClick(e);
+        return;
+      }
+      const canvas = canvasRef.current;
+      if (canvas && campaign) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const canvasX = (e.clientX - rect.left) * scaleX;
+        const canvasY = (e.clientY - rect.top) * scaleY;
+        const worldX = (canvasX - panOffset.x) / zoomLevel;
+        const worldY = (canvasY - panOffset.y) / zoomLevel;
+        const target = coordinateAt({ x: worldX, y: worldY }, campaign.gridWidth, campaign.gridHeight);
+        // Only drop on hexes that exist - tokens on missing hexes would vanish
+        if (target && getHex(target)) {
+          const targetKey = hexKey(target);
+          const chars = campaign.playerCharacters ?? [];
+          const dragged = chars.find(c => c.id === tokenDragState.characterId);
+          if (dragged && dragged.hexKey !== targetKey) {
+            updateCampaignData({
+              playerCharacters: chars.map(c =>
+                c.id === tokenDragState.characterId ? { ...c, hexKey: targetKey } : c
+              )
+            });
+          } else {
+            // Jittery click that never left the source hex: treat as a click
+            // so the gesture still selects instead of doing nothing
+            handlePlainClick(e);
+          }
+        }
+      }
+      draw();
+      return;
+    }
+
     // Handle marker drag end
     if (markerDrag.isDragging || markerDrag.isPending) {
       const canvas = canvasRef.current;
@@ -946,30 +1082,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
     }
 
     if (isPotentialDrag && !isDraggingMap) {
-      if (clickWasShiftRef.current && !regionPaintMode) {
-        // Shift+click: toggle hex in multi-selection
-        const canvas = canvasRef.current;
-        if (canvas && campaign) {
-          const rect = canvas.getBoundingClientRect();
-          const scaleX = canvas.width / rect.width;
-          const scaleY = canvas.height / rect.height;
-          const canvasX = (e.clientX - rect.left) * scaleX;
-          const canvasY = (e.clientY - rect.top) * scaleY;
-          const worldX = (canvasX - panOffset.x) / zoomLevel;
-          const worldY = (canvasY - panOffset.y) / zoomLevel;
-          const coord = coordinateAt({ x: worldX, y: worldY }, campaign.gridWidth, campaign.gridHeight);
-          if (coord) {
-            toggleMultiSelectHex(coord);
-            selectHex(coord);
-          }
-        }
-      } else {
-        // Normal click - select hex and clear any multi-selection
-        if (multiSelectedKeys.size > 0) {
-          clearMultiSelection();
-        }
-        selectHexAtPosition(e);
-      }
+      handlePlainClick(e);
     }
     // Sync targetPan with current panOffset after drag ends
     if (isDraggingMap) {
@@ -977,7 +1090,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
     }
     setIsPotentialDrag(false);
     setIsDraggingMap(false);
-  }, [isPotentialDrag, isDraggingMap, selectHexAtPosition, panOffset, campaign, zoomLevel, markerDrag, selectMarker, regionPaintMode, toggleMultiSelectHex, selectHex, multiSelectedKeys, clearMultiSelection]);
+  }, [isPotentialDrag, isDraggingMap, panOffset, campaign, zoomLevel, markerDrag, selectMarker, getHex, updateCampaignData, draw, handlePlainClick, setTargetPan]);
 
   // Handle mouse move for drag panning and tooltips
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -986,6 +1099,26 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
     if (!canvas || !container || !campaign) return;
 
     const rect = canvas.getBoundingClientRect();
+
+    // Handle character token dragging
+    const tokenDragState = tokenDragRef.current;
+    if (tokenDragState) {
+      tokenDragState.currentX = e.clientX - rect.left;
+      tokenDragState.currentY = e.clientY - rect.top;
+      if (!tokenDragState.dragging) {
+        const dx = e.clientX - tokenDragState.startX;
+        const dy = e.clientY - tokenDragState.startY;
+        // Hex threshold (8px, not 3px): a slightly jittery click on a token
+        // should still read as a click, not a drag
+        if (Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD_HEX) {
+          tokenDragState.dragging = true;
+        }
+      }
+      if (tokenDragState.dragging) {
+        draw();
+      }
+      return;
+    }
 
     // Handle marker dragging
     if (markerDrag.isPending || markerDrag.isDragging) {
@@ -1073,6 +1206,11 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
   // Handle mouse leave
   const handleMouseLeave = useCallback(() => {
     setTooltip(null);
+    // Cancel token drag if mouse leaves canvas
+    if (tokenDragRef.current) {
+      tokenDragRef.current = null;
+      draw();
+    }
     // Reset marker drag state if mouse leaves canvas
     if (markerDrag.isPending || markerDrag.isDragging) {
       markerDrag.cancelDrag();
@@ -1082,7 +1220,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
       setIsPotentialDrag(false);
       setIsDraggingMap(false);
     }
-  }, [isPotentialDrag, isDraggingMap, markerDrag]);
+  }, [isPotentialDrag, isDraggingMap, markerDrag, draw]);
 
   // Handle double-click for flood-fill terrain selection
   const handleDoubleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1112,17 +1250,48 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
   // Handle context menu (right-click)
   const handleContextMenu = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
-    if (multiSelectedKeys.size === 0) return;
+    if (!campaign) return;
 
     const container = containerRef.current;
-    if (!container) return;
+    const canvas = canvasRef.current;
+    if (!container || !canvas) return;
+
+    // Resolve the right-clicked hex (party-move target); null if outside grid
+    // or the hex doesn't exist (tokens on missing hexes would vanish)
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const canvasX = (e.clientX - rect.left) * scaleX;
+    const canvasY = (e.clientY - rect.top) * scaleY;
+    const worldX = (canvasX - panOffset.x) / zoomLevel;
+    const worldY = (canvasY - panOffset.y) / zoomLevel;
+    const coord = coordinateAt({ x: worldX, y: worldY }, campaign.gridWidth, campaign.gridHeight);
+    const targetKey = coord && getHex(coord) ? hexKey(coord) : null;
+
+    const hasCharacters = (campaign.playerCharacters ?? []).length > 0;
+    if (multiSelectedKeys.size === 0 && !(targetKey && hasCharacters)) return;
 
     const containerRect = container.getBoundingClientRect();
     // Clamp to container bounds
     const x = Math.min(e.clientX - containerRect.left, containerRect.width - 200);
     const y = Math.min(e.clientY - containerRect.top, containerRect.height - 50);
-    setContextMenu({ x, y });
-  }, [multiSelectedKeys.size]);
+    setContextMenu({ x, y, hexKey: targetKey });
+  }, [multiSelectedKeys.size, campaign, getHex, panOffset, zoomLevel]);
+
+  // Move all placed members of a party (or every placed character) to a hex in
+  // one undo state. Benched characters (no hexKey) stay benched: placing them
+  // is an explicit panel action, and a party move must not surprise-reveal
+  // them on the player view.
+  const handleMoveParty = useCallback((partyId: string | 'all', targetKey: string) => {
+    if (!campaign) return;
+    const chars = campaign.playerCharacters ?? [];
+    const shouldMove = (c: PlayerCharacter) =>
+      !!c.hexKey && (partyId === 'all' || c.partyId === partyId);
+    if (!chars.some(c => shouldMove(c) && c.hexKey !== targetKey)) return;
+    updateCampaignData({
+      playerCharacters: chars.map(c => shouldMove(c) ? { ...c, hexKey: targetKey } : c)
+    });
+  }, [campaign, updateCampaignData]);
 
   // Handle drag over for palette-to-canvas drop
   const handleDragOver = useCallback((e: React.DragEvent<HTMLCanvasElement>) => {
@@ -1362,22 +1531,40 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
         ) : null;
       })()}
       {/* Context menu */}
-      {contextMenu && multiSelectedKeys.size > 0 && (
-        <HexContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          selectionCount={multiSelectedKeys.size}
-          onCreateRegion={() => {
-            setContextMenu(null);
-            onCreateRegionFromSelection?.();
-          }}
-          onExportSelected={() => {
-            setContextMenu(null);
-            onExportSelection?.();
-          }}
-          onClose={() => setContextMenu(null)}
-        />
-      )}
+      {contextMenu && (() => {
+        // Only placed characters can be party-moved (benched ones stay benched)
+        const placedChars = (campaign.playerCharacters ?? []).filter(c => c.hexKey);
+        const parties = campaign.parties ?? [];
+        const partyMoveTargets = contextMenu.hexKey && placedChars.length > 0
+          ? [
+              ...parties
+                .filter(p => placedChars.some(c => c.partyId === p.id))
+                .map(p => ({ id: p.id, label: `Move ${p.name || 'Unnamed Party'} here` })),
+              { id: 'all', label: placedChars.length === 1 ? 'Move character here' : 'Move all characters here' }
+            ]
+          : [];
+        if (multiSelectedKeys.size === 0 && partyMoveTargets.length === 0) return null;
+        return (
+          <HexContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            selectionCount={multiSelectedKeys.size}
+            partyMoveTargets={partyMoveTargets}
+            onMoveParty={(partyId) => {
+              if (contextMenu.hexKey) handleMoveParty(partyId, contextMenu.hexKey);
+            }}
+            onCreateRegion={() => {
+              setContextMenu(null);
+              onCreateRegionFromSelection?.();
+            }}
+            onExportSelected={() => {
+              setContextMenu(null);
+              onExportSelection?.();
+            }}
+            onClose={() => setContextMenu(null)}
+          />
+        );
+      })()}
       {/* Layer controls */}
       <LayerControl />
       {/* Zoom controls - fixed position */}
