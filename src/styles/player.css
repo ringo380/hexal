@@ -1356,3 +1356,308 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* ============ DICE PANEL ============ */
+/* Twin block: identical styles also live in src/styles/app.css, since
+   the DM bundle (app.css) and the web-player bundle (player.css) never
+   share a stylesheet. Keep both in sync. */
+
+.dice-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 0;
+}
+
+.dice-panel .dice-panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dice-panel .dice-die-buttons {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dice-panel .dice-die-btn {
+  min-width: 48px;
+  padding: 8px 10px;
+  background-color: #2d2d2d;
+  border: 1px solid #3c3c3c;
+  border-radius: 4px;
+  color: #e0e0e0;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.dice-panel .dice-die-btn:hover {
+  background-color: #3a3a3a;
+}
+
+.dice-panel .dice-die-btn.selected {
+  background-color: #4a9eff;
+  border-color: #4a9eff;
+  color: #fff;
+}
+
+.dice-panel .dice-panel-controls {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.dice-panel .dice-stepper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dice-panel .dice-stepper-label {
+  font-size: 12px;
+  color: #a0a0a0;
+}
+
+.dice-panel .dice-stepper-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dice-panel .dice-stepper-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background-color: #2d2d2d;
+  border: 1px solid #3c3c3c;
+  border-radius: 4px;
+  color: #e0e0e0;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.dice-panel .dice-stepper-btn:hover:not(:disabled) {
+  background-color: #3a3a3a;
+}
+
+.dice-panel .dice-stepper-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.dice-panel .dice-stepper-value {
+  font-size: 15px;
+  font-weight: 500;
+  min-width: 32px;
+  text-align: center;
+}
+
+.dice-panel .dice-adv-toggle {
+  display: flex;
+  gap: 4px;
+}
+
+.dice-panel .dice-adv-btn {
+  padding: 6px 10px;
+  background-color: #2d2d2d;
+  border: 1px solid #3c3c3c;
+  border-radius: 4px;
+  color: #a0a0a0;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.dice-panel .dice-adv-btn:hover:not(:disabled) {
+  background-color: #3a3a3a;
+}
+
+.dice-panel .dice-adv-btn.selected {
+  background-color: #4a9eff;
+  border-color: #4a9eff;
+  color: #fff;
+}
+
+.dice-panel .dice-adv-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.dice-panel .dice-notation-row {
+  flex-direction: row;
+  gap: 8px;
+}
+
+.dice-panel .dice-notation-input {
+  flex: 1;
+  min-width: 0;
+  background-color: #2d2d2d;
+  border: 1px solid #3c3c3c;
+  border-radius: 4px;
+  color: #e0e0e0;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+.dice-panel .dice-roll-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background-color: #4a9eff;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dice-panel .dice-roll-btn:hover {
+  background-color: #5aadff;
+}
+
+.dice-panel .dice-error {
+  color: #ff6b6b;
+  font-size: 13px;
+  margin: 0;
+}
+
+.dice-panel .dice-hidden-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #a0a0a0;
+  cursor: pointer;
+}
+
+.dice-panel .dice-reveal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 0;
+  border-top: 1px solid #3c3c3c;
+  border-bottom: 1px solid #3c3c3c;
+}
+
+.dice-panel .dice-reveal-empty {
+  padding: 12px 0;
+}
+
+.dice-panel .dice-reveal-value {
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1;
+  color: #e0e0e0;
+  transform: scale(0.85);
+  opacity: 0.85;
+}
+
+.dice-panel .dice-reveal-value.settled {
+  color: #4a9eff;
+  transform: scale(1);
+  opacity: 1;
+  transition: transform 200ms ease-out, opacity 200ms ease-out, color 200ms ease-out;
+}
+
+.dice-panel .dice-reveal-notation {
+  font-size: 13px;
+  color: #a0a0a0;
+}
+
+.dice-panel .dice-history-heading {
+  margin: 0 0 6px 0;
+  font-size: 13px;
+  color: #a0a0a0;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.dice-panel .dice-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.dice-panel .dice-history-item {
+  padding: 8px 10px;
+  background-color: #2d2d2d;
+  border: 1px solid #3c3c3c;
+  border-radius: 4px;
+}
+
+.dice-panel .dice-history-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dice-panel .dice-history-notation {
+  font-size: 13px;
+  color: #a0a0a0;
+}
+
+.dice-panel .dice-history-total {
+  font-size: 16px;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.dice-panel .dice-history-hidden-badge {
+  margin-left: auto;
+  padding: 2px 6px;
+  background-color: rgba(255, 200, 50, 0.2);
+  color: #ffc832;
+  border-radius: 3px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.dice-panel .dice-history-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.dice-panel .dice-history-value {
+  font-size: 13px;
+  color: #e0e0e0;
+}
+
+.dice-panel .dice-history-value.discarded {
+  color: #666666;
+  text-decoration: line-through;
+}
+
+.dice-panel .dice-history-modifier {
+  font-size: 13px;
+  color: #a0a0a0;
+}
+
+.dice-panel .dice-history-roller {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #a0a0a0;
+}
+
+/* player.css has no global .empty-hint, so the dim-italic placeholder
+   style used for "No rolls yet." / "Roll to see a result." is defined
+   locally here too, scoped so it doesn't affect other player components. */
+.dice-panel .empty-hint {
+  color: #a0a0a0;
+  font-size: 12px;
+  font-style: italic;
+  padding: 4px 0;
+}
