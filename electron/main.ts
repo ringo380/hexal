@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog, Menu, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import Store from 'electron-store';
-import { startServer, stopServer, getStatus as getWebServerStatus, broadcastState, broadcastCampaignClosed, broadcastMessage, broadcastEncounterReveal, broadcastEncounterDismiss, broadcastCombatUpdate, broadcastCombatEnd, broadcastPlayerNote, setPlayerNoteCallback } from './webServer';
+import { startServer, stopServer, getStatus as getWebServerStatus, broadcastState, broadcastCampaignClosed, broadcastMessage, broadcastEncounterReveal, broadcastEncounterDismiss, broadcastCombatUpdate, broadcastCombatEnd, broadcastPlayerNote, setPlayerNoteCallback, broadcastDiceRoll, setDiceRollCallback } from './webServer';
 
 // Session-only message type (not persisted in campaign data)
 interface DmMessage {
@@ -22,6 +22,12 @@ const windows: Set<BrowserWindow> = new Set();
 const playerViewWindows: Set<BrowserWindow> = new Set();
 // Last combat-update payload, cached for player windows opened mid-combat
 let activeCombatData: unknown | null = null;
+// Recent dice rolls, cached for player windows opened mid-session (oldest first, capped at 50)
+let rollHistoryData: unknown[] = [];
+// Latest filtered player-view campaign state, cached so a player window
+// opened after the campaign is already loaded doesn't sit on "Waiting for
+// DM..." until the next campaign edit re-fires sync-player-view.
+let latestPlayerViewData: unknown = null;
 let activeWindow: BrowserWindow | null = null;
 
 // Get the Hexal folder in user's documents
@@ -274,9 +280,16 @@ function createPlayerViewWindow(): BrowserWindow {
     playerViewWindows.delete(win);
   });
 
-  // Replay active combat state so a window opened mid-combat shows the
-  // initiative banner immediately (mirrors webServer's late-join replay)
+  // Replay latest campaign state + active combat state so a window opened
+  // after the campaign is already loaded (or mid-combat) is caught up
+  // immediately instead of waiting for the next DM edit (mirrors webServer's
+  // late-join replay). Dice history is fetched separately via
+  // get-dice-history, invoked once the renderer's listeners are wired up -
+  // a did-finish-load push can fire before any renderer listener exists.
   win.webContents.once('did-finish-load', () => {
+    if (latestPlayerViewData !== null) {
+      win.webContents.send('player-view-update', latestPlayerViewData);
+    }
     if (activeCombatData !== null) {
       win.webContents.send('combat-update', activeCombatData);
     }
@@ -610,6 +623,7 @@ ipcMain.handle('open-player-view', async () => {
 
 // Relay campaign state from DM to all player view windows + web clients
 ipcMain.on('sync-player-view', (_event, data) => {
+  latestPlayerViewData = data;
   Array.from(playerViewWindows).forEach(win => {
     if (!win.isDestroyed()) {
       win.webContents.send('player-view-update', data);
@@ -672,6 +686,45 @@ ipcMain.on('combat-end', () => {
   broadcastCombatEnd();
 });
 
+// Pulled by createElectronDiceTransport's subscribe() after the renderer has
+// wired up its own listeners, so a newly opened DM or player window is
+// caught up on history without racing did-finish-load (a pushed
+// 'dice-history' event can fire before any renderer listener exists).
+ipcMain.handle('get-dice-history', () => rollHistoryData);
+
+// Relay dice rolls from DM/player windows to all other DM + player view
+// windows + web clients. The recent rolls are cached (oldest first, capped
+// at 50) so windows opened mid-session can be caught up on load.
+ipcMain.on('dice-roll', (event, payload) => {
+  if (typeof payload !== 'object' || payload === null) {
+    return;
+  }
+  try {
+    if (JSON.stringify(payload).length > 20000) {
+      return;
+    }
+  } catch {
+    return;
+  }
+
+  rollHistoryData.push(payload);
+  if (rollHistoryData.length > 50) {
+    rollHistoryData.shift();
+  }
+
+  Array.from(windows).forEach(win => {
+    if (!win.isDestroyed() && win.webContents !== event.sender) {
+      win.webContents.send('dice-roll', payload);
+    }
+  });
+  Array.from(playerViewWindows).forEach(win => {
+    if (!win.isDestroyed() && win.webContents !== event.sender) {
+      win.webContents.send('dice-roll', payload);
+    }
+  });
+  broadcastDiceRoll(payload);
+});
+
 // Relay player note from player window to DM renderer + other player windows + web clients
 ipcMain.on('player-note-save', (event, note) => {
   // Send to DM windows (non-player windows)
@@ -706,9 +759,32 @@ setPlayerNoteCallback((note) => {
   });
 });
 
+// Wire up web player dice roll callback to relay to DM + Electron player
+// windows. Does NOT call broadcastDiceRoll — the inbound web handler already
+// cached the roll and broadcast it to the other web clients, so re-broadcasting
+// here would double-insert into rollHistory and echo the roll back to its sender.
+setDiceRollCallback((roll) => {
+  rollHistoryData.push(roll);
+  if (rollHistoryData.length > 50) {
+    rollHistoryData.shift();
+  }
+  Array.from(windows).forEach(win => {
+    if (!win.isDestroyed()) {
+      win.webContents.send('dice-roll', roll);
+    }
+  });
+  Array.from(playerViewWindows).forEach(win => {
+    if (!win.isDestroyed()) {
+      win.webContents.send('dice-roll', roll);
+    }
+  });
+});
+
 // Relay campaign-closed event from DM to all player view windows + web clients
 ipcMain.on('player-view-campaign-closed', () => {
+  latestPlayerViewData = null;
   activeCombatData = null;
+  rollHistoryData = [];
   Array.from(playerViewWindows).forEach(win => {
     if (!win.isDestroyed()) {
       win.webContents.send('player-view-campaign-closed');

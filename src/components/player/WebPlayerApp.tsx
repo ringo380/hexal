@@ -1,11 +1,11 @@
 // WebPlayerApp — Root component for the browser-based player view.
 // Connects via WebSocket, handles PIN auth, reconnection, and renders PlayerView.
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { PlayerCampaign } from '../../services/playerViewFilter';
 import type { ActiveEncounter } from '../../types/Campaign';
 import type { PlayerCombatState } from '../../types/Combat';
-import type { PlayerNote } from '../../types';
+import type { PlayerNote, DiceRoll, DiceTransport } from '../../types';
 import PlayerView from './PlayerView';
 
 type ConnectionState =
@@ -43,6 +43,42 @@ function WebPlayerApp() {
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttemptRef = useRef(0);
   const pinRef = useRef(''); // Stores the last successful PIN for auto-reconnect
+
+  // Dice roll channel — bridges the DiceProvider mounted inside PlayerView to
+  // this component's single WebSocket onmessage switch, rather than a second
+  // onmessage listener. diceHandlersRef holds DiceContext's subscribe()
+  // callbacks; it (and the pending buffers below) live outside the
+  // per-connection `ws` instance so they survive reconnects untouched.
+  //
+  // A dice-roll/dice-history message can race DiceProvider's mount (it only
+  // mounts once PlayerView renders, after the 'state' message is handled) -
+  // buffer anything that arrives before subscribe() is called and replay it
+  // then, so a late-joining client never silently drops its history reply.
+  const diceHandlersRef = useRef<{ onRoll(r: DiceRoll): void; onHistory(rolls: DiceRoll[]): void } | null>(null);
+  const pendingDiceHistoryRef = useRef<DiceRoll[] | null>(null);
+  const pendingDiceRollsRef = useRef<DiceRoll[]>([]);
+
+  const diceTransport = useMemo<DiceTransport>(() => ({
+    send(roll: DiceRoll): void {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'dice-roll', data: roll }));
+      }
+    },
+    subscribe(handlers): () => void {
+      diceHandlersRef.current = handlers;
+      if (pendingDiceHistoryRef.current) {
+        handlers.onHistory(pendingDiceHistoryRef.current);
+        pendingDiceHistoryRef.current = null;
+      }
+      if (pendingDiceRollsRef.current.length > 0) {
+        pendingDiceRollsRef.current.forEach((r) => handlers.onRoll(r));
+        pendingDiceRollsRef.current = [];
+      }
+      return () => {
+        diceHandlersRef.current = null;
+      };
+    },
+  }), []);
 
   const cleanup = useCallback(() => {
     if (reconnectTimerRef.current) {
@@ -107,6 +143,8 @@ function WebPlayerApp() {
           setMessages([]);
           setActiveEncounter(null);
           setCombatState(null);
+          pendingDiceHistoryRef.current = null;
+          pendingDiceRollsRef.current = [];
           break;
 
         case 'dm-message':
@@ -146,6 +184,22 @@ function WebPlayerApp() {
           });
           break;
         }
+
+        case 'dice-roll':
+          if (diceHandlersRef.current) {
+            diceHandlersRef.current.onRoll(msg.data as DiceRoll);
+          } else {
+            pendingDiceRollsRef.current.push(msg.data as DiceRoll);
+          }
+          break;
+
+        case 'dice-history':
+          if (diceHandlersRef.current) {
+            diceHandlersRef.current.onHistory(msg.data as DiceRoll[]);
+          } else {
+            pendingDiceHistoryRef.current = msg.data as DiceRoll[];
+          }
+          break;
 
         case 'ping':
           if (ws.readyState === WebSocket.OPEN) {
@@ -192,6 +246,23 @@ function WebPlayerApp() {
     reconnectAttemptRef.current = 0;
     connect(pinRef.current || undefined);
   };
+
+  const handleSaveNote = useCallback((note: PlayerNote) => {
+    // Send to server via WebSocket
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'player-note-save', data: note }));
+    }
+    // Update local state immediately
+    setCampaign(prev => {
+      if (!prev) return prev;
+      const existing = prev.playerNotes ?? [];
+      const idx = existing.findIndex(n => n.id === note.id);
+      const updated = idx >= 0
+        ? existing.map((n, i) => i === idx ? note : n)
+        : [...existing, note];
+      return { ...prev, playerNotes: updated };
+    });
+  }, []);
 
   // --- PIN Entry Screen ---
   if (state === 'authenticating') {
@@ -276,23 +347,6 @@ function WebPlayerApp() {
     );
   }
 
-  const handleSaveNote = useCallback((note: PlayerNote) => {
-    // Send to server via WebSocket
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'player-note-save', data: note }));
-    }
-    // Update local state immediately
-    setCampaign(prev => {
-      if (!prev) return prev;
-      const existing = prev.playerNotes ?? [];
-      const idx = existing.findIndex(n => n.id === note.id);
-      const updated = idx >= 0
-        ? existing.map((n, i) => i === idx ? note : n)
-        : [...existing, note];
-      return { ...prev, playerNotes: updated };
-    });
-  }, []);
-
   // --- Active Campaign ---
   return (
     <PlayerView
@@ -302,6 +356,7 @@ function WebPlayerApp() {
       onEncounterDismiss={() => setActiveEncounter(null)}
       onSaveNote={handleSaveNote}
       combatState={combatState}
+      diceTransport={diceTransport}
     />
   );
 }

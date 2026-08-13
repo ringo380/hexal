@@ -43,6 +43,7 @@ import DmMessagePanel from './player/DmMessagePanel';
 import TravelPanel from './travel/TravelPanel';
 import CombatTrackerPanel from './combat/CombatTrackerPanel';
 import CombatToolbarButton from './combat/CombatToolbarButton';
+import DiceToolbarButton from './dice/DiceToolbarButton';
 import Icon from './icons/Icon';
 import type { PlayerNote } from '../types';
 import { CATEGORY_INFO, type ContentCategory, parseHexKey, type ActiveEncounter } from '../types/Campaign';
@@ -514,6 +515,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
             isOpen={showCombatTracker}
             onToggle={() => setShowCombatTracker(!showCombatTracker)}
           />
+          <DiceToolbarButton />
           <button className="btn btn-secondary" onClick={() => setShowGenerator(true)}>
             <Icon name="dice" size={16} /> Generate
           </button>

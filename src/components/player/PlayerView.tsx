@@ -1,6 +1,6 @@
 // PlayerView - Layout wrapper with Presentation/Explorer mode toggle
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import type { PlayerCampaign } from '../../services/playerViewFilter';
 import { createDefaultSimulationConfig } from '../../types/Weather';
 import PlayerHexGrid from './PlayerHexGrid';
@@ -10,12 +10,15 @@ import PlayerQuestLog from './PlayerQuestLog';
 import MessageToast from './MessageToast';
 import MessageHistory from './MessageHistory';
 import PlayerJournal from './PlayerJournal';
+import PlayerDiceSection from './PlayerDiceSection';
 import type { HexCoordinate, PlayerNote } from '../../types';
 import type { ActiveEncounter } from '../../types/Campaign';
 import { WEATHER_CONDITION_LABELS, TEMPERATURE_LABELS } from '../../types/Weather';
 import EncounterOverlay from './EncounterOverlay';
 import CombatBanner from './CombatBanner';
 import type { PlayerCombatState } from '../../types/Combat';
+import { DiceProvider } from '../../stores/DiceContext';
+import type { DiceTransport } from '../../types';
 
 interface DmMessage {
   id: string;
@@ -34,9 +37,10 @@ interface PlayerViewProps {
   onEncounterDismiss?: () => void;
   onSaveNote?: (note: PlayerNote) => void;
   combatState?: PlayerCombatState | null;
+  diceTransport?: DiceTransport;
 }
 
-function PlayerView({ campaign, messages = [], onMessageSeen, activeEncounter, onEncounterDismiss, onSaveNote, combatState }: PlayerViewProps) {
+function PlayerView({ campaign, messages = [], onMessageSeen, activeEncounter, onEncounterDismiss, onSaveNote, combatState, diceTransport }: PlayerViewProps) {
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('presentation');
   const [selectedHexKey, setSelectedHexKey] = useState<string | null>(null);
   const [showQuestLog, setShowQuestLog] = useState(false);
@@ -47,9 +51,33 @@ function PlayerView({ campaign, messages = [], onMessageSeen, activeEncounter, o
   const [lastSeenCount, setLastSeenCount] = useState(0);
   const prevMessageCountRef = useRef(messages.length);
   const [showJournal, setShowJournal] = useState(false);
+  const [showDicePanel, setShowDicePanel] = useState(false);
   const [playerName, setPlayerName] = useState(() => localStorage.getItem('hexal-player-name') || '');
   const [showNamePrompt, setShowNamePrompt] = useState(false);
+  const [namePromptIntent, setNamePromptIntent] = useState<'journal' | 'dice'>('journal');
   const [nameInput, setNameInput] = useState('');
+
+  // Roller name for the dice channel - same source as journal authorship
+  // (playerName, prompted/stored via the name prompt below). Memoized so the
+  // DiceProvider's roll() callback doesn't rebuild on every unrelated
+  // PlayerView re-render (e.g. hex selection).
+  const diceRoller = useMemo(
+    () => ({ kind: 'player' as const, name: playerName || 'Player' }),
+    [playerName]
+  );
+
+  // Completes the name prompt for whichever panel triggered it (journal or
+  // dice), opening that panel immediately rather than requiring a second click.
+  const completeNamePrompt = useCallback((name: string) => {
+    setPlayerName(name);
+    localStorage.setItem('hexal-player-name', name);
+    setShowNamePrompt(false);
+    if (namePromptIntent === 'dice') {
+      setShowDicePanel(true);
+    } else {
+      setShowJournal(true);
+    }
+  }, [namePromptIntent]);
 
   // Show toast when a new message arrives (not on initial mount with history)
   useEffect(() => {
@@ -100,6 +128,7 @@ function PlayerView({ campaign, messages = [], onMessageSeen, activeEncounter, o
     : null;
 
   return (
+    <DiceProvider campaignId={campaign.id} roller={diceRoller} transport={diceTransport}>
     <div className={`player-view player-view--${layoutMode}`}>
       {/* Weather bar */}
       {weatherText && (
@@ -133,6 +162,7 @@ function PlayerView({ campaign, messages = [], onMessageSeen, activeEncounter, o
           className="player-journal-toggle"
           onClick={() => {
             if (!playerName) {
+              setNamePromptIntent('journal');
               setShowNamePrompt(true);
             } else {
               setShowJournal(!showJournal);
@@ -142,6 +172,21 @@ function PlayerView({ campaign, messages = [], onMessageSeen, activeEncounter, o
           {showJournal ? 'Hide Journal' : 'Journal'}
         </button>
       )}
+
+      {/* Dice roller toggle */}
+      <button
+        className="player-dice-toggle"
+        onClick={() => {
+          if (!playerName) {
+            setNamePromptIntent('dice');
+            setShowNamePrompt(true);
+          } else {
+            setShowDicePanel(!showDicePanel);
+          }
+        }}
+      >
+        {showDicePanel ? 'Hide Dice' : 'Dice'}
+      </button>
 
       {/* Campaign name overlay (presentation mode) */}
       {layoutMode === 'presentation' && (
@@ -268,12 +313,21 @@ function PlayerView({ campaign, messages = [], onMessageSeen, activeEncounter, o
         </div>
       )}
 
+      {/* Dice roller panel */}
+      {showDicePanel && playerName && (
+        <PlayerDiceSection onClose={() => setShowDicePanel(false)} />
+      )}
+
       {/* Player name prompt */}
       {showNamePrompt && (
         <div className="player-name-prompt-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowNamePrompt(false); }}>
           <div className="player-name-prompt">
             <h3>Enter Your Name</h3>
-            <p>This will be used to identify your journal entries.</p>
+            <p>
+              {namePromptIntent === 'dice'
+                ? 'This will be shown next to your dice rolls.'
+                : 'This will be used to identify your journal entries.'}
+            </p>
             <input
               type="text"
               value={nameInput}
@@ -282,11 +336,7 @@ function PlayerView({ campaign, messages = [], onMessageSeen, activeEncounter, o
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && nameInput.trim()) {
-                  const name = nameInput.trim();
-                  setPlayerName(name);
-                  localStorage.setItem('hexal-player-name', name);
-                  setShowNamePrompt(false);
-                  setShowJournal(true);
+                  completeNamePrompt(nameInput.trim());
                 }
               }}
             />
@@ -294,13 +344,7 @@ function PlayerView({ campaign, messages = [], onMessageSeen, activeEncounter, o
               <button onClick={() => setShowNamePrompt(false)}>Cancel</button>
               <button
                 disabled={!nameInput.trim()}
-                onClick={() => {
-                  const name = nameInput.trim();
-                  setPlayerName(name);
-                  localStorage.setItem('hexal-player-name', name);
-                  setShowNamePrompt(false);
-                  setShowJournal(true);
-                }}
+                onClick={() => completeNamePrompt(nameInput.trim())}
               >
                 Continue
               </button>
@@ -309,6 +353,7 @@ function PlayerView({ campaign, messages = [], onMessageSeen, activeEncounter, o
         </div>
       )}
     </div>
+    </DiceProvider>
   );
 }
 

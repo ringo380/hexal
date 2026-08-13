@@ -1,10 +1,12 @@
 // App.tsx - Main application with conditional routing (DM view)
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useCampaign } from './stores/CampaignContext';
 import CampaignBrowser from './components/CampaignBrowser';
 import MainEditor from './components/MainEditor';
 import { WeatherSimulationProvider } from './stores/WeatherSimulationContext';
 import { CombatProvider } from './stores/CombatContext';
+import { DiceProvider } from './stores/DiceContext';
+import { createElectronDiceTransport } from './services/diceTransport';
 import UnsavedChangesDialog from './components/modals/UnsavedChangesDialog';
 import AlertDialog from './components/modals/AlertDialog';
 import ConflictResolutionModal from './components/modals/ConflictResolutionModal';
@@ -23,6 +25,7 @@ function App() {
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { pendingConflict, resolveConflict } = useSyncContext();
+  const diceTransport = useMemo(() => createElectronDiceTransport(), []);
   const exportRef = useRef<(() => void) | null>(null);
   const mapExportRef = useRef<(() => void) | null>(null);
   const exportTemplateRef = useRef<(() => void) | null>(null);
@@ -253,12 +256,18 @@ function App() {
         <ErrorBoundary>
           <WeatherSimulationProvider>
             <CombatProvider>
-              <MainEditor
-                onRegisterExport={registerExportHandler}
-                onRegisterMapExport={registerMapExportHandler}
-                onRegisterExportTemplate={registerExportTemplateHandler}
-                onRegisterFogOfWar={registerFogOfWarHandler}
-              />
+              <DiceProvider
+                campaignId={campaign.id}
+                roller={{ kind: 'dm', name: 'DM' }}
+                transport={diceTransport}
+              >
+                <MainEditor
+                  onRegisterExport={registerExportHandler}
+                  onRegisterMapExport={registerMapExportHandler}
+                  onRegisterExportTemplate={registerExportTemplateHandler}
+                  onRegisterFogOfWar={registerFogOfWarHandler}
+                />
+              </DiceProvider>
             </CombatProvider>
           </WeatherSimulationProvider>
         </ErrorBoundary>

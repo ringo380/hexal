@@ -1,12 +1,13 @@
 // PlayerApp - Root component for the player view window
 // Manages IPC state, shows waiting/closed screens, renders PlayerView when data is available
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { PlayerCampaign } from '../../services/playerViewFilter';
 import type { ActiveEncounter } from '../../types/Campaign';
 import type { PlayerCombatState } from '../../types/Combat';
 import type { PlayerNote } from '../../types';
 import PlayerView from './PlayerView';
+import { createElectronDiceTransport } from '../../services/diceTransport';
 import '../../styles/player.css';
 
 type PlayerState = 'waiting' | 'active' | 'closed';
@@ -24,6 +25,7 @@ function PlayerApp() {
   const [messages, setMessages] = useState<DmMessage[]>([]);
   const [activeEncounter, setActiveEncounter] = useState<ActiveEncounter | null>(null);
   const [combatState, setCombatState] = useState<PlayerCombatState | null>(null);
+  const diceTransport = useMemo(() => createElectronDiceTransport(), []);
 
   useEffect(() => {
     const cleanupUpdate = window.electronAPI.onPlayerViewUpdate((data) => {
@@ -85,6 +87,20 @@ function PlayerApp() {
     };
   }, []);
 
+  const handleSaveNote = useCallback((note: PlayerNote) => {
+    window.electronAPI.sendPlayerNote(note);
+    // Also update local state immediately
+    setPlayerCampaign(prev => {
+      if (!prev) return prev;
+      const existing = prev.playerNotes ?? [];
+      const idx = existing.findIndex(n => n.id === note.id);
+      const updated = idx >= 0
+        ? existing.map((n, i) => i === idx ? note : n)
+        : [...existing, note];
+      return { ...prev, playerNotes: updated };
+    });
+  }, []);
+
   if (state === 'waiting' || !playerCampaign) {
     return (
       <div className="player-status-screen">
@@ -109,20 +125,6 @@ function PlayerApp() {
     );
   }
 
-  const handleSaveNote = useCallback((note: PlayerNote) => {
-    window.electronAPI.sendPlayerNote(note);
-    // Also update local state immediately
-    setPlayerCampaign(prev => {
-      if (!prev) return prev;
-      const existing = prev.playerNotes ?? [];
-      const idx = existing.findIndex(n => n.id === note.id);
-      const updated = idx >= 0
-        ? existing.map((n, i) => i === idx ? note : n)
-        : [...existing, note];
-      return { ...prev, playerNotes: updated };
-    });
-  }, []);
-
   return (
     <PlayerView
       campaign={playerCampaign}
@@ -131,6 +133,7 @@ function PlayerApp() {
       onEncounterDismiss={() => setActiveEncounter(null)}
       onSaveNote={handleSaveNote}
       combatState={combatState}
+      diceTransport={diceTransport}
     />
   );
 }
