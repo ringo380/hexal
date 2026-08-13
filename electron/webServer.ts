@@ -36,9 +36,36 @@ let activeEncounter: unknown | null = null; // Current revealed encounter
 let activeCombat: unknown | null = null; // Current combat tracker state (filtered for players)
 let pingIntervalHandle: ReturnType<typeof setInterval> | null = null;
 let messageHistory: unknown[] = []; // Session message buffer (max 100)
+let rollHistory: unknown[] = []; // Recent dice rolls, oldest first, capped at 50
 let onPlayerNoteCallback: ((note: unknown) => void) | null = null;
+let onDiceRollCallback: ((roll: unknown) => void) | null = null;
 
 // ---------- Helpers ----------
+
+// Minimal, ES3-safe shape check for an inbound dice roll from a web client.
+// electron/ cannot import src/ services, so this duplicates the relevant
+// bounds from src/services/diceService.ts's isValidDiceRollPayload. Hidden
+// rolls are refused outright — they must never transit the network.
+function isDiceRollShaped(x: unknown): boolean {
+  if (typeof x !== 'object' || x === null) return false;
+  const r = x as Record<string, unknown>;
+
+  if (typeof r.id !== 'string' || r.id.length > 64) return false;
+  if (typeof r.notation !== 'string' || r.notation.length > 100) return false;
+  if (typeof r.total !== 'number' || !isFinite(r.total)) return false;
+  if (typeof r.modifier !== 'number' || !isFinite(r.modifier)) return false;
+  if (typeof r.timestamp !== 'number' || !isFinite(r.timestamp)) return false;
+  if (!Array.isArray(r.rolls) || r.rolls.length > 200) return false;
+
+  if (typeof r.roller !== 'object' || r.roller === null) return false;
+  const roller = r.roller as Record<string, unknown>;
+  if (roller.kind !== 'dm' && roller.kind !== 'player') return false;
+  if (typeof roller.name !== 'string' || roller.name.length > 50) return false;
+
+  if (r.isHidden !== false) return false;
+
+  return true;
+}
 
 function generatePin(): string {
   return String(Math.floor(1000 + Math.random() * 9000));
@@ -223,6 +250,10 @@ export function startServer(options: { port: number; pin?: string }): WebServerS
           if (activeCombat) {
             sendJson(ws, { type: 'combat-update', data: activeCombat });
           }
+          // Send dice roll history to late-joining clients
+          if (rollHistory.length > 0) {
+            sendJson(ws, { type: 'dice-history', data: rollHistory });
+          }
         } else {
           sendJson(ws, { type: 'auth-fail', reason: 'Invalid PIN' });
           ws.close();
@@ -246,6 +277,31 @@ export function startServer(options: { port: number; pin?: string }): WebServerS
         Array.from(clients).forEach(c => {
           if (c !== client && c.authenticated && c.ws.readyState === WebSocket.OPEN) {
             c.ws.send(noteMessage);
+          }
+        });
+        return;
+      }
+
+      // Dice roll from web client — validate, cache, relay to DM, broadcast to other clients
+      if (msg.type === 'dice-roll' && client.authenticated && msg.data) {
+        if (!isDiceRollShaped(msg.data)) {
+          return;
+        }
+
+        rollHistory.push(msg.data);
+        if (rollHistory.length > 50) {
+          rollHistory.shift();
+        }
+
+        if (onDiceRollCallback) {
+          onDiceRollCallback(msg.data);
+        }
+
+        // Broadcast to other authenticated clients (not the sender)
+        const rollMessage = JSON.stringify({ type: 'dice-roll', data: msg.data });
+        Array.from(clients).forEach(c => {
+          if (c !== client && c.authenticated && c.ws.readyState === WebSocket.OPEN) {
+            c.ws.send(rollMessage);
           }
         });
         return;
@@ -297,6 +353,7 @@ export function stopServer(): void {
   currentPort = 0;
   latestState = null;
   messageHistory = [];
+  rollHistory = [];
   activeEncounter = null;
   activeCombat = null;
 }
@@ -366,18 +423,33 @@ export function broadcastCombatEnd(): void {
   broadcastToAuthenticated(message);
 }
 
-export function broadcastDiceRoll(_data: unknown): void {
-  // no-op
+// Broadcasts a roll that originated in Electron (DM or player window) to all
+// authenticated web clients, caching it for late-joining clients. Rolls that
+// originate from a web client are cached and relayed by the inbound
+// 'dice-roll' message handler instead — that path pushes to rollHistory
+// itself, so calling this from there would double-insert and double-send.
+export function broadcastDiceRoll(data: unknown): void {
+  rollHistory.push(data);
+  if (rollHistory.length > 50) {
+    rollHistory.shift();
+  }
+  const message = JSON.stringify({ type: 'dice-roll', data });
+  broadcastToAuthenticated(message);
 }
 
 export function setPlayerNoteCallback(cb: (note: unknown) => void): void {
   onPlayerNoteCallback = cb;
 }
 
+export function setDiceRollCallback(cb: (roll: unknown) => void): void {
+  onDiceRollCallback = cb;
+}
+
 export function broadcastCampaignClosed(): void {
   const message = JSON.stringify({ type: 'campaign-closed' });
   latestState = null;
   messageHistory = [];
+  rollHistory = [];
   activeEncounter = null;
   activeCombat = null;
   broadcastToAuthenticated(message);

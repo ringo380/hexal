@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog, Menu, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import Store from 'electron-store';
-import { startServer, stopServer, getStatus as getWebServerStatus, broadcastState, broadcastCampaignClosed, broadcastMessage, broadcastEncounterReveal, broadcastEncounterDismiss, broadcastCombatUpdate, broadcastCombatEnd, broadcastPlayerNote, setPlayerNoteCallback, broadcastDiceRoll } from './webServer';
+import { startServer, stopServer, getStatus as getWebServerStatus, broadcastState, broadcastCampaignClosed, broadcastMessage, broadcastEncounterReveal, broadcastEncounterDismiss, broadcastCombatUpdate, broadcastCombatEnd, broadcastPlayerNote, setPlayerNoteCallback, broadcastDiceRoll, setDiceRollCallback } from './webServer';
 
 // Session-only message type (not persisted in campaign data)
 interface DmMessage {
@@ -740,6 +740,27 @@ setPlayerNoteCallback((note) => {
   Array.from(playerViewWindows).forEach(win => {
     if (!win.isDestroyed()) {
       win.webContents.send('player-note-received', note);
+    }
+  });
+});
+
+// Wire up web player dice roll callback to relay to DM + Electron player
+// windows. Does NOT call broadcastDiceRoll — the inbound web handler already
+// cached the roll and broadcast it to the other web clients, so re-broadcasting
+// here would double-insert into rollHistory and echo the roll back to its sender.
+setDiceRollCallback((roll) => {
+  rollHistoryData.push(roll);
+  if (rollHistoryData.length > 50) {
+    rollHistoryData.shift();
+  }
+  Array.from(windows).forEach(win => {
+    if (!win.isDestroyed()) {
+      win.webContents.send('dice-roll', roll);
+    }
+  });
+  Array.from(playerViewWindows).forEach(win => {
+    if (!win.isDestroyed()) {
+      win.webContents.send('dice-roll', roll);
     }
   });
 });
