@@ -669,7 +669,6 @@ ipcMain.on('combat-update', (_event, data) => {
 
 ipcMain.on('combat-end', () => {
   activeCombatData = null;
-  rollHistoryData = [];
   Array.from(playerViewWindows).forEach(win => {
     if (!win.isDestroyed()) {
       win.webContents.send('combat-end');
