@@ -24,6 +24,10 @@ const playerViewWindows: Set<BrowserWindow> = new Set();
 let activeCombatData: unknown | null = null;
 // Recent dice rolls, cached for player windows opened mid-session (oldest first, capped at 50)
 let rollHistoryData: unknown[] = [];
+// Latest filtered player-view campaign state, cached so a player window
+// opened after the campaign is already loaded doesn't sit on "Waiting for
+// DM..." until the next campaign edit re-fires sync-player-view.
+let latestPlayerViewData: unknown = null;
 let activeWindow: BrowserWindow | null = null;
 
 // Get the Hexal folder in user's documents
@@ -285,9 +289,14 @@ function createPlayerViewWindow(): BrowserWindow {
     playerViewWindows.delete(win);
   });
 
-  // Replay active combat state so a window opened mid-combat shows the
-  // initiative banner immediately (mirrors webServer's late-join replay)
+  // Replay latest campaign state + active combat state so a window opened
+  // after the campaign is already loaded (or mid-combat) is caught up
+  // immediately instead of waiting for the next DM edit (mirrors webServer's
+  // late-join replay, and the dice-history replay below it).
   win.webContents.once('did-finish-load', () => {
+    if (latestPlayerViewData !== null) {
+      win.webContents.send('player-view-update', latestPlayerViewData);
+    }
     if (activeCombatData !== null) {
       win.webContents.send('combat-update', activeCombatData);
     }
@@ -624,6 +633,7 @@ ipcMain.handle('open-player-view', async () => {
 
 // Relay campaign state from DM to all player view windows + web clients
 ipcMain.on('sync-player-view', (_event, data) => {
+  latestPlayerViewData = data;
   Array.from(playerViewWindows).forEach(win => {
     if (!win.isDestroyed()) {
       win.webContents.send('player-view-update', data);
@@ -776,6 +786,7 @@ setDiceRollCallback((roll) => {
 
 // Relay campaign-closed event from DM to all player view windows + web clients
 ipcMain.on('player-view-campaign-closed', () => {
+  latestPlayerViewData = null;
   activeCombatData = null;
   rollHistoryData = [];
   Array.from(playerViewWindows).forEach(win => {

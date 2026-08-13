@@ -247,6 +247,23 @@ function WebPlayerApp() {
     connect(pinRef.current || undefined);
   };
 
+  const handleSaveNote = useCallback((note: PlayerNote) => {
+    // Send to server via WebSocket
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'player-note-save', data: note }));
+    }
+    // Update local state immediately
+    setCampaign(prev => {
+      if (!prev) return prev;
+      const existing = prev.playerNotes ?? [];
+      const idx = existing.findIndex(n => n.id === note.id);
+      const updated = idx >= 0
+        ? existing.map((n, i) => i === idx ? note : n)
+        : [...existing, note];
+      return { ...prev, playerNotes: updated };
+    });
+  }, []);
+
   // --- PIN Entry Screen ---
   if (state === 'authenticating') {
     return (
@@ -329,23 +346,6 @@ function WebPlayerApp() {
       </div>
     );
   }
-
-  const handleSaveNote = useCallback((note: PlayerNote) => {
-    // Send to server via WebSocket
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'player-note-save', data: note }));
-    }
-    // Update local state immediately
-    setCampaign(prev => {
-      if (!prev) return prev;
-      const existing = prev.playerNotes ?? [];
-      const idx = existing.findIndex(n => n.id === note.id);
-      const updated = idx >= 0
-        ? existing.map((n, i) => i === idx ? note : n)
-        : [...existing, note];
-      return { ...prev, playerNotes: updated };
-    });
-  }, []);
 
   // --- Active Campaign ---
   return (

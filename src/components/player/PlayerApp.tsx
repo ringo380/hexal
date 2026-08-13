@@ -87,6 +87,20 @@ function PlayerApp() {
     };
   }, []);
 
+  const handleSaveNote = useCallback((note: PlayerNote) => {
+    window.electronAPI.sendPlayerNote(note);
+    // Also update local state immediately
+    setPlayerCampaign(prev => {
+      if (!prev) return prev;
+      const existing = prev.playerNotes ?? [];
+      const idx = existing.findIndex(n => n.id === note.id);
+      const updated = idx >= 0
+        ? existing.map((n, i) => i === idx ? note : n)
+        : [...existing, note];
+      return { ...prev, playerNotes: updated };
+    });
+  }, []);
+
   if (state === 'waiting' || !playerCampaign) {
     return (
       <div className="player-status-screen">
@@ -110,20 +124,6 @@ function PlayerApp() {
       </div>
     );
   }
-
-  const handleSaveNote = useCallback((note: PlayerNote) => {
-    window.electronAPI.sendPlayerNote(note);
-    // Also update local state immediately
-    setPlayerCampaign(prev => {
-      if (!prev) return prev;
-      const existing = prev.playerNotes ?? [];
-      const idx = existing.findIndex(n => n.id === note.id);
-      const updated = idx >= 0
-        ? existing.map((n, i) => i === idx ? note : n)
-        : [...existing, note];
-      return { ...prev, playerNotes: updated };
-    });
-  }, []);
 
   return (
     <PlayerView
