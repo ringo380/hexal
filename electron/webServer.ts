@@ -366,6 +366,10 @@ export function broadcastCombatEnd(): void {
   broadcastToAuthenticated(message);
 }
 
+export function broadcastDiceRoll(_data: unknown): void {
+  // no-op
+}
+
 export function setPlayerNoteCallback(cb: (note: unknown) => void): void {
   onPlayerNoteCallback = cb;
 }

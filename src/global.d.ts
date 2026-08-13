@@ -1,5 +1,7 @@
 // Global type declarations for Electron preload API
 
+import type { DiceRoll } from './types/Dice';
+
 interface CampaignInfo {
   name: string;
   path: string;
@@ -93,6 +95,10 @@ interface ElectronAPI {
   // Player notes
   sendPlayerNote: (note: unknown) => void;
   onPlayerNoteReceived: (callback: (note: unknown) => void) => () => void;
+  // Dice rolls
+  sendDiceRoll: (roll: DiceRoll) => void;
+  onDiceRoll: (callback: (roll: DiceRoll) => void) => () => void;
+  onDiceHistory: (callback: (rolls: DiceRoll[]) => void) => () => void;
 }
 
 declare global {

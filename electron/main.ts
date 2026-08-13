@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog, Menu, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import Store from 'electron-store';
-import { startServer, stopServer, getStatus as getWebServerStatus, broadcastState, broadcastCampaignClosed, broadcastMessage, broadcastEncounterReveal, broadcastEncounterDismiss, broadcastCombatUpdate, broadcastCombatEnd, broadcastPlayerNote, setPlayerNoteCallback } from './webServer';
+import { startServer, stopServer, getStatus as getWebServerStatus, broadcastState, broadcastCampaignClosed, broadcastMessage, broadcastEncounterReveal, broadcastEncounterDismiss, broadcastCombatUpdate, broadcastCombatEnd, broadcastPlayerNote, setPlayerNoteCallback, broadcastDiceRoll } from './webServer';
 
 // Session-only message type (not persisted in campaign data)
 interface DmMessage {
@@ -22,6 +22,8 @@ const windows: Set<BrowserWindow> = new Set();
 const playerViewWindows: Set<BrowserWindow> = new Set();
 // Last combat-update payload, cached for player windows opened mid-combat
 let activeCombatData: unknown | null = null;
+// Recent dice rolls, cached for player windows opened mid-session (oldest first, capped at 50)
+let rollHistoryData: unknown[] = [];
 let activeWindow: BrowserWindow | null = null;
 
 // Get the Hexal folder in user's documents
@@ -279,6 +281,9 @@ function createPlayerViewWindow(): BrowserWindow {
   win.webContents.once('did-finish-load', () => {
     if (activeCombatData !== null) {
       win.webContents.send('combat-update', activeCombatData);
+    }
+    if (rollHistoryData.length > 0) {
+      win.webContents.send('dice-history', rollHistoryData);
     }
   });
 
@@ -664,12 +669,46 @@ ipcMain.on('combat-update', (_event, data) => {
 
 ipcMain.on('combat-end', () => {
   activeCombatData = null;
+  rollHistoryData = [];
   Array.from(playerViewWindows).forEach(win => {
     if (!win.isDestroyed()) {
       win.webContents.send('combat-end');
     }
   });
   broadcastCombatEnd();
+});
+
+// Relay dice rolls from DM/player windows to all other DM + player view
+// windows + web clients. The recent rolls are cached (oldest first, capped
+// at 50) so windows opened mid-session can be caught up on load.
+ipcMain.on('dice-roll', (event, payload) => {
+  if (typeof payload !== 'object' || payload === null) {
+    return;
+  }
+  try {
+    if (JSON.stringify(payload).length > 20000) {
+      return;
+    }
+  } catch {
+    return;
+  }
+
+  rollHistoryData.push(payload);
+  if (rollHistoryData.length > 50) {
+    rollHistoryData.shift();
+  }
+
+  Array.from(windows).forEach(win => {
+    if (!win.isDestroyed() && win.webContents !== event.sender) {
+      win.webContents.send('dice-roll', payload);
+    }
+  });
+  Array.from(playerViewWindows).forEach(win => {
+    if (!win.isDestroyed() && win.webContents !== event.sender) {
+      win.webContents.send('dice-roll', payload);
+    }
+  });
+  broadcastDiceRoll(payload);
 });
 
 // Relay player note from player window to DM renderer + other player windows + web clients
@@ -709,6 +748,7 @@ setPlayerNoteCallback((note) => {
 // Relay campaign-closed event from DM to all player view windows + web clients
 ipcMain.on('player-view-campaign-closed', () => {
   activeCombatData = null;
+  rollHistoryData = [];
   Array.from(playerViewWindows).forEach(win => {
     if (!win.isDestroyed()) {
       win.webContents.send('player-view-campaign-closed');

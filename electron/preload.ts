@@ -235,6 +235,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const handler = (_event: Electron.IpcRendererEvent, note: unknown) => callback(note);
     ipcRenderer.on('player-note-received', handler);
     return () => ipcRenderer.removeListener('player-note-received', handler);
+  },
+
+  // Dice roll operations
+  sendDiceRoll: (roll: unknown): void => {
+    ipcRenderer.send('dice-roll', roll);
+  },
+
+  onDiceRoll: (callback: (roll: unknown) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, roll: unknown) => callback(roll);
+    ipcRenderer.on('dice-roll', handler);
+    return () => ipcRenderer.removeListener('dice-roll', handler);
+  },
+
+  onDiceHistory: (callback: (rolls: unknown[]) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, rolls: unknown[]) => callback(rolls);
+    ipcRenderer.on('dice-history', handler);
+    return () => ipcRenderer.removeListener('dice-history', handler);
   }
 });
 
@@ -289,6 +306,10 @@ declare global {
       // Player notes
       sendPlayerNote: (note: unknown) => void;
       onPlayerNoteReceived: (callback: (note: unknown) => void) => () => void;
+      // Dice rolls
+      sendDiceRoll: (roll: unknown) => void;
+      onDiceRoll: (callback: (roll: unknown) => void) => () => void;
+      onDiceHistory: (callback: (rolls: unknown[]) => void) => () => void;
     };
   }
 }
