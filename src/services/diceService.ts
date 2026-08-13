@@ -27,6 +27,14 @@ export function parseNotation(input: string): ParsedDice {
     throw new DiceParseError('Dice notation cannot be empty');
   }
 
+  // Reject malformed operator placement up front: a trailing operator
+  // ("2d6+"), a leading operator with nothing after it ("+"), or consecutive
+  // operators ("2d6++3") would otherwise be silently swallowed by the token
+  // regex below (unmatched characters between tokens are just skipped).
+  if (!/^[+-]?[^+-]+([+-][^+-]+)*$/.test(cleaned)) {
+    throw new DiceParseError(`Invalid dice notation: "${input}"`);
+  }
+
   const rawTokens = cleaned.match(/[+-]?[^+-]+/g);
   if (!rawTokens) {
     throw new DiceParseError(`Invalid dice notation: "${input}"`);

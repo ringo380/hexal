@@ -36,6 +36,10 @@ describe('parseNotation', () => {
     it('tolerates surrounding and internal whitespace', () => {
       expect(parseNotation(' 2d6 + 3 ')).toEqual({ terms: [{ count: 2, sides: 6 }], modifier: 3 });
     });
+
+    it('tolerates a leading positive sign on the first term', () => {
+      expect(parseNotation('+2d6')).toEqual({ terms: [{ count: 2, sides: 6 }], modifier: 0 });
+    });
   });
 
   describe('invalid notation', () => {
@@ -53,6 +57,7 @@ describe('parseNotation', () => {
 
     it('throws DiceParseError on zero-sided (and 1-sided) die', () => {
       expect(() => parseNotation('1d0')).toThrow(DiceParseError);
+      expect(() => parseNotation('1d1')).toThrow(DiceParseError);
     });
 
     it('throws DiceParseError on a dangling d with no sides', () => {
@@ -61,6 +66,14 @@ describe('parseNotation', () => {
 
     it('throws DiceParseError on a bare modifier with no dice', () => {
       expect(() => parseNotation('+3')).toThrow(DiceParseError);
+    });
+
+    it('throws DiceParseError on a trailing operator', () => {
+      expect(() => parseNotation('2d6+')).toThrow(DiceParseError);
+    });
+
+    it('throws DiceParseError on consecutive operators', () => {
+      expect(() => parseNotation('2d6++3')).toThrow(DiceParseError);
     });
   });
 
