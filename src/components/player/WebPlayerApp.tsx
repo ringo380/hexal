@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { PlayerCampaign } from '../../services/playerViewFilter';
 import type { ActiveEncounter } from '../../types/Campaign';
+import type { PlayerCombatState } from '../../types/Combat';
 import type { PlayerNote } from '../../types';
 import PlayerView from './PlayerView';
 
@@ -33,6 +34,7 @@ function WebPlayerApp() {
   const [state, setState] = useState<ConnectionState>('connecting');
   const [campaign, setCampaign] = useState<PlayerCampaign | null>(null);
   const [activeEncounter, setActiveEncounter] = useState<ActiveEncounter | null>(null);
+  const [combatState, setCombatState] = useState<PlayerCombatState | null>(null);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
   const [messages, setMessages] = useState<DmMessage[]>([]);
@@ -83,6 +85,10 @@ function WebPlayerApp() {
           setState('waiting');
           reconnectAttemptRef.current = 0;
           setPinError('');
+          // Clear session overlays that may have ended while disconnected;
+          // the server replays encounter/combat state after auth if still active
+          setActiveEncounter(null);
+          setCombatState(null);
           break;
 
         case 'auth-fail':
@@ -100,6 +106,7 @@ function WebPlayerApp() {
           setState('closed');
           setMessages([]);
           setActiveEncounter(null);
+          setCombatState(null);
           break;
 
         case 'dm-message':
@@ -116,6 +123,14 @@ function WebPlayerApp() {
 
         case 'encounter-dismiss':
           setActiveEncounter(null);
+          break;
+
+        case 'combat-update':
+          setCombatState(msg.data as PlayerCombatState);
+          break;
+
+        case 'combat-end':
+          setCombatState(null);
           break;
 
         case 'player-note': {
@@ -286,6 +301,7 @@ function WebPlayerApp() {
       activeEncounter={activeEncounter}
       onEncounterDismiss={() => setActiveEncounter(null)}
       onSaveNote={handleSaveNote}
+      combatState={combatState}
     />
   );
 }

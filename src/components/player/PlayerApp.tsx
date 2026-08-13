@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { PlayerCampaign } from '../../services/playerViewFilter';
 import type { ActiveEncounter } from '../../types/Campaign';
+import type { PlayerCombatState } from '../../types/Combat';
 import type { PlayerNote } from '../../types';
 import PlayerView from './PlayerView';
 import '../../styles/player.css';
@@ -22,6 +23,7 @@ function PlayerApp() {
   const [state, setState] = useState<PlayerState>('waiting');
   const [messages, setMessages] = useState<DmMessage[]>([]);
   const [activeEncounter, setActiveEncounter] = useState<ActiveEncounter | null>(null);
+  const [combatState, setCombatState] = useState<PlayerCombatState | null>(null);
 
   useEffect(() => {
     const cleanupUpdate = window.electronAPI.onPlayerViewUpdate((data) => {
@@ -33,6 +35,7 @@ function PlayerApp() {
       setState('closed');
       setMessages([]);
       setActiveEncounter(null);
+      setCombatState(null);
     });
 
     const cleanupMessage = window.electronAPI.onPlayerMessage((data) => {
@@ -46,6 +49,14 @@ function PlayerApp() {
 
     const cleanupEncounterDismiss = window.electronAPI.onEncounterDismiss(() => {
       setActiveEncounter(null);
+    });
+
+    const cleanupCombatUpdate = window.electronAPI.onCombatUpdate((data) => {
+      setCombatState(data as PlayerCombatState);
+    });
+
+    const cleanupCombatEnd = window.electronAPI.onCombatEnd(() => {
+      setCombatState(null);
     });
 
     // Listen for notes from other players (relayed by main process)
@@ -68,6 +79,8 @@ function PlayerApp() {
       cleanupMessage();
       cleanupEncounterReveal();
       cleanupEncounterDismiss();
+      cleanupCombatUpdate();
+      cleanupCombatEnd();
       cleanupNotes();
     };
   }, []);
@@ -117,6 +130,7 @@ function PlayerApp() {
       activeEncounter={activeEncounter}
       onEncounterDismiss={() => setActiveEncounter(null)}
       onSaveNote={handleSaveNote}
+      combatState={combatState}
     />
   );
 }

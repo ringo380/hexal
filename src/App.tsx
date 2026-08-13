@@ -4,6 +4,7 @@ import { useCampaign } from './stores/CampaignContext';
 import CampaignBrowser from './components/CampaignBrowser';
 import MainEditor from './components/MainEditor';
 import { WeatherSimulationProvider } from './stores/WeatherSimulationContext';
+import { CombatProvider } from './stores/CombatContext';
 import UnsavedChangesDialog from './components/modals/UnsavedChangesDialog';
 import AlertDialog from './components/modals/AlertDialog';
 import ConflictResolutionModal from './components/modals/ConflictResolutionModal';
@@ -251,12 +252,14 @@ function App() {
       {campaign ? (
         <ErrorBoundary>
           <WeatherSimulationProvider>
-            <MainEditor
-              onRegisterExport={registerExportHandler}
-              onRegisterMapExport={registerMapExportHandler}
-              onRegisterExportTemplate={registerExportTemplateHandler}
-              onRegisterFogOfWar={registerFogOfWarHandler}
-            />
+            <CombatProvider>
+              <MainEditor
+                onRegisterExport={registerExportHandler}
+                onRegisterMapExport={registerMapExportHandler}
+                onRegisterExportTemplate={registerExportTemplateHandler}
+                onRegisterFogOfWar={registerFogOfWarHandler}
+              />
+            </CombatProvider>
           </WeatherSimulationProvider>
         </ErrorBoundary>
       ) : (

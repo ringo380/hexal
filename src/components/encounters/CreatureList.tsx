@@ -50,6 +50,18 @@ function CreatureList({ creatures, onChange }: CreatureListProps) {
             aria-label={`Creature ${idx + 1} CR`}
           />
           <input
+            type="number"
+            className="creature-hp"
+            value={creature.maxHp ?? ''}
+            onChange={(e) => {
+              const parsed = parseInt(e.target.value);
+              updateCreature(creature.id, { maxHp: parsed > 0 ? parsed : undefined });
+            }}
+            min={1}
+            placeholder="HP"
+            aria-label={`Creature ${idx + 1} max HP`}
+          />
+          <input
             type="text"
             className="creature-notes"
             value={creature.notes || ''}

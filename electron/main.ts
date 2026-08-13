@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog, Menu, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import Store from 'electron-store';
-import { startServer, stopServer, getStatus as getWebServerStatus, broadcastState, broadcastCampaignClosed, broadcastMessage, broadcastEncounterReveal, broadcastEncounterDismiss, broadcastPlayerNote, setPlayerNoteCallback } from './webServer';
+import { startServer, stopServer, getStatus as getWebServerStatus, broadcastState, broadcastCampaignClosed, broadcastMessage, broadcastEncounterReveal, broadcastEncounterDismiss, broadcastCombatUpdate, broadcastCombatEnd, broadcastPlayerNote, setPlayerNoteCallback } from './webServer';
 
 // Session-only message type (not persisted in campaign data)
 interface DmMessage {
@@ -20,6 +20,8 @@ if (process.platform === 'darwin') {
 // Multi-window support
 const windows: Set<BrowserWindow> = new Set();
 const playerViewWindows: Set<BrowserWindow> = new Set();
+// Last combat-update payload, cached for player windows opened mid-combat
+let activeCombatData: unknown | null = null;
 let activeWindow: BrowserWindow | null = null;
 
 // Get the Hexal folder in user's documents
@@ -270,6 +272,14 @@ function createPlayerViewWindow(): BrowserWindow {
 
   win.on('closed', () => {
     playerViewWindows.delete(win);
+  });
+
+  // Replay active combat state so a window opened mid-combat shows the
+  // initiative banner immediately (mirrors webServer's late-join replay)
+  win.webContents.once('did-finish-load', () => {
+    if (activeCombatData !== null) {
+      win.webContents.send('combat-update', activeCombatData);
+    }
   });
 
   // Load with #player-view hash
@@ -639,6 +649,29 @@ ipcMain.on('dismiss-encounter', () => {
   broadcastEncounterDismiss();
 });
 
+// Relay combat tracker updates from DM to all player view windows + web clients.
+// The latest payload is cached so player windows opened mid-combat can be
+// caught up on load.
+ipcMain.on('combat-update', (_event, data) => {
+  activeCombatData = data;
+  Array.from(playerViewWindows).forEach(win => {
+    if (!win.isDestroyed()) {
+      win.webContents.send('combat-update', data);
+    }
+  });
+  broadcastCombatUpdate(data);
+});
+
+ipcMain.on('combat-end', () => {
+  activeCombatData = null;
+  Array.from(playerViewWindows).forEach(win => {
+    if (!win.isDestroyed()) {
+      win.webContents.send('combat-end');
+    }
+  });
+  broadcastCombatEnd();
+});
+
 // Relay player note from player window to DM renderer + other player windows + web clients
 ipcMain.on('player-note-save', (event, note) => {
   // Send to DM windows (non-player windows)
@@ -675,6 +708,7 @@ setPlayerNoteCallback((note) => {
 
 // Relay campaign-closed event from DM to all player view windows + web clients
 ipcMain.on('player-view-campaign-closed', () => {
+  activeCombatData = null;
   Array.from(playerViewWindows).forEach(win => {
     if (!win.isDestroyed()) {
       win.webContents.send('player-view-campaign-closed');

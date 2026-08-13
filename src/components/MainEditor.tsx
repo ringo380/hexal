@@ -41,6 +41,8 @@ import PlayerNotesViewer from './PlayerNotesViewer';
 import CommandPalette from './CommandPalette';
 import DmMessagePanel from './player/DmMessagePanel';
 import TravelPanel from './travel/TravelPanel';
+import CombatTrackerPanel from './combat/CombatTrackerPanel';
+import CombatToolbarButton from './combat/CombatToolbarButton';
 import Icon from './icons/Icon';
 import type { PlayerNote } from '../types';
 import { CATEGORY_INFO, type ContentCategory, parseHexKey, type ActiveEncounter } from '../types/Campaign';
@@ -102,6 +104,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
   const [revealedEncounterId, setRevealedEncounterId] = useState<string | null>(null);
   const [showTravelPanel, setShowTravelPanel] = useState(false);
   const [travelPath, setTravelPath] = useState<string[]>([]);
+  const [showCombatTracker, setShowCombatTracker] = useState(false);
   const hexClickOverrideRef = useRef<((key: string) => void) | null>(null);
 
   // Clear session-only UI state and stop weather simulation when campaign changes
@@ -112,6 +115,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
     setLayerVisibility(DEFAULT_LAYER_VISIBILITY);
     setShowTravelPanel(false);
     setTravelPath([]);
+    setShowCombatTracker(false);
     hexClickOverrideRef.current = null;
     if (weatherSim.isRunning) {
       weatherSim.stopSimulation();
@@ -506,6 +510,10 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
           >
             <Icon name="walk" size={16} /> Travel
           </button>
+          <CombatToolbarButton
+            isOpen={showCombatTracker}
+            onToggle={() => setShowCombatTracker(!showCombatTracker)}
+          />
           <button className="btn btn-secondary" onClick={() => setShowGenerator(true)}>
             <Icon name="dice" size={16} /> Generate
           </button>
@@ -570,6 +578,11 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
           onTravelPathChange={setTravelPath}
           hexClickCallback={hexClickOverrideRef}
         />
+      )}
+
+      {/* Combat Tracker Panel (floating) */}
+      {showCombatTracker && (
+        <CombatTrackerPanel onClose={() => setShowCombatTracker(false)} />
       )}
 
       {/* Modals */}

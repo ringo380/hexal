@@ -166,6 +166,27 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('encounter-dismiss', handler);
   },
 
+  // Combat tracker sync operations
+  combatUpdate: (data: unknown): void => {
+    ipcRenderer.send('combat-update', data);
+  },
+
+  combatEnd: (): void => {
+    ipcRenderer.send('combat-end');
+  },
+
+  onCombatUpdate: (callback: (data: unknown) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+    ipcRenderer.on('combat-update', handler);
+    return () => ipcRenderer.removeListener('combat-update', handler);
+  },
+
+  onCombatEnd: (callback: () => void): (() => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('combat-end', handler);
+    return () => ipcRenderer.removeListener('combat-end', handler);
+  },
+
   // Settings operations
   getSettings: (): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('get-settings'),
@@ -246,6 +267,10 @@ declare global {
       dismissEncounter: () => void;
       onEncounterReveal: (callback: (data: unknown) => void) => () => void;
       onEncounterDismiss: (callback: () => void) => () => void;
+      combatUpdate: (data: unknown) => void;
+      combatEnd: () => void;
+      onCombatUpdate: (callback: (data: unknown) => void) => () => void;
+      onCombatEnd: (callback: () => void) => () => void;
       // Templates
       listUserTemplates: () => Promise<{ fileName: string; filePath: string; modifiedAt: string; content: string | null }[]>;
       saveUserTemplate: (envelope: string, fileName: string) => Promise<{ success: boolean; filePath?: string; error?: string }>;
