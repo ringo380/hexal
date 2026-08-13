@@ -18,8 +18,9 @@ import type { DiceRoll, DiceAdvantage, DiceTransport, ParsedDice } from '../type
 
 export const DICE_HISTORY_LIMIT = 50;
 
-interface DiceState {
+export interface DiceState {
   history: DiceRoll[];
+  lastRemoteRoll: DiceRoll | null;
 }
 
 type DiceAction =
@@ -39,12 +40,15 @@ function appendCapped(history: DiceRoll[], roll: DiceRoll): DiceRoll[] {
 export function diceReducer(state: DiceState, action: DiceAction): DiceState {
   switch (action.type) {
     case 'ADD_LOCAL':
-      return { history: appendCapped(state.history, action.roll) };
+      return { ...state, history: appendCapped(state.history, action.roll) };
     case 'ADD_REMOTE': {
       if (state.history.some((r) => r.id === action.roll.id)) {
         return state;
       }
-      return { history: appendCapped(state.history, action.roll) };
+      return {
+        history: appendCapped(state.history, action.roll),
+        lastRemoteRoll: action.roll,
+      };
     }
     case 'SET_HISTORY': {
       const rolls = action.rolls;
@@ -52,10 +56,10 @@ export function diceReducer(state: DiceState, action: DiceAction): DiceState {
         rolls.length > DICE_HISTORY_LIMIT
           ? rolls.slice(rolls.length - DICE_HISTORY_LIMIT)
           : rolls;
-      return { history: capped };
+      return { ...state, history: capped };
     }
     case 'CLEAR':
-      return { history: [] };
+      return { history: [], lastRemoteRoll: null };
     default:
       return state;
   }
@@ -93,6 +97,7 @@ function buildParsedFromObject(
 
 interface DiceContextValue {
   history: DiceRoll[];
+  lastRemoteRoll: DiceRoll | null;
   roll: (input: string | { sides: number; count: number }, opts?: RollOpts) => DiceRoll;
   addRemoteRoll: (roll: DiceRoll) => void;
   clearHistory: () => void;
@@ -116,7 +121,7 @@ interface DiceProviderProps {
 }
 
 export function DiceProvider({ campaignId, roller, transport, children }: DiceProviderProps) {
-  const [state, dispatch] = useReducer(diceReducer, { history: [] });
+  const [state, dispatch] = useReducer(diceReducer, { history: [], lastRemoteRoll: null });
 
   const roll = useCallback(
     (input: string | { sides: number; count: number }, opts: RollOpts = {}): DiceRoll => {
@@ -178,11 +183,12 @@ export function DiceProvider({ campaignId, roller, transport, children }: DicePr
   const value = useMemo<DiceContextValue>(
     () => ({
       history: state.history,
+      lastRemoteRoll: state.lastRemoteRoll,
       roll,
       addRemoteRoll,
       clearHistory,
     }),
-    [state.history, roll, addRemoteRoll, clearHistory]
+    [state.history, state.lastRemoteRoll, roll, addRemoteRoll, clearHistory]
   );
 
   return <DiceContext.Provider value={value}>{children}</DiceContext.Provider>;

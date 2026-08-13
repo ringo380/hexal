@@ -254,6 +254,15 @@ function createWindow(filePath?: string): BrowserWindow {
     });
   }
 
+  // Replay dice roll history so a newly opened DM window (e.g. "open in new
+  // window") doesn't start with empty history forever - mirrors the
+  // player-view window replay below.
+  win.webContents.once('did-finish-load', () => {
+    if (rollHistoryData.length > 0) {
+      win.webContents.send('dice-history', rollHistoryData);
+    }
+  });
+
   return win;
 }
 
