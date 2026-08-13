@@ -4,9 +4,9 @@ import { DiceProvider, useDice } from './DiceContext';
 import { DiceParseError } from '../services/diceService';
 import type { DiceRoll, DiceTransport } from '../types';
 
-function makeMockTransport(): DiceTransport & { send: ReturnType<typeof vi.fn> } {
+function makeMockTransport(): DiceTransport & { send: ReturnType<typeof vi.fn<(roll: DiceRoll) => void>> } {
   return {
-    send: vi.fn(),
+    send: vi.fn<(roll: DiceRoll) => void>(),
     subscribe: vi.fn(() => () => {}),
   };
 }
