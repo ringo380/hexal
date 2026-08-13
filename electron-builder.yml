@@ -30,6 +30,20 @@ win:
       arch:
         - x64
 
+# Linux build
+linux:
+  icon: build/icon.png
+  category: Game
+  maintainer: "Robworks Software LLC <support@robworks.info>"
+  syncDesktopName: true
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+
 # NSIS installer customization
 nsis:
   oneClick: false
