@@ -8307,6 +8307,30 @@ label {
   color: var(--text-secondary);
 }
 
+/* ============ DICE TOOLBAR POPOVER ============ */
+/* DM-only toolbar button + anchored popover wrapping .dice-panel. Not a
+   modal - dismissed via outside-click/Escape in DiceToolbarButton, no
+   focus trap. */
+
+.dice-toolbar-anchor {
+  position: relative;
+}
+
+.dice-toolbar-popover {
+  position: absolute;
+  top: 36px;
+  right: 0;
+  width: 320px;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 12px;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
 .dice-panel .dice-history-roller {
   margin-top: 4px;
   font-size: 12px;
