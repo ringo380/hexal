@@ -8,7 +8,6 @@ import {
   HEX_SIZE,
   hexCenter,
   drawHexPath,
-  hexPoints,
   coordinateAt,
   floodFillSameTerrain,
   getVisibleHexRange
@@ -19,10 +18,18 @@ import {
   getContentSummary,
   truncateForHex,
   CONTENT_INDICATORS,
-  renderMarkers,
   renderDraggingMarker
 } from '../services/hexRenderer';
-import { createHexRegionMap, getRegionBorderSegments } from '../services/regions';
+import { createHexRegionMap } from '../services/regions';
+import {
+  renderMultiSelection,
+  renderAllConnections,
+  renderRegionBorders,
+  renderRegionLabels,
+  renderAllMarkers,
+  renderCharacterTokens,
+  renderPartyMarker
+} from '../services/gridRenderer';
 import { markerAudio } from '../services/audioService';
 import { figurineCache } from '../services/markerFigurines';
 import { useMarkerDrag } from '../hooks/useMarkerDrag';
@@ -380,9 +387,6 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
     ctx.translate(curPan.x, curPan.y);
     ctx.scale(curZoom, curZoom);
 
-    // Neighbor-to-edge index mapping for border rendering
-    const NEIGHBOR_TO_EDGE = [5, 0, 1, 2, 3, 4];
-
     // ========================================================================
     // PASS 1: Draw hex backgrounds and content (terrain, indicators, labels)
     // ========================================================================
@@ -579,137 +583,27 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
     // ========================================================================
     // MULTI-SELECTION OVERLAY PASS
     // ========================================================================
-    if (multiSelectedKeys.size > 0) {
-      for (const key of multiSelectedKeys) {
-        const parts = key.split(',');
-        const msq = parseInt(parts[0], 10);
-        const msr = parseInt(parts[1], 10);
-        const msCenter = hexCenter({ q: msq, r: msr });
-        drawHexPath(ctx, msCenter, HEX_SIZE);
-        ctx.fillStyle = 'rgba(74, 158, 255, 0.22)';
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(74, 158, 255, 0.6)';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
-    }
+    renderMultiSelection(ctx, multiSelectedKeys);
 
     // ========================================================================
     // CONNECTION PASS: Draw rivers and roads (layer visibility gated)
     // ========================================================================
-    if (layerVisibility.connections && curZoom >= 0.25) {
-      for (let q = visibleRange.qMin; q <= visibleRange.qMax; q++) {
-        for (let r = visibleRange.rMin; r <= visibleRange.rMax; r++) {
-          const coord: HexCoordinate = { q, r };
-          const hex = getHex(coord);
-          if (!hex?.connections) continue;
-          const center = hexCenter(coord);
-          const points = hexPoints(center, HEX_SIZE);
-
-          // Draw rivers (blue curved lines)
-          if (hex.connections.rivers.length > 0 && curZoom >= 0.25) {
-            ctx.strokeStyle = '#4a9eff';
-            ctx.lineWidth = 2;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-
-            for (const edge of hex.connections.rivers) {
-              const p1 = points[edge];
-              const p2 = points[(edge + 1) % 6];
-              const edgeMidX = (p1.x + p2.x) / 2;
-              const edgeMidY = (p1.y + p2.y) / 2;
-
-              ctx.beginPath();
-              ctx.moveTo(edgeMidX, edgeMidY);
-              // Curve through hex center for organic look
-              const cpX = center.x + (edgeMidX - center.x) * 0.3;
-              const cpY = center.y + (edgeMidY - center.y) * 0.3;
-              ctx.quadraticCurveTo(cpX, cpY, center.x, center.y);
-              ctx.stroke();
-            }
-          }
-
-          // Draw roads (brown dashed lines)
-          if (hex.connections.roads.length > 0 && curZoom >= 0.40) {
-            ctx.strokeStyle = '#8B7355';
-            ctx.lineWidth = 1.5;
-            ctx.lineCap = 'round';
-            ctx.setLineDash([3, 3]);
-
-            for (const edge of hex.connections.roads) {
-              const p1 = points[edge];
-              const p2 = points[(edge + 1) % 6];
-              const edgeMidX = (p1.x + p2.x) / 2;
-              const edgeMidY = (p1.y + p2.y) / 2;
-
-              ctx.beginPath();
-              ctx.moveTo(edgeMidX, edgeMidY);
-              ctx.lineTo(center.x, center.y);
-              ctx.stroke();
-            }
-
-            ctx.setLineDash([]);
-          }
-        }
-      }
+    if (layerVisibility.connections) {
+      renderAllConnections(ctx, (q, r) => getHex({ q, r }), visibleRange, curZoom);
     }
 
     // ========================================================================
     // REGION BORDER PASS: Draw region boundary edges (layer visibility gated)
     // ========================================================================
-    if (layerVisibility.regionBorders) for (const region of regions) {
-      if (region.hexKeys.length === 0) continue;
-      const borderSegments = getRegionBorderSegments(region);
-
-      ctx.strokeStyle = hexToRgba(region.color, 0.6);
-      ctx.lineWidth = 2.5;
-      ctx.lineCap = 'round';
-
-      for (const segment of borderSegments) {
-        const center = hexCenter(segment.coord);
-        const points = hexPoints(center, HEX_SIZE);
-        const edgeIndex = NEIGHBOR_TO_EDGE[segment.edgeIndex];
-        const p1 = points[edgeIndex];
-        const p2 = points[(edgeIndex + 1) % 6];
-
-        ctx.beginPath();
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(p2.x, p2.y);
-        ctx.stroke();
-      }
+    if (layerVisibility.regionBorders) {
+      renderRegionBorders(ctx, regions);
     }
 
     // ========================================================================
     // REGION NAME LABELS (at lower zoom levels, layer visibility gated)
     // ========================================================================
-    if (layerVisibility.regionLabels && curZoom >= 0.25 && curZoom <= 0.80) {
-      for (const region of regions) {
-        if (region.hexKeys.length === 0) continue;
-
-        // Calculate bounding box center of region hexes
-        let sumX = 0, sumY = 0;
-        for (const key of region.hexKeys) {
-          const parsed = key.split(',');
-          const rq = parseInt(parsed[0], 10);
-          const rr = parseInt(parsed[1], 10);
-          const c = hexCenter({ q: rq, r: rr });
-          sumX += c.x;
-          sumY += c.y;
-        }
-        const cx = sumX / region.hexKeys.length;
-        const cy = sumY / region.hexKeys.length;
-
-        const fontSize = Math.max(8, Math.min(14, 10 / curZoom));
-        const wantFont = `bold ${fontSize}px sans-serif`;
-        if (currentFont !== wantFont) { ctx.font = wantFont; currentFont = wantFont; }
-        if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
-        if (currentBaseline !== 'middle') { ctx.textBaseline = 'middle'; currentBaseline = 'middle'; }
-        ctx.fillStyle = hexToRgba(region.color, 0.9);
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-        ctx.shadowBlur = 4;
-        ctx.fillText(region.name, cx, cy);
-        ctx.shadowBlur = 0;
-      }
+    if (layerVisibility.regionLabels) {
+      renderRegionLabels(ctx, regions, curZoom);
     }
 
     // ========================================================================
@@ -766,27 +660,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
     if (campaign?.partyPosition) {
       const posCoord = parseHexKey(campaign.partyPosition);
       if (posCoord) {
-        const center = hexCenter(posCoord);
-        ctx.save();
-        // Gold circle
-        ctx.beginPath();
-        ctx.arc(center.x, center.y, 8, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 200, 50, 0.9)';
-        ctx.fill();
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-        // "P" label
-        const labelFont = `bold 10px sans-serif`;
-        if (currentFont !== labelFont) { ctx.font = labelFont; currentFont = labelFont; }
-        if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
-        if (currentBaseline !== 'middle') { ctx.textBaseline = 'middle'; currentBaseline = 'middle'; }
-        ctx.fillStyle = '#000';
-        ctx.fillText('P', center.x, center.y);
-        ctx.restore();
-        currentFont = '';
-        currentAlign = '';
-        currentBaseline = '';
+        renderPartyMarker(ctx, hexCenter(posCoord));
       }
     }
 
@@ -795,72 +669,26 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
     // This ensures markers with free-form positions can overlap adjacent hexes
     // ========================================================================
     if (lod.showMarkers && layerVisibility.markers) {
-      for (let q = visibleRange.qMin; q <= visibleRange.qMax; q++) {
-        for (let r = visibleRange.rMin; r <= visibleRange.rMax; r++) {
-          const coord: HexCoordinate = { q, r };
-          const center = hexCenter(coord);
-          const hex = getHex(coord);
-
-          if (hex && hex.markers && hex.markers.length > 0) {
-            const hexMarkerPositions = renderMarkers(
-              ctx,
-              hex,
-              center,
-              markerTypes,
-              curZoom,
-              selectedMarker?.markerId
-            );
-            markerPositions.push(...hexMarkerPositions);
-          }
-        }
-      }
+      renderAllMarkers(ctx, (q, r) => getHex({ q, r }), visibleRange, curZoom, markerTypes, {
+        selectedMarkerId: selectedMarker?.markerId,
+        markerPositions
+      });
     }
 
     // ========================================================================
     // PASS 3: Character tokens (player characters on map)
     // ========================================================================
-    const playerCharacters = campaign.playerCharacters ?? [];
-    for (const pc of playerCharacters) {
-      if (!pc.hexKey) continue;
-      const hex = getHex(parseHexKey(pc.hexKey) ?? { q: -1, r: -1 });
-      if (!hex) continue;
-
-      const parts = pc.hexKey.split(',');
-      const cq = parseInt(parts[0], 10);
-      const cr = parseInt(parts[1], 10);
-      if (cq < visibleRange.qMin || cq > visibleRange.qMax || cr < visibleRange.rMin || cr > visibleRange.rMax) continue;
-
-      const center = hexCenter({ q: cq, r: cr });
-
-      // Draw circular token (slightly transparent for invisible characters in DM view)
-      const tokenRadius = 8;
-      ctx.beginPath();
-      ctx.arc(center.x, center.y - 10, tokenRadius, 0, Math.PI * 2);
-      ctx.fillStyle = pc.isVisible ? pc.color : hexToRgba(pc.color, 0.4);
-      ctx.fill();
-      ctx.strokeStyle = pc.isVisible ? '#fff' : 'rgba(255, 255, 255, 0.4)';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      // Draw icon
-      const wantFont = '10px sans-serif';
-      if (currentFont !== wantFont) { ctx.font = wantFont; currentFont = wantFont; }
-      if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
-      if (currentBaseline !== 'middle') { ctx.textBaseline = 'middle'; currentBaseline = 'middle'; }
-      ctx.fillStyle = pc.isVisible ? '#fff' : 'rgba(255, 255, 255, 0.4)';
-      ctx.fillText(pc.icon, center.x, center.y - 10);
-
-      // Draw name label if zoomed in enough
-      if (curZoom >= 0.6) {
-        const nameFont = 'bold 5px sans-serif';
-        if (currentFont !== nameFont) { ctx.font = nameFont; currentFont = nameFont; }
-        ctx.fillStyle = pc.isVisible ? pc.color : hexToRgba(pc.color, 0.4);
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-        ctx.shadowBlur = 2;
-        ctx.fillText(pc.name, center.x, center.y - 1);
-        ctx.shadowBlur = 0;
-      }
-    }
+    renderCharacterTokens(
+      ctx,
+      campaign.playerCharacters ?? [],
+      (key) => {
+        const coord = parseHexKey(key);
+        return coord ? getHex(coord) : null;
+      },
+      visibleRange,
+      curZoom,
+      { dimInvisible: true }
+    );
 
     // Restore canvas transform state
     ctx.restore();

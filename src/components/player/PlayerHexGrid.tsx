@@ -9,14 +9,21 @@ import {
   HEX_SIZE,
   hexCenter,
   drawHexPath,
-  hexPoints,
   coordinateAt,
   getVisibleHexRange
 } from '../../services/hexGeometry';
-import { hexToRgba, renderMarkers } from '../../services/hexRenderer';
+import { hexToRgba } from '../../services/hexRenderer';
 import { useGridNavigation } from '../../hooks/useGridNavigation';
 import { figurineCache } from '../../services/markerFigurines';
-import { createHexRegionMap, getRegionBorderSegments } from '../../services/regions';
+import { createHexRegionMap } from '../../services/regions';
+import {
+  renderAllConnections,
+  renderRegionBorders,
+  renderRegionLabels,
+  renderAllMarkers,
+  renderCharacterTokens,
+  renderPartyMarker
+} from '../../services/gridRenderer';
 import type { Region } from '../../types';
 import type { WeatherField, WeatherSimulationConfig } from '../../types/Weather';
 import { useWeatherOverlay } from '../../hooks/useWeatherOverlay';
@@ -168,7 +175,6 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
 
     // Build hex-to-region lookup
     const hexRegionMap = createHexRegionMap(regionAdapters);
-    const NEIGHBOR_TO_EDGE = [5, 0, 1, 2, 3, 4];
 
     // Calculate visible hex range for viewport culling
     const visibleRange = getVisibleHexRange(
@@ -278,115 +284,24 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
     }
 
     // CONNECTION PASS: Draw rivers and roads (layer visibility gated)
-    if (playerLayers.connections && zoomLevel >= 0.25) {
-      for (let q = visibleRange.qMin; q <= visibleRange.qMax; q++) {
-        for (let r = visibleRange.rMin; r <= visibleRange.rMax; r++) {
-          const key = `${q},${r}`;
-          const hex = campaign.hexes[key];
-          if (!hex?.connections) continue;
-          if (hex.status === 'undiscovered') continue;
-          const coord: HexCoordinate = { q, r };
-          const center = hexCenter(coord);
-          const points = hexPoints(center, HEX_SIZE);
-
-          // Draw rivers (blue curved lines)
-          if (hex.connections.rivers.length > 0) {
-            ctx.strokeStyle = '#4a9eff';
-            ctx.lineWidth = 2;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-
-            for (const edge of hex.connections.rivers) {
-              const p1 = points[edge];
-              const p2 = points[(edge + 1) % 6];
-              const edgeMidX = (p1.x + p2.x) / 2;
-              const edgeMidY = (p1.y + p2.y) / 2;
-
-              ctx.beginPath();
-              ctx.moveTo(edgeMidX, edgeMidY);
-              const cpX = center.x + (edgeMidX - center.x) * 0.3;
-              const cpY = center.y + (edgeMidY - center.y) * 0.3;
-              ctx.quadraticCurveTo(cpX, cpY, center.x, center.y);
-              ctx.stroke();
-            }
-          }
-
-          // Draw roads (brown dashed lines)
-          if (hex.connections.roads.length > 0 && zoomLevel >= 0.40) {
-            ctx.strokeStyle = '#8B7355';
-            ctx.lineWidth = 1.5;
-            ctx.lineCap = 'round';
-            ctx.setLineDash([3, 3]);
-
-            for (const edge of hex.connections.roads) {
-              const p1 = points[edge];
-              const p2 = points[(edge + 1) % 6];
-              const edgeMidX = (p1.x + p2.x) / 2;
-              const edgeMidY = (p1.y + p2.y) / 2;
-
-              ctx.beginPath();
-              ctx.moveTo(edgeMidX, edgeMidY);
-              ctx.lineTo(center.x, center.y);
-              ctx.stroke();
-            }
-
-            ctx.setLineDash([]);
-          }
-        }
-      }
+    if (playerLayers.connections) {
+      renderAllConnections(
+        ctx,
+        (q, r) => campaign.hexes[`${q},${r}`],
+        visibleRange,
+        zoomLevel,
+        true // skip undiscovered hexes
+      );
     }
 
     // PASS 2: Region borders (layer visibility gated)
-    if (playerLayers.regionBorders) for (const region of regionAdapters) {
-      if (region.hexKeys.length === 0) continue;
-      const borderSegments = getRegionBorderSegments(region);
-
-      ctx.strokeStyle = hexToRgba(region.color, 0.6);
-      ctx.lineWidth = 2.5;
-      ctx.lineCap = 'round';
-
-      for (const segment of borderSegments) {
-        const center = hexCenter(segment.coord);
-        const points = hexPoints(center, HEX_SIZE);
-        const edgeIndex = NEIGHBOR_TO_EDGE[segment.edgeIndex];
-        const p1 = points[edgeIndex];
-        const p2 = points[(edgeIndex + 1) % 6];
-
-        ctx.beginPath();
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(p2.x, p2.y);
-        ctx.stroke();
-      }
+    if (playerLayers.regionBorders) {
+      renderRegionBorders(ctx, regionAdapters);
     }
 
     // PASS 3: Region name labels (layer visibility gated)
-    if (playerLayers.regionLabels && zoomLevel >= 0.25 && zoomLevel <= 0.80) {
-      for (const region of campaign.regions) {
-        if (region.hexKeys.length === 0) continue;
-
-        let sumX = 0, sumY = 0;
-        for (const key of region.hexKeys) {
-          const parsed = key.split(',');
-          const rq = parseInt(parsed[0], 10);
-          const rr = parseInt(parsed[1], 10);
-          const c = hexCenter({ q: rq, r: rr });
-          sumX += c.x;
-          sumY += c.y;
-        }
-        const cx = sumX / region.hexKeys.length;
-        const cy = sumY / region.hexKeys.length;
-
-        const fontSize = Math.max(8, Math.min(14, 10 / zoomLevel));
-        const wantFont = `bold ${fontSize}px sans-serif`;
-        if (currentFont !== wantFont) { ctx.font = wantFont; currentFont = wantFont; }
-        if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
-        if (currentBaseline !== 'middle') { ctx.textBaseline = 'middle'; currentBaseline = 'middle'; }
-        ctx.fillStyle = hexToRgba(region.color, 0.9);
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-        ctx.shadowBlur = 4;
-        ctx.fillText(region.name, cx, cy);
-        ctx.shadowBlur = 0;
-      }
+    if (playerLayers.regionLabels) {
+      renderRegionLabels(ctx, campaign.regions, zoomLevel);
     }
 
     // WEATHER OVERLAY PASS: Gradient overlay (layer visibility gated)
@@ -402,14 +317,15 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
     updateAudio(zoomLevel, panOffset.x, panOffset.y, canvas.width, canvas.height);
 
     // PASS 4: Markers (layer visibility gated)
-    if (playerLayers.markers) for (let q = visibleRange.qMin; q <= visibleRange.qMax; q++) {
-      for (let r = visibleRange.rMin; r <= visibleRange.rMax; r++) {
-        const key = `${q},${r}`;
-        const hex = campaign.hexes[key];
-        if (hex && hex.markers && hex.markers.length > 0 && hex.status !== 'undiscovered') {
-          const center = hexCenter({ q, r });
-          // Adapt hex data for renderMarkers (needs full Hex-like shape)
-          const adaptedHex = {
+    // The accessor adapts PlayerHex to the full Hex-like shape renderMarkers
+    // needs, and filters undiscovered/markerless hexes before adapting.
+    if (playerLayers.markers) {
+      renderAllMarkers(
+        ctx,
+        (q, r) => {
+          const hex = campaign.hexes[`${q},${r}`];
+          if (!hex || !hex.markers || hex.markers.length === 0 || hex.status === 'undiscovered') return null;
+          return {
             ...hex,
             notes: '',
             tags: [] as string[],
@@ -418,80 +334,29 @@ function PlayerHexGrid({ campaign, selectedHexKey, onHexSelect, onHexDeselect, w
             npcs: [],
             treasures: [],
             clues: []
-          };
-          renderMarkers(ctx, adaptedHex as any, center, markerTypes, zoomLevel);
-        }
-      }
+          } as any;
+        },
+        visibleRange,
+        zoomLevel,
+        markerTypes
+      );
     }
 
     // PASS 5: Character tokens
-    for (const char of campaign.characters) {
-      if (!char.hexKey) continue;
-      const hex = campaign.hexes[char.hexKey];
-      if (!hex || hex.status === 'undiscovered') continue;
-
-      const parts = char.hexKey.split(',');
-      const cq = parseInt(parts[0], 10);
-      const cr = parseInt(parts[1], 10);
-      if (cq < visibleRange.qMin || cq > visibleRange.qMax || cr < visibleRange.rMin || cr > visibleRange.rMax) continue;
-
-      const center = hexCenter({ q: cq, r: cr });
-
-      // Draw circular token
-      const tokenRadius = 8;
-      ctx.beginPath();
-      ctx.arc(center.x, center.y - 10, tokenRadius, 0, Math.PI * 2);
-      ctx.fillStyle = char.color;
-      ctx.fill();
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      // Draw icon
-      const wantFont = '10px sans-serif';
-      if (currentFont !== wantFont) { ctx.font = wantFont; currentFont = wantFont; }
-      if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
-      if (currentBaseline !== 'middle') { ctx.textBaseline = 'middle'; currentBaseline = 'middle'; }
-      ctx.fillStyle = '#fff';
-      ctx.fillText(char.icon, center.x, center.y - 10);
-
-      // Draw name label if zoomed in enough
-      if (zoomLevel >= 0.6) {
-        const nameFont = 'bold 5px sans-serif';
-        if (currentFont !== nameFont) { ctx.font = nameFont; currentFont = nameFont; }
-        ctx.fillStyle = char.color;
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-        ctx.shadowBlur = 2;
-        ctx.fillText(char.name, center.x, center.y - 1);
-        ctx.shadowBlur = 0;
-      }
-    }
+    renderCharacterTokens(
+      ctx,
+      campaign.characters,
+      (key) => campaign.hexes[key],
+      visibleRange,
+      zoomLevel,
+      { skipUndiscovered: true }
+    );
 
     // PASS 6: Party position marker
     if (campaign.partyPosition) {
       const posCoord = parseHexKey(campaign.partyPosition);
       if (posCoord) {
-        const center = hexCenter(posCoord);
-        ctx.save();
-        // Gold circle
-        ctx.beginPath();
-        ctx.arc(center.x, center.y, 8, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 200, 50, 0.9)';
-        ctx.fill();
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-        // "P" label
-        const labelFont = 'bold 10px sans-serif';
-        if (currentFont !== labelFont) { ctx.font = labelFont; currentFont = labelFont; }
-        if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
-        if (currentBaseline !== 'middle') { ctx.textBaseline = 'middle'; currentBaseline = 'middle'; }
-        ctx.fillStyle = '#000';
-        ctx.fillText('P', center.x, center.y);
-        ctx.restore();
-        currentFont = '';
-        currentAlign = '';
-        currentBaseline = '';
+        renderPartyMarker(ctx, hexCenter(posCoord));
       }
     }
 
