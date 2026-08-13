@@ -3,8 +3,8 @@
 // instance and pass in history themselves. Keeping this component pure props
 // in / DiceRoll out means it can render identically in both bundles.
 
-import { useEffect, useState, type KeyboardEvent } from 'react';
-import { DiceParseError, formatRoll } from '../../services/diceService';
+import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
+import { DiceParseError, formatRoll, parseNotation } from '../../services/diceService';
 import type { DiceAdvantage, DiceRoll } from '../../types';
 import Icon from '../icons/Icon';
 import DiceHistoryList from './DiceHistoryList';
@@ -43,11 +43,32 @@ function DicePanel({ onRoll, history, showHiddenToggle, announce }: DicePanelPro
   const [lastRoll, setLastRoll] = useState<DiceRoll | null>(null);
 
   const isNotationMode = notation.trim().length > 0;
-  const advantageEnabled = isNotationMode || (selectedDie === 20 && count === 1);
+
+  // In notation mode, advantage/disadvantage is only eligible when the
+  // typed notation itself parses to a single 1d20 term (an optional
+  // modifier is fine) - the same shape executeRoll enforces. A cheap parse
+  // on every keystroke is fine here; no debounce needed.
+  const notationIsSingleD20 = useMemo(() => {
+    if (!isNotationMode) return false;
+    try {
+      const parsed = parseNotation(notation.trim());
+      return (
+        parsed.terms.length === 1 &&
+        parsed.terms[0].count === 1 &&
+        parsed.terms[0].sides === 20
+      );
+    } catch {
+      return false;
+    }
+  }, [isNotationMode, notation]);
+
+  const advantageEnabled = isNotationMode
+    ? notationIsSingleD20
+    : selectedDie === 20 && count === 1;
 
   // Advantage/disadvantage only applies to a single d20 - drop back to
-  // 'none' whenever the die-button pending roll stops matching that shape,
-  // so a stale selection can't silently throw when the user hits Roll.
+  // 'none' whenever the pending roll stops matching that shape, so a stale
+  // selection can't silently throw when the user hits Roll.
   useEffect(() => {
     if (!advantageEnabled && advantage !== 'none') {
       setAdvantage('none');
@@ -67,10 +88,13 @@ function DicePanel({ onRoll, history, showHiddenToggle, announce }: DicePanelPro
 
   const handleRoll = () => {
     setError(null);
+    // Correct by construction: don't rely on the reset effect above having
+    // already run before this click is handled.
+    const effectiveAdvantage: DiceAdvantage = advantageEnabled ? advantage : 'none';
     try {
       const result = isNotationMode
-        ? onRoll(notation.trim(), { advantage, modifier: 0, isHidden })
-        : onRoll({ sides: selectedDie, count }, { advantage, modifier, isHidden });
+        ? onRoll(notation.trim(), { advantage: effectiveAdvantage, modifier: 0, isHidden })
+        : onRoll({ sides: selectedDie, count }, { advantage: effectiveAdvantage, modifier, isHidden });
       setLastRoll(result);
       announce?.(formatRoll(result));
     } catch (err) {
