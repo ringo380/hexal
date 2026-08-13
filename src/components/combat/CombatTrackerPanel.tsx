@@ -6,7 +6,7 @@ import { useState, useMemo, useRef } from 'react';
 import { useCampaign } from '../../stores/CampaignContext';
 import { useCombat } from '../../stores/CombatContext';
 import { useAnnounce } from '../../stores/AnnouncerContext';
-import { expandEncounterCreatures } from '../../services/combatTracker';
+import { combatReducer, expandEncounterCreatures } from '../../services/combatTracker';
 import { createCombatant } from '../../types/Combat';
 import type { Combatant } from '../../types/Combat';
 import type { Encounter } from '../../types/Campaign';
@@ -97,35 +97,21 @@ function CombatTrackerPanel({ onClose }: CombatTrackerPanelProps) {
     setNewHp('');
   };
 
-  const announceTurn = (state: typeof combat) => {
-    const current = state.combatants[state.turnIndex];
-    if (current) announce(`Round ${state.round}: ${current.name}'s turn`);
+  // Compute the post-dispatch state with the (pure) reducer itself so the
+  // announcement can never drift from the real turn logic
+  const advanceTurn = (action: { type: 'NEXT_TURN' } | { type: 'PREV_TURN' }) => {
+    const next = combatReducer(combat, action);
+    dispatch(action);
+    const current = next.combatants[next.turnIndex];
+    if (current && next !== combat) announce(`Round ${next.round}: ${current.name}'s turn`);
   };
 
-  const handleNextTurn = () => {
-    dispatch({ type: 'NEXT_TURN' });
-    // Reducer result isn't available here; recompute the announcement
-    const next = combat.turnIndex + 1;
-    const wrapped = next >= combat.combatants.length;
-    announceTurn({
-      ...combat,
-      turnIndex: wrapped ? 0 : next,
-      round: wrapped ? combat.round + 1 : combat.round
-    });
-  };
+  const handleNextTurn = () => advanceTurn({ type: 'NEXT_TURN' });
+  const handlePrevTurn = () => advanceTurn({ type: 'PREV_TURN' });
 
-  const handlePrevTurn = () => {
-    if (combat.turnIndex === 0 && combat.round === 1) return;
-    const wrapped = combat.turnIndex === 0;
-    announceTurn({
-      ...combat,
-      turnIndex: wrapped ? combat.combatants.length - 1 : combat.turnIndex - 1,
-      round: wrapped ? combat.round - 1 : combat.round
-    });
-    dispatch({ type: 'PREV_TURN' });
+  const handleDragEnd = () => {
+    dragIndexRef.current = null;
   };
-
-  const handleDragOver = (e: React.DragEvent) => e.preventDefault();
   const handleDrop = (toIndex: number) => {
     const fromIndex = dragIndexRef.current;
     dragIndexRef.current = null;
@@ -213,7 +199,7 @@ function CombatTrackerPanel({ onClose }: CombatTrackerPanelProps) {
                     total={combat.combatants.length}
                     dispatch={dispatch}
                     onDragStart={(i) => { dragIndexRef.current = i; }}
-                    onDragOver={handleDragOver}
+                    onDragEnd={handleDragEnd}
                     onDrop={handleDrop}
                   />
                 ))}

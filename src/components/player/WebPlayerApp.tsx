@@ -85,6 +85,10 @@ function WebPlayerApp() {
           setState('waiting');
           reconnectAttemptRef.current = 0;
           setPinError('');
+          // Clear session overlays that may have ended while disconnected;
+          // the server replays encounter/combat state after auth if still active
+          setActiveEncounter(null);
+          setCombatState(null);
           break;
 
         case 'auth-fail':

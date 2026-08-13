@@ -15,14 +15,18 @@ interface CombatantRowProps {
   total: number;
   dispatch: Dispatch<CombatAction>;
   onDragStart: (index: number) => void;
-  onDragOver: (e: React.DragEvent) => void;
+  onDragEnd: () => void;
   onDrop: (index: number) => void;
 }
 
 const CUSTOM_OPTION = '__custom__';
+// Custom drag payload type so combatant rows only accept combatant drags,
+// never OS file/text drops (types are lowercased by the DataTransfer API)
+export const COMBATANT_DRAG_TYPE = 'application/x-hexal-combatant';
 
-function CombatantRow({ combatant, isCurrent, index, total, dispatch, onDragStart, onDragOver, onDrop }: CombatantRowProps) {
+function CombatantRow({ combatant, isCurrent, index, total, dispatch, onDragStart, onDragEnd, onDrop }: CombatantRowProps) {
   const [hpAmount, setHpAmount] = useState('');
+  const [initiativeDraft, setInitiativeDraft] = useState<string | null>(null);
   const [setHpValue, setSetHpValue] = useState('');
   const [showCustomCondition, setShowCustomCondition] = useState(false);
   const [customCondition, setCustomCondition] = useState('');
@@ -51,29 +55,45 @@ function CombatantRow({ combatant, isCurrent, index, total, dispatch, onDragStar
     setSetHpValue('');
   };
 
+  const commitInitiative = () => {
+    if (initiativeDraft === null) return;
+    const parsed = parseInt(initiativeDraft);
+    if (!isNaN(parsed)) {
+      dispatch({ type: 'UPDATE_COMBATANT', id: combatant.id, changes: { initiative: parsed } });
+    }
+    setInitiativeDraft(null);
+  };
+
   return (
     <li
       className={`combatant-row${isCurrent ? ' current' : ''}${isDown ? ' down' : ''}${combatant.kind === 'pc' ? ' pc' : ''}`}
-      onDragOver={onDragOver}
-      onDrop={() => onDrop(index)}
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes(COMBATANT_DRAG_TYPE)) e.preventDefault();
+      }}
+      onDrop={(e) => {
+        if (e.dataTransfer.types.includes(COMBATANT_DRAG_TYPE)) onDrop(index);
+      }}
     >
       <div className="combatant-main">
         <span
           className="combatant-drag-handle"
           draggable
-          onDragStart={() => onDragStart(index)}
+          onDragStart={(e) => {
+            e.dataTransfer.setData(COMBATANT_DRAG_TYPE, combatant.id);
+            e.dataTransfer.effectAllowed = 'move';
+            onDragStart(index);
+          }}
+          onDragEnd={onDragEnd}
           title="Drag to reorder"
           aria-hidden="true"
         >&#8801;</span>
         <input
           type="number"
           className="combatant-initiative"
-          value={combatant.initiative}
-          onChange={(e) => dispatch({
-            type: 'UPDATE_COMBATANT',
-            id: combatant.id,
-            changes: { initiative: parseInt(e.target.value) || 0 }
-          })}
+          value={initiativeDraft ?? combatant.initiative}
+          onChange={(e) => setInitiativeDraft(e.target.value)}
+          onBlur={commitInitiative}
+          onKeyDown={(e) => { if (e.key === 'Enter') commitInitiative(); }}
           aria-label={`${combatant.name} initiative`}
           title="Initiative"
         />

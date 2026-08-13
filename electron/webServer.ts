@@ -312,14 +312,19 @@ export function getStatus(): WebServerStatus {
   };
 }
 
+// Send an already-serialized payload to every authenticated, open client
+function broadcastToAuthenticated(payload: string): void {
+  Array.from(clients).forEach(client => {
+    if (client.authenticated && client.ws.readyState === WebSocket.OPEN) {
+      client.ws.send(payload);
+    }
+  });
+}
+
 export function broadcastState(playerCampaign: unknown): void {
   const message = JSON.stringify({ type: 'state', data: playerCampaign });
   latestState = message;
-  Array.from(clients).forEach(client => {
-    if (client.authenticated && client.ws.readyState === WebSocket.OPEN) {
-      client.ws.send(message);
-    }
-  });
+  broadcastToAuthenticated(message);
 }
 
 export function broadcastMessage(message: unknown): void {
@@ -329,60 +334,36 @@ export function broadcastMessage(message: unknown): void {
   }
 
   const payload = JSON.stringify({ type: 'dm-message', data: message });
-  Array.from(clients).forEach(client => {
-    if (client.authenticated && client.ws.readyState === WebSocket.OPEN) {
-      client.ws.send(payload);
-    }
-  });
+  broadcastToAuthenticated(payload);
 }
 
 export function broadcastEncounterReveal(data: unknown): void {
   activeEncounter = data;
   const message = JSON.stringify({ type: 'encounter-reveal', data });
-  Array.from(clients).forEach(client => {
-    if (client.authenticated && client.ws.readyState === WebSocket.OPEN) {
-      client.ws.send(message);
-    }
-  });
+  broadcastToAuthenticated(message);
 }
 
 export function broadcastPlayerNote(note: unknown): void {
   const message = JSON.stringify({ type: 'player-note', data: note });
-  Array.from(clients).forEach(client => {
-    if (client.authenticated && client.ws.readyState === WebSocket.OPEN) {
-      client.ws.send(message);
-    }
-  });
+  broadcastToAuthenticated(message);
 }
 
 export function broadcastEncounterDismiss(): void {
   activeEncounter = null;
   const message = JSON.stringify({ type: 'encounter-dismiss' });
-  Array.from(clients).forEach(client => {
-    if (client.authenticated && client.ws.readyState === WebSocket.OPEN) {
-      client.ws.send(message);
-    }
-  });
+  broadcastToAuthenticated(message);
 }
 
 export function broadcastCombatUpdate(data: unknown): void {
   activeCombat = data;
   const message = JSON.stringify({ type: 'combat-update', data });
-  Array.from(clients).forEach(client => {
-    if (client.authenticated && client.ws.readyState === WebSocket.OPEN) {
-      client.ws.send(message);
-    }
-  });
+  broadcastToAuthenticated(message);
 }
 
 export function broadcastCombatEnd(): void {
   activeCombat = null;
   const message = JSON.stringify({ type: 'combat-end' });
-  Array.from(clients).forEach(client => {
-    if (client.authenticated && client.ws.readyState === WebSocket.OPEN) {
-      client.ws.send(message);
-    }
-  });
+  broadcastToAuthenticated(message);
 }
 
 export function setPlayerNoteCallback(cb: (note: unknown) => void): void {
@@ -395,9 +376,5 @@ export function broadcastCampaignClosed(): void {
   messageHistory = [];
   activeEncounter = null;
   activeCombat = null;
-  Array.from(clients).forEach(client => {
-    if (client.authenticated && client.ws.readyState === WebSocket.OPEN) {
-      client.ws.send(message);
-    }
-  });
+  broadcastToAuthenticated(message);
 }

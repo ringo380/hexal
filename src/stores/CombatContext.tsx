@@ -31,14 +31,24 @@ export function CombatProvider({ children }: { children: ReactNode }) {
     }
   }, [campaign?.id]);
 
-  // Sync filtered combat state to player views on every change; send the
-  // end signal when combat transitions active -> inactive
+  // Sync filtered combat state to player views on change; send the end
+  // signal when combat transitions active -> inactive. DM-only edits (HP,
+  // initiative values) produce byte-identical filtered payloads, so dedupe
+  // on the serialized form to avoid flooding IPC and web clients.
   const wasActiveRef = useRef(false);
+  const lastSentRef = useRef<string | null>(null);
   useEffect(() => {
     if (combat.isActive) {
       const filtered = filterCombatForPlayer(combat);
-      if (filtered) window.electronAPI?.combatUpdate(filtered);
+      if (filtered) {
+        const serialized = JSON.stringify(filtered);
+        if (serialized !== lastSentRef.current) {
+          lastSentRef.current = serialized;
+          window.electronAPI?.combatUpdate(filtered);
+        }
+      }
     } else if (wasActiveRef.current) {
+      lastSentRef.current = null;
       window.electronAPI?.combatEnd();
     }
     wasActiveRef.current = combat.isActive;

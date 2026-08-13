@@ -42,7 +42,7 @@ import CommandPalette from './CommandPalette';
 import DmMessagePanel from './player/DmMessagePanel';
 import TravelPanel from './travel/TravelPanel';
 import CombatTrackerPanel from './combat/CombatTrackerPanel';
-import { useCombat } from '../stores/CombatContext';
+import CombatToolbarButton from './combat/CombatToolbarButton';
 import Icon from './icons/Icon';
 import type { PlayerNote } from '../types';
 import { CATEGORY_INFO, type ContentCategory, parseHexKey, type ActiveEncounter } from '../types/Campaign';
@@ -105,7 +105,6 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
   const [showTravelPanel, setShowTravelPanel] = useState(false);
   const [travelPath, setTravelPath] = useState<string[]>([]);
   const [showCombatTracker, setShowCombatTracker] = useState(false);
-  const { combat } = useCombat();
   const hexClickOverrideRef = useRef<((key: string) => void) | null>(null);
 
   // Clear session-only UI state and stop weather simulation when campaign changes
@@ -511,13 +510,10 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
           >
             <Icon name="walk" size={16} /> Travel
           </button>
-          <button
-            className={`btn btn-secondary${showCombatTracker ? ' btn-active' : ''}`}
-            onClick={() => setShowCombatTracker(!showCombatTracker)}
-          >
-            <Icon name="sword" size={16} /> Combat
-            {combat.isActive && <span className="filter-badge">R{combat.round}</span>}
-          </button>
+          <CombatToolbarButton
+            isOpen={showCombatTracker}
+            onToggle={() => setShowCombatTracker(!showCombatTracker)}
+          />
           <button className="btn btn-secondary" onClick={() => setShowGenerator(true)}>
             <Icon name="dice" size={16} /> Generate
           </button>
