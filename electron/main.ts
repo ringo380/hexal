@@ -258,15 +258,6 @@ function createWindow(filePath?: string): BrowserWindow {
     });
   }
 
-  // Replay dice roll history so a newly opened DM window (e.g. "open in new
-  // window") doesn't start with empty history forever - mirrors the
-  // player-view window replay below.
-  win.webContents.once('did-finish-load', () => {
-    if (rollHistoryData.length > 0) {
-      win.webContents.send('dice-history', rollHistoryData);
-    }
-  });
-
   return win;
 }
 
@@ -292,16 +283,15 @@ function createPlayerViewWindow(): BrowserWindow {
   // Replay latest campaign state + active combat state so a window opened
   // after the campaign is already loaded (or mid-combat) is caught up
   // immediately instead of waiting for the next DM edit (mirrors webServer's
-  // late-join replay, and the dice-history replay below it).
+  // late-join replay). Dice history is fetched separately via
+  // get-dice-history, invoked once the renderer's listeners are wired up -
+  // a did-finish-load push can fire before any renderer listener exists.
   win.webContents.once('did-finish-load', () => {
     if (latestPlayerViewData !== null) {
       win.webContents.send('player-view-update', latestPlayerViewData);
     }
     if (activeCombatData !== null) {
       win.webContents.send('combat-update', activeCombatData);
-    }
-    if (rollHistoryData.length > 0) {
-      win.webContents.send('dice-history', rollHistoryData);
     }
   });
 
@@ -695,6 +685,12 @@ ipcMain.on('combat-end', () => {
   });
   broadcastCombatEnd();
 });
+
+// Pulled by createElectronDiceTransport's subscribe() after the renderer has
+// wired up its own listeners, so a newly opened DM or player window is
+// caught up on history without racing did-finish-load (a pushed
+// 'dice-history' event can fire before any renderer listener exists).
+ipcMain.handle('get-dice-history', () => rollHistoryData);
 
 // Relay dice rolls from DM/player windows to all other DM + player view
 // windows + web clients. The recent rolls are cached (oldest first, capped

@@ -25,7 +25,9 @@ export interface ParsedDice {
   modifier: number;
 }
 
-// Consumed by a later task's networking layer; only the shape is defined here.
+// Abstracts roll delivery over whichever channel is active (Electron IPC,
+// the web player's WebSocket) so DiceContext doesn't need to know which one
+// it's talking to.
 export interface DiceTransport {
   send(roll: DiceRoll): void;
   subscribe(handlers: { onRoll(r: DiceRoll): void; onHistory(rolls: DiceRoll[]): void }): () => void;

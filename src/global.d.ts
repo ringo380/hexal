@@ -98,7 +98,7 @@ interface ElectronAPI {
   // Dice rolls
   sendDiceRoll: (roll: DiceRoll) => void;
   onDiceRoll: (callback: (roll: DiceRoll) => void) => () => void;
-  onDiceHistory: (callback: (rolls: DiceRoll[]) => void) => () => void;
+  getDiceHistory: () => Promise<DiceRoll[]>;
 }
 
 declare global {

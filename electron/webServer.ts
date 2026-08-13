@@ -42,29 +42,89 @@ let onDiceRollCallback: ((roll: unknown) => void) | null = null;
 
 // ---------- Helpers ----------
 
-// Minimal, ES3-safe shape check for an inbound dice roll from a web client.
-// electron/ cannot import src/ services, so this duplicates the relevant
-// bounds from src/services/diceService.ts's isValidDiceRollPayload. Hidden
-// rolls are refused outright — they must never transit the network.
-function isDiceRollShaped(x: unknown): boolean {
-  if (typeof x !== 'object' || x === null) return false;
+// Shape returned by sanitizeDiceRoll: exactly the fields a DiceRoll needs,
+// nothing else. electron/ cannot import src/ services, so this duplicates
+// the relevant bounds from src/services/diceService.ts's
+// isValidDiceRollPayload rather than sharing code with it.
+interface SanitizedDiceRoll {
+  id: string;
+  notation: string;
+  rolls: { sides: number; value: number; discarded?: boolean }[];
+  modifier: number;
+  total: number;
+  advantage: 'none' | 'advantage' | 'disadvantage';
+  roller: { kind: 'dm' | 'player'; name: string };
+  isHidden: false;
+  timestamp: number;
+}
+
+const MAX_SIDES = 1000;
+const MAX_ROLLS = 200;
+const ADVANTAGE_VALUES = ['none', 'advantage', 'disadvantage'];
+
+function isFiniteNumber(x: unknown): x is number {
+  return typeof x === 'number' && isFinite(x);
+}
+
+// Validates a single die result element: finite numeric sides in [2, 1000],
+// finite numeric value in [1, sides], and an optional boolean `discarded`.
+function sanitizeDieResult(x: unknown): { sides: number; value: number; discarded?: boolean } | null {
+  if (typeof x !== 'object' || x === null) return null;
+  const r = x as Record<string, unknown>;
+  if (!isFiniteNumber(r.sides) || r.sides < 2 || r.sides > MAX_SIDES) return null;
+  if (!isFiniteNumber(r.value) || r.value < 1 || r.value > r.sides) return null;
+  if ('discarded' in r && r.discarded !== undefined && typeof r.discarded !== 'boolean') {
+    return null;
+  }
+  const out: { sides: number; value: number; discarded?: boolean } = { sides: r.sides, value: r.value };
+  if (r.discarded === true) out.discarded = true;
+  return out;
+}
+
+// Validates an inbound dice roll from a web client and, if valid, rebuilds a
+// whitelisted copy containing exactly the DiceRoll fields — unknown extra
+// properties (e.g. an oversized junk field) never survive into the copy
+// that gets cached/relayed/forwarded. Hidden rolls are refused outright —
+// they must never transit the network. Returns null on any validation
+// failure.
+function sanitizeDiceRoll(x: unknown): SanitizedDiceRoll | null {
+  if (typeof x !== 'object' || x === null) return null;
   const r = x as Record<string, unknown>;
 
-  if (typeof r.id !== 'string' || r.id.length > 64) return false;
-  if (typeof r.notation !== 'string' || r.notation.length > 100) return false;
-  if (typeof r.total !== 'number' || !isFinite(r.total)) return false;
-  if (typeof r.modifier !== 'number' || !isFinite(r.modifier)) return false;
-  if (typeof r.timestamp !== 'number' || !isFinite(r.timestamp)) return false;
-  if (!Array.isArray(r.rolls) || r.rolls.length > 200) return false;
+  if (typeof r.id !== 'string' || r.id.length === 0 || r.id.length > 64) return null;
+  if (typeof r.notation !== 'string' || r.notation.length === 0 || r.notation.length > 100) return null;
+  if (!isFiniteNumber(r.total)) return null;
+  if (!isFiniteNumber(r.modifier)) return null;
+  if (!isFiniteNumber(r.timestamp)) return null;
+  if (!Array.isArray(r.rolls) || r.rolls.length > MAX_ROLLS) return null;
 
-  if (typeof r.roller !== 'object' || r.roller === null) return false;
+  const rolls: { sides: number; value: number; discarded?: boolean }[] = [];
+  for (let i = 0; i < r.rolls.length; i++) {
+    const die = sanitizeDieResult(r.rolls[i]);
+    if (!die) return null;
+    rolls.push(die);
+  }
+
+  if (typeof r.advantage !== 'string' || ADVANTAGE_VALUES.indexOf(r.advantage) === -1) return null;
+
+  if (typeof r.roller !== 'object' || r.roller === null) return null;
   const roller = r.roller as Record<string, unknown>;
-  if (roller.kind !== 'dm' && roller.kind !== 'player') return false;
-  if (typeof roller.name !== 'string' || roller.name.length > 50) return false;
+  if (roller.kind !== 'dm' && roller.kind !== 'player') return null;
+  if (typeof roller.name !== 'string' || roller.name.length > 50) return null;
 
-  if (r.isHidden !== false) return false;
+  if (r.isHidden !== false) return null;
 
-  return true;
+  return {
+    id: r.id,
+    notation: r.notation,
+    rolls,
+    modifier: r.modifier,
+    total: r.total,
+    advantage: r.advantage as 'none' | 'advantage' | 'disadvantage',
+    roller: { kind: roller.kind, name: roller.name },
+    isHidden: false,
+    timestamp: r.timestamp,
+  };
 }
 
 function generatePin(): string {
@@ -198,8 +258,10 @@ export function startServer(options: { port: number; pin?: string }): WebServerS
     fs.createReadStream(filePath).pipe(res);
   });
 
-  // WebSocket server: handles auth and state broadcast
-  wss = new WebSocketServer({ server: httpServer });
+  // WebSocket server: handles auth and state broadcast. maxPayload caps an
+  // inbound frame well below ws's 100MiB default — the 20KB IPC cap in
+  // main.ts only guards the Electron-origin path, not this network one.
+  wss = new WebSocketServer({ server: httpServer, maxPayload: 64 * 1024 });
 
   wss.on('connection', (ws: WebSocket) => {
     const client: AuthenticatedClient = {
@@ -284,21 +346,22 @@ export function startServer(options: { port: number; pin?: string }): WebServerS
 
       // Dice roll from web client — validate, cache, relay to DM, broadcast to other clients
       if (msg.type === 'dice-roll' && client.authenticated && msg.data) {
-        if (!isDiceRollShaped(msg.data)) {
+        const sanitized = sanitizeDiceRoll(msg.data);
+        if (!sanitized) {
           return;
         }
 
-        rollHistory.push(msg.data);
+        rollHistory.push(sanitized);
         if (rollHistory.length > 50) {
           rollHistory.shift();
         }
 
         if (onDiceRollCallback) {
-          onDiceRollCallback(msg.data);
+          onDiceRollCallback(sanitized);
         }
 
         // Broadcast to other authenticated clients (not the sender)
-        const rollMessage = JSON.stringify({ type: 'dice-roll', data: msg.data });
+        const rollMessage = JSON.stringify({ type: 'dice-roll', data: sanitized });
         Array.from(clients).forEach(c => {
           if (c !== client && c.authenticated && c.ws.readyState === WebSocket.OPEN) {
             c.ws.send(rollMessage);

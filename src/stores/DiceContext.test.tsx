@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { DiceProvider, useDice } from './DiceContext';
 import { DiceParseError } from '../services/diceService';
-import type { DiceTransport } from '../types';
+import type { DiceRoll, DiceTransport } from '../types';
 
 function makeMockTransport(): DiceTransport & { send: ReturnType<typeof vi.fn> } {
   return {
@@ -10,6 +10,34 @@ function makeMockTransport(): DiceTransport & { send: ReturnType<typeof vi.fn> }
     subscribe: vi.fn(() => () => {}),
   };
 }
+
+// Captures the handlers DiceProvider passes to transport.subscribe() so
+// tests can simulate remote arrivals directly, bypassing the transport.
+type DiceHandlers = { onRoll(r: DiceRoll): void; onHistory(rolls: DiceRoll[]): void };
+
+function makeCapturingTransport(): { transport: DiceTransport; getHandlers: () => DiceHandlers | null } {
+  let handlers: DiceHandlers | null = null;
+  const transport: DiceTransport = {
+    send: vi.fn(),
+    subscribe: vi.fn((h: DiceHandlers) => {
+      handlers = h;
+      return () => {};
+    }),
+  };
+  return { transport, getHandlers: () => handlers };
+}
+
+const validRoll: DiceRoll = {
+  id: 'remote-1',
+  notation: '1d20',
+  rolls: [{ sides: 20, value: 12 }],
+  modifier: 0,
+  total: 12,
+  advantage: 'none',
+  roller: { kind: 'player', name: 'Remote' },
+  isHidden: false,
+  timestamp: Date.now(),
+};
 
 function renderDiceHook(transport?: DiceTransport) {
   return renderHook(() => useDice(), {
@@ -87,5 +115,43 @@ describe('DiceProvider roll() object-input bounds validation', () => {
         result.current.roll({ sides: 6, count: 101 });
       });
     }).toThrow(DiceParseError);
+  });
+});
+
+describe('DiceProvider transport subscription validates incoming rolls', () => {
+  it('appends a well-formed remote roll delivered via onRoll', () => {
+    const { transport, getHandlers } = makeCapturingTransport();
+    const { result } = renderDiceHook(transport);
+
+    act(() => {
+      getHandlers()!.onRoll(validRoll);
+    });
+
+    expect(result.current.history).toContainEqual(validRoll);
+  });
+
+  it('drops a malformed roll delivered via onRoll instead of reaching the reducer', () => {
+    const { transport, getHandlers } = makeCapturingTransport();
+    const { result } = renderDiceHook(transport);
+
+    act(() => {
+      // A hostile/corrupted payload: `value` is an object, which would
+      // crash a naive `{die.value}` render if it reached the history.
+      getHandlers()!.onRoll({ ...validRoll, rolls: [{ sides: 20, value: {} }] } as unknown as DiceRoll);
+    });
+
+    expect(result.current.history).toHaveLength(0);
+  });
+
+  it('keeps only well-formed entries from a mixed onHistory replay', () => {
+    const { transport, getHandlers } = makeCapturingTransport();
+    const { result } = renderDiceHook(transport);
+    const malformed = { ...validRoll, id: 'bad-1', total: Infinity };
+
+    act(() => {
+      getHandlers()!.onHistory([validRoll, malformed as unknown as DiceRoll]);
+    });
+
+    expect(result.current.history).toEqual([validRoll]);
   });
 });

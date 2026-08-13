@@ -248,11 +248,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('dice-roll', handler);
   },
 
-  onDiceHistory: (callback: (rolls: unknown[]) => void): (() => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, rolls: unknown[]) => callback(rolls);
-    ipcRenderer.on('dice-history', handler);
-    return () => ipcRenderer.removeListener('dice-history', handler);
-  }
+  getDiceHistory: (): Promise<unknown[]> => ipcRenderer.invoke('get-dice-history'),
 });
 
 // Type declaration for window.electronAPI
@@ -309,7 +305,7 @@ declare global {
       // Dice rolls
       sendDiceRoll: (roll: unknown) => void;
       onDiceRoll: (callback: (roll: unknown) => void) => () => void;
-      onDiceHistory: (callback: (rolls: unknown[]) => void) => () => void;
+      getDiceHistory: () => Promise<unknown[]>;
     };
   }
 }

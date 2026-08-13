@@ -235,12 +235,13 @@ describe('formatRoll', () => {
     expect(formatted).toContain(String(roll.total));
   });
 
-  it('marks discarded dice distinctly in the formatted string', () => {
+  it('marks discarded dice distinctly in the formatted string, as plain text', () => {
     const parsed = parseNotation('1d20');
     const roll = executeRoll(parsed, { roller: dmRoller, advantage: 'advantage' });
     const formatted = formatRoll(roll);
     const discardedValue = roll.rolls.find((r) => r.discarded)!.value;
-    expect(formatted).toMatch(new RegExp(`~~${discardedValue}~~|\\(${discardedValue}\\)`));
+    expect(formatted).toContain(`(dropped ${discardedValue})`);
+    expect(formatted).not.toContain('~~');
   });
 });
 

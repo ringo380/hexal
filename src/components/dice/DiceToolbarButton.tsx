@@ -19,6 +19,7 @@ function DiceToolbarButton() {
   const announce = useAnnounce();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const toggleButtonRef = useRef<HTMLButtonElement>(null);
 
   // Skip the initial mount so an already-populated lastRemoteRoll (e.g. a
   // late-join history replay that arrived before this component mounted)
@@ -49,6 +50,10 @@ function DiceToolbarButton() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setOpen(false);
+        // Escape moves focus back to the toggle button - closing the
+        // popover otherwise drops focus to <body> since the focused
+        // element was inside the popover being removed.
+        toggleButtonRef.current?.focus();
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -62,6 +67,7 @@ function DiceToolbarButton() {
   return (
     <div className="dice-toolbar-anchor" ref={containerRef}>
       <button
+        ref={toggleButtonRef}
         type="button"
         className={`btn btn-secondary${open ? ' btn-active' : ''}`}
         aria-label="Dice roller"

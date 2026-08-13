@@ -13,7 +13,7 @@ import {
   useCallback,
 } from 'react';
 import type { ReactNode } from 'react';
-import { parseNotation, executeRoll, DiceParseError, MAX_DICE, MAX_SIDES } from '../services/diceService';
+import { parseNotation, executeRoll, DiceParseError, MAX_DICE, MAX_SIDES, isValidDiceRollPayload } from '../services/diceService';
 import type { DiceRoll, DiceAdvantage, DiceTransport, ParsedDice } from '../types';
 
 export const DICE_HISTORY_LIMIT = 50;
@@ -155,12 +155,21 @@ export function DiceProvider({ campaignId, roller, transport, children }: DicePr
     dispatch({ type: 'CLEAR' });
   }, []);
 
-  // Subscribe to the transport for remote rolls and late-join history replay.
+  // Subscribe to the transport for remote rolls and late-join history
+  // replay. Transports carry data from other processes/clients (Electron
+  // IPC, the web player's WebSocket) — validate every roll here so a
+  // malformed payload from any transport can never reach the reducer.
   useEffect(() => {
     if (!transport) return;
     const unsubscribe = transport.subscribe({
-      onRoll: (r) => dispatch({ type: 'ADD_REMOTE', roll: r }),
-      onHistory: (rolls) => dispatch({ type: 'SET_HISTORY', rolls }),
+      onRoll: (r) => {
+        if (isValidDiceRollPayload(r)) {
+          dispatch({ type: 'ADD_REMOTE', roll: r });
+        }
+      },
+      onHistory: (rolls) => {
+        dispatch({ type: 'SET_HISTORY', rolls: rolls.filter(isValidDiceRollPayload) });
+      },
     });
     return unsubscribe;
   }, [transport]);

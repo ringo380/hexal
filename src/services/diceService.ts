@@ -189,10 +189,15 @@ export function executeRoll(
   };
 }
 
-/** Formats a DiceRoll as a human-readable string, striking discarded dice. */
+/**
+ * Formats a DiceRoll as a plain-text, human-readable string — read literally
+ * in toasts and screen-reader announcements, so it must not contain markup.
+ * Visual strikethrough for discarded dice is a DOM/CSS concern handled by
+ * DiceHistoryList; here a discarded die is spelled out as "(dropped N)".
+ */
 export function formatRoll(roll: DiceRoll): string {
   const rollsStr = roll.rolls
-    .map((r) => (r.discarded ? `~~${r.value}~~` : String(r.value)))
+    .map((r) => (r.discarded ? `(dropped ${r.value})` : String(r.value)))
     .join(', ');
   return `${roll.notation}: ${roll.total} (${rollsStr})`;
 }

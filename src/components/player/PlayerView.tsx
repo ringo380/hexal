@@ -184,7 +184,6 @@ function PlayerView({ campaign, messages = [], onMessageSeen, activeEncounter, o
             setShowDicePanel(!showDicePanel);
           }
         }}
-        aria-label="Dice roller"
       >
         {showDicePanel ? 'Hide Dice' : 'Dice'}
       </button>

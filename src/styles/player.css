@@ -560,6 +560,21 @@
     left: 8px;
   }
 
+  /* The journal and dice toggles use fixed desktop-width right offsets
+     (240px / 346px) that assume room for their sibling panels alongside
+     the layout toggle. Below 480px that leaves no room at all — stack
+     them under the layout toggle instead so all three stay on-screen and
+     non-overlapping. */
+  .player-journal-toggle {
+    top: 48px;
+    right: 8px;
+  }
+
+  .player-dice-toggle {
+    top: 88px;
+    right: 8px;
+  }
+
   .player-campaign-name {
     display: none;
   }
@@ -1695,7 +1710,10 @@
 }
 
 .dice-panel .dice-history-value.discarded {
-  color: #666666;
+  /* #666 on this panel's #252525 background is ~2.7:1 - below the 4.5:1
+     AA minimum for normal-size text. #999 clears it with margin (~5.4:1)
+     while staying visibly dimmer than the #e0e0e0 kept-die value. */
+  color: #999999;
   text-decoration: line-through;
 }
 

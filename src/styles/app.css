@@ -8298,7 +8298,12 @@ label {
 }
 
 .dice-panel .dice-history-value.discarded {
-  color: var(--text-muted);
+  /* var(--text-muted) (#666) on this panel's --bg-secondary (#252526) is
+     ~2.7:1 - below the 4.5:1 AA minimum for normal-size text. #999 clears
+     it with margin (~5.4:1) while staying visibly dimmer than the kept-die
+     value's --text-primary. Overridden locally rather than changing
+     --text-muted, which is used elsewhere against different backgrounds. */
+  color: #999999;
   text-decoration: line-through;
 }
 

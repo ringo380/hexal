@@ -88,8 +88,11 @@ function DicePanel({ onRoll, history, showHiddenToggle, announce }: DicePanelPro
 
   const handleRoll = () => {
     setError(null);
-    // Correct by construction: don't rely on the reset effect above having
-    // already run before this click is handled.
+    // Recompute from advantageEnabled directly rather than reading `advantage`
+    // as-is: the effect above resets a stale selection back to 'none' on
+    // render, but React may not have flushed that effect yet when this
+    // click handler runs, so `advantage` state could still hold a value
+    // that no longer matches the current dice/notation shape.
     const effectiveAdvantage: DiceAdvantage = advantageEnabled ? advantage : 'none';
     try {
       const result = isNotationMode
