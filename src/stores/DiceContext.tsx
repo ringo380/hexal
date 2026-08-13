@@ -13,7 +13,7 @@ import {
   useCallback,
 } from 'react';
 import type { ReactNode } from 'react';
-import { parseNotation, executeRoll } from '../services/diceService';
+import { parseNotation, executeRoll, DiceParseError, MAX_DICE, MAX_SIDES } from '../services/diceService';
 import type { DiceRoll, DiceAdvantage, DiceTransport, ParsedDice } from '../types';
 
 export const DICE_HISTORY_LIMIT = 50;
@@ -67,6 +67,30 @@ interface RollOpts {
   modifier?: number;
 }
 
+/**
+ * Builds a ParsedDice from the object-input roll() form, applying the same
+ * bounds checks parseNotation enforces on string input (count >= 1,
+ * sides >= 2, sides <= MAX_SIDES, total count <= MAX_DICE).
+ */
+function buildParsedFromObject(
+  input: { sides: number; count: number },
+  modifier: number
+): ParsedDice {
+  if (input.count < 1) {
+    throw new DiceParseError(`Dice count must be at least 1: "${input.count}d${input.sides}"`);
+  }
+  if (input.sides < 2) {
+    throw new DiceParseError(`A die must have at least 2 sides: "${input.count}d${input.sides}"`);
+  }
+  if (input.sides > MAX_SIDES) {
+    throw new DiceParseError(`Die sides cannot exceed ${MAX_SIDES}: "${input.count}d${input.sides}"`);
+  }
+  if (input.count > MAX_DICE) {
+    throw new DiceParseError(`Total dice count cannot exceed ${MAX_DICE}`);
+  }
+  return { terms: [{ count: input.count, sides: input.sides }], modifier };
+}
+
 interface DiceContextValue {
   history: DiceRoll[];
   roll: (input: string | { sides: number; count: number }, opts?: RollOpts) => DiceRoll;
@@ -99,7 +123,7 @@ export function DiceProvider({ campaignId, roller, transport, children }: DicePr
       const parsed: ParsedDice =
         typeof input === 'string'
           ? parseNotation(input)
-          : { terms: [{ count: input.count, sides: input.sides }], modifier: opts.modifier ?? 0 };
+          : buildParsedFromObject(input, opts.modifier ?? 0);
 
       const result = executeRoll(parsed, {
         advantage: opts.advantage,
