@@ -44,6 +44,18 @@ describe('layoutTokensOnHex', () => {
     expect(layoutTokensOnHex(CENTER, 7)).toEqual(layoutTokensOnHex(CENTER, 7));
   });
 
+  it('keeps every pair of tokens separated enough to stay visible', () => {
+    for (let count = 2; count <= 12; count++) {
+      const positions = layoutTokensOnHex(CENTER, count);
+      for (let i = 0; i < positions.length; i++) {
+        for (let j = i + 1; j < positions.length; j++) {
+          const d = Math.hypot(positions[i].x - positions[j].x, positions[i].y - positions[j].y);
+          expect(d, `count=${count} pair ${i},${j}`).toBeGreaterThanOrEqual(8);
+        }
+      }
+    }
+  });
+
   it('uses a second ring beyond six tokens so positions stay distinct', () => {
     const positions = layoutTokensOnHex(CENTER, 9);
     const keys = new Set(positions.map(p => `${p.x.toFixed(3)},${p.y.toFixed(3)}`));

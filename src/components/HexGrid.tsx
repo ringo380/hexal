@@ -933,22 +933,33 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
       }
     }
 
-    // Check for character token hit (for token dragging)
-    const hitToken = tokenPositionsRef.current.find(t => {
-      const dx = worldX - t.x;
-      const dy = worldY - t.y;
-      return Math.sqrt(dx * dx + dy * dy) <= t.radius + 2;
-    });
-    if (hitToken) {
-      tokenDragRef.current = {
-        characterId: hitToken.characterId,
-        startX: e.clientX,
-        startY: e.clientY,
-        currentX: e.clientX - rect.left,
-        currentY: e.clientY - rect.top,
-        dragging: false
-      };
-      return; // Don't start map pan
+    // Check for character token hit (for token dragging). Skipped in region
+    // paint and click-override (travel pick) modes so those clicks land on the
+    // hex instead of silently relocating a character. Nearest center wins so
+    // the visually topmost token in a crowded fan-out is the one picked up.
+    if (!regionPaintMode && !hexClickOverride?.current) {
+      let hitToken: TokenPosition | null = null;
+      let hitDist = Infinity;
+      for (const t of tokenPositionsRef.current) {
+        const dx = worldX - t.x;
+        const dy = worldY - t.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist <= t.radius + 2 && dist < hitDist) {
+          hitToken = t;
+          hitDist = dist;
+        }
+      }
+      if (hitToken) {
+        tokenDragRef.current = {
+          characterId: hitToken.characterId,
+          startX: e.clientX,
+          startY: e.clientY,
+          currentX: e.clientX - rect.left,
+          currentY: e.clientY - rect.top,
+          dragging: false
+        };
+        return; // Don't start map pan
+      }
     }
 
     // Check if clicking on an active hex
@@ -971,7 +982,33 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
       panY: panOffset.y,
       onActiveHex: !!hasContent
     };
-  }, [campaign, getHex, panOffset, zoomLevel, markerDrag]);
+  }, [campaign, getHex, panOffset, zoomLevel, markerDrag, regionPaintMode, hexClickOverride]);
+
+  // Shared plain-click handling: shift-aware hex select / multi-select toggle
+  const handlePlainClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (clickWasShiftRef.current && !regionPaintMode) {
+      const canvas = canvasRef.current;
+      if (canvas && campaign) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const canvasX = (e.clientX - rect.left) * scaleX;
+        const canvasY = (e.clientY - rect.top) * scaleY;
+        const worldX = (canvasX - panOffset.x) / zoomLevel;
+        const worldY = (canvasY - panOffset.y) / zoomLevel;
+        const coord = coordinateAt({ x: worldX, y: worldY }, campaign.gridWidth, campaign.gridHeight);
+        if (coord) {
+          toggleMultiSelectHex(coord);
+          selectHex(coord);
+        }
+      }
+    } else {
+      if (multiSelectedKeys.size > 0) {
+        clearMultiSelection();
+      }
+      selectHexAtPosition(e);
+    }
+  }, [campaign, regionPaintMode, panOffset, zoomLevel, toggleMultiSelectHex, selectHex, multiSelectedKeys, clearMultiSelection, selectHexAtPosition]);
 
   // Handle mouse up - either complete drag or select hex
   const handleMouseUp = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -980,30 +1017,8 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
     if (tokenDragState) {
       tokenDragRef.current = null;
       if (!tokenDragState.dragging) {
-        // Plain click on a token: behave like a normal hex click (shift-aware)
-        if (clickWasShiftRef.current && !regionPaintMode) {
-          const canvas = canvasRef.current;
-          if (canvas && campaign) {
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            const canvasX = (e.clientX - rect.left) * scaleX;
-            const canvasY = (e.clientY - rect.top) * scaleY;
-            const worldX = (canvasX - panOffset.x) / zoomLevel;
-            const worldY = (canvasY - panOffset.y) / zoomLevel;
-            const coord = coordinateAt({ x: worldX, y: worldY }, campaign.gridWidth, campaign.gridHeight);
-            if (coord) {
-              toggleMultiSelectHex(coord);
-              selectHex(coord);
-            }
-          }
-        } else {
-          if (multiSelectedKeys.size > 0) {
-            clearMultiSelection();
-          }
-          selectHexAtPosition(e);
-        }
-        draw();
+        // Plain click on a token: behave like a normal hex click
+        handlePlainClick(e);
         return;
       }
       const canvas = canvasRef.current;
@@ -1027,6 +1042,10 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
                 c.id === tokenDragState.characterId ? { ...c, hexKey: targetKey } : c
               )
             });
+          } else {
+            // Jittery click that never left the source hex: treat as a click
+            // so the gesture still selects instead of doing nothing
+            handlePlainClick(e);
           }
         }
       }
@@ -1063,30 +1082,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
     }
 
     if (isPotentialDrag && !isDraggingMap) {
-      if (clickWasShiftRef.current && !regionPaintMode) {
-        // Shift+click: toggle hex in multi-selection
-        const canvas = canvasRef.current;
-        if (canvas && campaign) {
-          const rect = canvas.getBoundingClientRect();
-          const scaleX = canvas.width / rect.width;
-          const scaleY = canvas.height / rect.height;
-          const canvasX = (e.clientX - rect.left) * scaleX;
-          const canvasY = (e.clientY - rect.top) * scaleY;
-          const worldX = (canvasX - panOffset.x) / zoomLevel;
-          const worldY = (canvasY - panOffset.y) / zoomLevel;
-          const coord = coordinateAt({ x: worldX, y: worldY }, campaign.gridWidth, campaign.gridHeight);
-          if (coord) {
-            toggleMultiSelectHex(coord);
-            selectHex(coord);
-          }
-        }
-      } else {
-        // Normal click - select hex and clear any multi-selection
-        if (multiSelectedKeys.size > 0) {
-          clearMultiSelection();
-        }
-        selectHexAtPosition(e);
-      }
+      handlePlainClick(e);
     }
     // Sync targetPan with current panOffset after drag ends
     if (isDraggingMap) {
@@ -1094,7 +1090,7 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
     }
     setIsPotentialDrag(false);
     setIsDraggingMap(false);
-  }, [isPotentialDrag, isDraggingMap, selectHexAtPosition, panOffset, campaign, zoomLevel, markerDrag, selectMarker, regionPaintMode, toggleMultiSelectHex, selectHex, multiSelectedKeys, clearMultiSelection, getHex, updateCampaignData, draw]);
+  }, [isPotentialDrag, isDraggingMap, panOffset, campaign, zoomLevel, markerDrag, selectMarker, getHex, updateCampaignData, draw, handlePlainClick, setTargetPan]);
 
   // Handle mouse move for drag panning and tooltips
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1112,7 +1108,9 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
       if (!tokenDragState.dragging) {
         const dx = e.clientX - tokenDragState.startX;
         const dy = e.clientY - tokenDragState.startY;
-        if (Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD_EMPTY) {
+        // Hex threshold (8px, not 3px): a slightly jittery click on a token
+        // should still read as a click, not a drag
+        if (Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD_HEX) {
           tokenDragState.dragging = true;
         }
       }
@@ -1280,11 +1278,15 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
     setContextMenu({ x, y, hexKey: targetKey });
   }, [multiSelectedKeys.size, campaign, getHex, panOffset, zoomLevel]);
 
-  // Move all members of a party (or every character) to a hex in one undo state
+  // Move all placed members of a party (or every placed character) to a hex in
+  // one undo state. Benched characters (no hexKey) stay benched: placing them
+  // is an explicit panel action, and a party move must not surprise-reveal
+  // them on the player view.
   const handleMoveParty = useCallback((partyId: string | 'all', targetKey: string) => {
     if (!campaign) return;
     const chars = campaign.playerCharacters ?? [];
-    const shouldMove = (c: PlayerCharacter) => partyId === 'all' || c.partyId === partyId;
+    const shouldMove = (c: PlayerCharacter) =>
+      !!c.hexKey && (partyId === 'all' || c.partyId === partyId);
     if (!chars.some(c => shouldMove(c) && c.hexKey !== targetKey)) return;
     updateCampaignData({
       playerCharacters: chars.map(c => shouldMove(c) ? { ...c, hexKey: targetKey } : c)
@@ -1530,14 +1532,15 @@ function HexGrid({ onCreateRegionFromSelection, onExportSelection, travelPath, h
       })()}
       {/* Context menu */}
       {contextMenu && (() => {
-        const chars = campaign.playerCharacters ?? [];
+        // Only placed characters can be party-moved (benched ones stay benched)
+        const placedChars = (campaign.playerCharacters ?? []).filter(c => c.hexKey);
         const parties = campaign.parties ?? [];
-        const partyMoveTargets = contextMenu.hexKey && chars.length > 0
+        const partyMoveTargets = contextMenu.hexKey && placedChars.length > 0
           ? [
               ...parties
-                .filter(p => chars.some(c => c.partyId === p.id))
+                .filter(p => placedChars.some(c => c.partyId === p.id))
                 .map(p => ({ id: p.id, label: `Move ${p.name || 'Unnamed Party'} here` })),
-              { id: 'all', label: chars.length === 1 ? 'Move character here' : 'Move all characters here' }
+              { id: 'all', label: placedChars.length === 1 ? 'Move character here' : 'Move all characters here' }
             ]
           : [];
         if (multiSelectedKeys.size === 0 && partyMoveTargets.length === 0) return null;

@@ -55,14 +55,15 @@ const NEIGHBOR_TO_EDGE = [5, 0, 1, 2, 3, 4];
 
 // Character token geometry
 const TOKEN_RADIUS = 8;
-const TOKEN_RING_INNER = 10;   // fan-out ring radius for up to 6 tokens
-const TOKEN_RING_OUTER = 16;   // second ring for tokens 7+
-const TOKEN_RING_CAPACITY = 6; // tokens per inner ring
+const TOKEN_RING_INNER = 10;   // ring radius for up to 6 tokens
+const TOKEN_RING_OUTER = 15;   // wider ring used above 6 (with one token centered)
+const TOKEN_RING_CAPACITY = 6;
 
 /**
  * Lay out N character tokens on one hex. A single token keeps the legacy
- * position (hex center raised 10); multiple tokens spread on a ring around
- * the hex center so each stays visible, with a second ring beyond six.
+ * position (hex center raised 10); 2-6 tokens spread on a ring around the
+ * hex center; above 6, one token sits at the center and the rest on a wider
+ * ring (two symmetric rings can't guarantee separation for arbitrary counts).
  * Deterministic: index order in equals position order out.
  */
 export function layoutTokensOnHex(
@@ -73,21 +74,18 @@ export function layoutTokensOnHex(
   if (count === 1) return [{ x: center.x, y: center.y - 10 }];
 
   const positions: { x: number; y: number }[] = [];
-  const innerCount = Math.min(count, TOKEN_RING_CAPACITY);
-  const outerCount = count - innerCount;
-
-  for (let i = 0; i < innerCount; i++) {
-    const angle = -Math.PI / 2 + (i * 2 * Math.PI) / innerCount;
-    positions.push({
-      x: center.x + TOKEN_RING_INNER * Math.cos(angle),
-      y: center.y + TOKEN_RING_INNER * Math.sin(angle)
-    });
+  let ringCount = count;
+  let radius = TOKEN_RING_INNER;
+  if (count > TOKEN_RING_CAPACITY) {
+    positions.push({ x: center.x, y: center.y });
+    ringCount = count - 1;
+    radius = TOKEN_RING_OUTER;
   }
-  for (let i = 0; i < outerCount; i++) {
-    const angle = -Math.PI / 2 + (i * 2 * Math.PI) / outerCount;
+  for (let i = 0; i < ringCount; i++) {
+    const angle = -Math.PI / 2 + (i * 2 * Math.PI) / ringCount;
     positions.push({
-      x: center.x + TOKEN_RING_OUTER * Math.cos(angle),
-      y: center.y + TOKEN_RING_OUTER * Math.sin(angle)
+      x: center.x + radius * Math.cos(angle),
+      y: center.y + radius * Math.sin(angle)
     });
   }
   return positions;
