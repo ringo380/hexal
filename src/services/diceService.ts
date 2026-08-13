@@ -1,6 +1,6 @@
-// Dice notation parsing
+// Dice notation parsing, roll execution, formatting, and payload validation
 
-import type { ParsedDice } from '../types';
+import type { DiceAdvantage, DiceRoll, DieResult, ParsedDice } from '../types';
 
 export const MAX_DICE = 100;
 export const MAX_SIDES = 1000;
@@ -95,4 +95,148 @@ export function parseNotation(input: string): ParsedDice {
   }
 
   return { terms, modifier };
+}
+
+/**
+ * Rolls a single die with `sides` faces using a cryptographically strong
+ * source and rejection sampling to avoid modulo bias.
+ */
+export function rollDie(sides: number): number {
+  const max = Math.floor(0x100000000 / sides) * sides;
+  const buf = new Uint32Array(1);
+  let value: number;
+  do {
+    crypto.getRandomValues(buf);
+    value = buf[0];
+  } while (value >= max);
+  return (value % sides) + 1;
+}
+
+/** Rebuilds canonical dice notation (e.g. "2d6+1d4+3") from parsed terms. */
+function buildNotation(parsed: ParsedDice): string {
+  const parts = parsed.terms.map((term) => `${term.count}d${term.sides}`);
+  if (parsed.modifier > 0) {
+    parts.push(String(parsed.modifier));
+  } else if (parsed.modifier < 0) {
+    parts[parts.length - 1] += String(parsed.modifier);
+  }
+  return parts.join('+').replace(/\+-/g, '-');
+}
+
+/**
+ * Executes a parsed dice roll, producing a fully-formed DiceRoll.
+ * Advantage/disadvantage is only valid for a single 1d20 term (an optional
+ * modifier is allowed); it rolls two d20s and marks the losing die
+ * `discarded: true`.
+ */
+export function executeRoll(
+  parsed: ParsedDice,
+  opts: { advantage?: DiceAdvantage; roller: DiceRoll['roller']; isHidden?: boolean }
+): DiceRoll {
+  const advantage = opts.advantage ?? 'none';
+
+  if (advantage !== 'none') {
+    const isSingleD20 =
+      parsed.terms.length === 1 && parsed.terms[0].count === 1 && parsed.terms[0].sides === 20;
+    if (!isSingleD20) {
+      throw new DiceParseError(
+        `Advantage/disadvantage can only be applied to a single d20 roll`
+      );
+    }
+
+    const first = rollDie(20);
+    const second = rollDie(20);
+    const keepFirst =
+      advantage === 'advantage' ? first >= second : first <= second;
+
+    const rolls: DieResult[] = [
+      { sides: 20, value: first, ...(keepFirst ? {} : { discarded: true }) },
+      { sides: 20, value: second, ...(keepFirst ? { discarded: true } : {}) },
+    ];
+    const kept = keepFirst ? first : second;
+
+    return {
+      id: crypto.randomUUID(),
+      notation: buildNotation(parsed),
+      rolls,
+      modifier: parsed.modifier,
+      total: kept + parsed.modifier,
+      advantage,
+      roller: opts.roller,
+      isHidden: opts.isHidden ?? false,
+      timestamp: Date.now(),
+    };
+  }
+
+  const rolls: DieResult[] = [];
+  for (const term of parsed.terms) {
+    for (let i = 0; i < term.count; i++) {
+      rolls.push({ sides: term.sides, value: rollDie(term.sides) });
+    }
+  }
+  const total = rolls.reduce((acc, r) => acc + r.value, 0) + parsed.modifier;
+
+  return {
+    id: crypto.randomUUID(),
+    notation: buildNotation(parsed),
+    rolls,
+    modifier: parsed.modifier,
+    total,
+    advantage,
+    roller: opts.roller,
+    isHidden: opts.isHidden ?? false,
+    timestamp: Date.now(),
+  };
+}
+
+/** Formats a DiceRoll as a human-readable string, striking discarded dice. */
+export function formatRoll(roll: DiceRoll): string {
+  const rollsStr = roll.rolls
+    .map((r) => (r.discarded ? `~~${r.value}~~` : String(r.value)))
+    .join(', ');
+  return `${roll.notation}: ${roll.total} (${rollsStr})`;
+}
+
+const DICE_ADVANTAGE_VALUES: DiceAdvantage[] = ['none', 'advantage', 'disadvantage'];
+const ROLLER_KINDS = ['dm', 'player'];
+
+function isFiniteNumber(x: unknown): x is number {
+  return typeof x === 'number' && Number.isFinite(x);
+}
+
+function isValidDieResult(x: unknown): x is DieResult {
+  if (typeof x !== 'object' || x === null) return false;
+  const r = x as Record<string, unknown>;
+  if (!isFiniteNumber(r.sides) || r.sides < 1 || r.sides > MAX_SIDES) return false;
+  if (!isFiniteNumber(r.value) || r.value < 1 || r.value > r.sides) return false;
+  if ('discarded' in r && r.discarded !== undefined && typeof r.discarded !== 'boolean') {
+    return false;
+  }
+  return true;
+}
+
+/** Runtime guard verifying an unknown value is a well-formed, in-bounds DiceRoll. */
+export function isValidDiceRollPayload(x: unknown): x is DiceRoll {
+  if (typeof x !== 'object' || x === null) return false;
+  const r = x as Record<string, unknown>;
+
+  if (typeof r.id !== 'string' || r.id.length === 0 || r.id.length > 64) return false;
+  if (typeof r.notation !== 'string' || r.notation.length === 0 || r.notation.length > 100) {
+    return false;
+  }
+  if (!Array.isArray(r.rolls) || r.rolls.length > MAX_DICE * 2) return false;
+  if (!r.rolls.every(isValidDieResult)) return false;
+  if (!isFiniteNumber(r.modifier)) return false;
+  if (!isFiniteNumber(r.total)) return false;
+  if (typeof r.advantage !== 'string' || !DICE_ADVANTAGE_VALUES.includes(r.advantage as DiceAdvantage)) {
+    return false;
+  }
+  if (typeof r.roller !== 'object' || r.roller === null) return false;
+  const roller = r.roller as Record<string, unknown>;
+  if (typeof roller.kind !== 'string' || !ROLLER_KINDS.includes(roller.kind)) return false;
+  if (typeof roller.name !== 'string' || roller.name.length > 50) return false;
+  if (typeof r.isHidden !== 'boolean') return false;
+  if (!isFiniteNumber(r.timestamp)) return false;
+
+  return true;
 }
