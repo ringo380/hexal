@@ -34,6 +34,7 @@ interface LabeledRegion {
 
 /** Character token shape (DM PlayerCharacter and player PlayerCharacterToken both satisfy it). */
 export interface CharacterToken {
+  id: string;
   hexKey?: string | null;
   color: string;
   icon: string;
@@ -41,8 +42,56 @@ export interface CharacterToken {
   isVisible?: boolean;
 }
 
+/** Token position collected for hit-testing (world coordinates). */
+export interface TokenPosition {
+  characterId: string;
+  x: number;
+  y: number;
+  radius: number;
+}
+
 // Neighbor-to-edge index mapping for region border rendering
 const NEIGHBOR_TO_EDGE = [5, 0, 1, 2, 3, 4];
+
+// Character token geometry
+const TOKEN_RADIUS = 8;
+const TOKEN_RING_INNER = 10;   // fan-out ring radius for up to 6 tokens
+const TOKEN_RING_OUTER = 16;   // second ring for tokens 7+
+const TOKEN_RING_CAPACITY = 6; // tokens per inner ring
+
+/**
+ * Lay out N character tokens on one hex. A single token keeps the legacy
+ * position (hex center raised 10); multiple tokens spread on a ring around
+ * the hex center so each stays visible, with a second ring beyond six.
+ * Deterministic: index order in equals position order out.
+ */
+export function layoutTokensOnHex(
+  center: { x: number; y: number },
+  count: number
+): { x: number; y: number }[] {
+  if (count <= 0) return [];
+  if (count === 1) return [{ x: center.x, y: center.y - 10 }];
+
+  const positions: { x: number; y: number }[] = [];
+  const innerCount = Math.min(count, TOKEN_RING_CAPACITY);
+  const outerCount = count - innerCount;
+
+  for (let i = 0; i < innerCount; i++) {
+    const angle = -Math.PI / 2 + (i * 2 * Math.PI) / innerCount;
+    positions.push({
+      x: center.x + TOKEN_RING_INNER * Math.cos(angle),
+      y: center.y + TOKEN_RING_INNER * Math.sin(angle)
+    });
+  }
+  for (let i = 0; i < outerCount; i++) {
+    const angle = -Math.PI / 2 + (i * 2 * Math.PI) / outerCount;
+    positions.push({
+      x: center.x + TOKEN_RING_OUTER * Math.cos(angle),
+      y: center.y + TOKEN_RING_OUTER * Math.sin(angle)
+    });
+  }
+  return positions;
+}
 
 /**
  * Render multi-selection overlay (DM view only)
@@ -251,55 +300,106 @@ export function renderCharacterTokens(
   getHexByKey: (key: string) => { status: string } | null | undefined,
   visibleRange: HexRange,
   zoomLevel: number,
-  options?: { dimInvisible?: boolean; skipUndiscovered?: boolean }
+  options?: {
+    dimInvisible?: boolean;
+    skipUndiscovered?: boolean;
+    tokenPositions?: TokenPosition[];
+  }
 ) {
   let currentFont = '';
   let currentAlign = '';
   let currentBaseline = '';
 
+  // Group placed characters by hex so co-located tokens fan out instead of stacking
+  const byHex = new Map<string, CharacterToken[]>();
   for (const char of characters) {
     if (!char.hexKey) continue;
     const hex = getHexByKey(char.hexKey);
     if (!hex) continue;
     if (options?.skipUndiscovered && hex.status === 'undiscovered') continue;
+    const group = byHex.get(char.hexKey);
+    if (group) group.push(char);
+    else byHex.set(char.hexKey, [char]);
+  }
 
-    const parts = char.hexKey.split(',');
+  for (const [key, group] of byHex) {
+    const parts = key.split(',');
     const cq = parseInt(parts[0], 10);
     const cr = parseInt(parts[1], 10);
     if (cq < visibleRange.qMin || cq > visibleRange.qMax || cr < visibleRange.rMin || cr > visibleRange.rMax) continue;
 
     const center = hexCenter({ q: cq, r: cr });
-    const dimmed = options?.dimInvisible === true && !char.isVisible;
+    const layout = layoutTokensOnHex(center, group.length);
 
-    // Draw circular token (slightly transparent for invisible characters in DM view)
-    const tokenRadius = 8;
-    ctx.beginPath();
-    ctx.arc(center.x, center.y - 10, tokenRadius, 0, Math.PI * 2);
-    ctx.fillStyle = dimmed ? hexToRgba(char.color, 0.4) : char.color;
-    ctx.fill();
-    ctx.strokeStyle = dimmed ? 'rgba(255, 255, 255, 0.4)' : '#fff';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+    for (let i = 0; i < group.length; i++) {
+      const char = group[i];
+      const pos = layout[i];
+      const dimmed = options?.dimInvisible === true && !char.isVisible;
 
-    // Draw icon
-    const wantFont = '10px sans-serif';
-    if (currentFont !== wantFont) { ctx.font = wantFont; currentFont = wantFont; }
-    if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
-    if (currentBaseline !== 'middle') { ctx.textBaseline = 'middle'; currentBaseline = 'middle'; }
-    ctx.fillStyle = dimmed ? 'rgba(255, 255, 255, 0.4)' : '#fff';
-    ctx.fillText(char.icon, center.x, center.y - 10);
+      options?.tokenPositions?.push({
+        characterId: char.id,
+        x: pos.x,
+        y: pos.y,
+        radius: TOKEN_RADIUS
+      });
 
-    // Draw name label if zoomed in enough
-    if (zoomLevel >= 0.6) {
-      const nameFont = 'bold 5px sans-serif';
-      if (currentFont !== nameFont) { ctx.font = nameFont; currentFont = nameFont; }
+      // Draw circular token (slightly transparent for invisible characters in DM view)
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, TOKEN_RADIUS, 0, Math.PI * 2);
       ctx.fillStyle = dimmed ? hexToRgba(char.color, 0.4) : char.color;
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-      ctx.shadowBlur = 2;
-      ctx.fillText(char.name, center.x, center.y - 1);
-      ctx.shadowBlur = 0;
+      ctx.fill();
+      ctx.strokeStyle = dimmed ? 'rgba(255, 255, 255, 0.4)' : '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Draw icon
+      const wantFont = '10px sans-serif';
+      if (currentFont !== wantFont) { ctx.font = wantFont; currentFont = wantFont; }
+      if (currentAlign !== 'center') { ctx.textAlign = 'center'; currentAlign = 'center'; }
+      if (currentBaseline !== 'middle') { ctx.textBaseline = 'middle'; currentBaseline = 'middle'; }
+      ctx.fillStyle = dimmed ? 'rgba(255, 255, 255, 0.4)' : '#fff';
+      ctx.fillText(char.icon, pos.x, pos.y);
+
+      // Draw name label if zoomed in enough
+      if (zoomLevel >= 0.6) {
+        const nameFont = 'bold 5px sans-serif';
+        if (currentFont !== nameFont) { ctx.font = nameFont; currentFont = nameFont; }
+        ctx.fillStyle = dimmed ? hexToRgba(char.color, 0.4) : char.color;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+        ctx.shadowBlur = 2;
+        ctx.fillText(char.name, pos.x, pos.y + 9);
+        ctx.shadowBlur = 0;
+      }
     }
   }
+}
+
+/**
+ * Render the ghost of a character token being dragged (screen coordinates,
+ * call after the world-space transform is restored).
+ */
+export function renderTokenDragGhost(
+  ctx: CanvasRenderingContext2D,
+  token: CharacterToken,
+  screenPos: { x: number; y: number },
+  zoomLevel: number
+) {
+  const radius = TOKEN_RADIUS * Math.max(1, zoomLevel);
+  ctx.save();
+  ctx.globalAlpha = 0.8;
+  ctx.beginPath();
+  ctx.arc(screenPos.x, screenPos.y, radius, 0, Math.PI * 2);
+  ctx.fillStyle = token.color;
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.font = `${Math.round(10 * Math.max(1, zoomLevel))}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#fff';
+  ctx.fillText(token.icon, screenPos.x, screenPos.y);
+  ctx.restore();
 }
 
 /**

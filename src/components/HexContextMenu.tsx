@@ -4,12 +4,14 @@ interface HexContextMenuProps {
   x: number;
   y: number;
   selectionCount: number;
+  partyMoveTargets?: { id: string; label: string }[];
+  onMoveParty?: (partyId: string) => void;
   onCreateRegion: () => void;
   onExportSelected: () => void;
   onClose: () => void;
 }
 
-function HexContextMenu({ x, y, selectionCount, onCreateRegion, onExportSelected, onClose }: HexContextMenuProps) {
+function HexContextMenu({ x, y, selectionCount, partyMoveTargets, onMoveParty, onCreateRegion, onExportSelected, onClose }: HexContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close on outside click — check event target against our ref
@@ -29,24 +31,40 @@ function HexContextMenu({ x, y, selectionCount, onCreateRegion, onExportSelected
       className="hex-context-menu"
       style={{ left: x, top: y }}
     >
-      <button
-        className="hex-context-menu-item"
-        onClick={() => {
-          onCreateRegion();
-          onClose();
-        }}
-      >
-        Create Region from {selectionCount} hex{selectionCount !== 1 ? 'es' : ''}
-      </button>
-      <button
-        className="hex-context-menu-item"
-        onClick={() => {
-          onExportSelected();
-          onClose();
-        }}
-      >
-        Export {selectionCount} hex{selectionCount !== 1 ? 'es' : ''} as image...
-      </button>
+      {selectionCount > 0 && (
+        <>
+          <button
+            className="hex-context-menu-item"
+            onClick={() => {
+              onCreateRegion();
+              onClose();
+            }}
+          >
+            Create Region from {selectionCount} hex{selectionCount !== 1 ? 'es' : ''}
+          </button>
+          <button
+            className="hex-context-menu-item"
+            onClick={() => {
+              onExportSelected();
+              onClose();
+            }}
+          >
+            Export {selectionCount} hex{selectionCount !== 1 ? 'es' : ''} as image...
+          </button>
+        </>
+      )}
+      {partyMoveTargets?.map(target => (
+        <button
+          key={target.id}
+          className="hex-context-menu-item"
+          onClick={() => {
+            onMoveParty?.(target.id);
+            onClose();
+          }}
+        >
+          {target.label}
+        </button>
+      ))}
     </div>
   );
 }
