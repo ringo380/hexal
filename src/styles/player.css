@@ -1248,3 +1248,111 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ============ COMBAT INITIATIVE BANNER ============ */
+
+.player-combat-banner {
+  position: fixed;
+  top: 70px;
+  left: 16px;
+  width: 240px;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  background: rgba(30, 30, 30, 0.92);
+  border: 1px solid #ffc832;
+  border-radius: 8px;
+  padding: 10px 12px;
+  z-index: 60;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.player-combat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.player-combat-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffc832;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.player-combat-round {
+  font-size: 13px;
+  color: #ccc;
+}
+
+.player-combat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.player-combat-entry {
+  padding: 5px 8px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.player-combat-entry.current {
+  background: rgba(255, 200, 50, 0.18);
+  border-left: 3px solid #ffc832;
+}
+
+.player-combat-entry.pc .player-combat-name {
+  color: #4a9eff;
+}
+
+.player-combat-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #eee;
+}
+
+.player-combat-entry.current .player-combat-name {
+  color: #ffc832;
+}
+
+.player-combat-conditions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.player-condition-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: rgba(156, 39, 176, 0.3);
+  border: 1px solid rgba(156, 39, 176, 0.5);
+  color: #ce93d8;
+}
+
+@media (max-width: 700px) {
+  .player-combat-banner {
+    width: calc(100vw - 32px);
+    max-height: 40vh;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

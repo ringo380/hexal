@@ -460,6 +460,7 @@ export interface CreatureEntry {
   name: string;
   count: number;
   cr?: string;
+  maxHp?: number;
   notes?: string;
 }
 

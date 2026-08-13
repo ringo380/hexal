@@ -1,5 +1,6 @@
 export * from './Campaign';
 export * from './CampaignTemplate';
+export * from './Combat';
 export * from './LayerVisibility';
 export * from './MapExport';
 export * from './Markers';

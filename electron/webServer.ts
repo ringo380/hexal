@@ -33,6 +33,7 @@ let currentPort = 0;
 let clients: AuthenticatedClient[] = [];
 let latestState: string | null = null; // JSON-stringified PlayerCampaign
 let activeEncounter: unknown | null = null; // Current revealed encounter
+let activeCombat: unknown | null = null; // Current combat tracker state (filtered for players)
 let pingIntervalHandle: ReturnType<typeof setInterval> | null = null;
 let messageHistory: unknown[] = []; // Session message buffer (max 100)
 let onPlayerNoteCallback: ((note: unknown) => void) | null = null;
@@ -218,6 +219,10 @@ export function startServer(options: { port: number; pin?: string }): WebServerS
           if (activeEncounter) {
             sendJson(ws, { type: 'encounter-reveal', data: activeEncounter });
           }
+          // Send active combat state if any
+          if (activeCombat) {
+            sendJson(ws, { type: 'combat-update', data: activeCombat });
+          }
         } else {
           sendJson(ws, { type: 'auth-fail', reason: 'Invalid PIN' });
           ws.close();
@@ -293,6 +298,7 @@ export function stopServer(): void {
   latestState = null;
   messageHistory = [];
   activeEncounter = null;
+  activeCombat = null;
 }
 
 export function getStatus(): WebServerStatus {
@@ -359,6 +365,26 @@ export function broadcastEncounterDismiss(): void {
   });
 }
 
+export function broadcastCombatUpdate(data: unknown): void {
+  activeCombat = data;
+  const message = JSON.stringify({ type: 'combat-update', data });
+  Array.from(clients).forEach(client => {
+    if (client.authenticated && client.ws.readyState === WebSocket.OPEN) {
+      client.ws.send(message);
+    }
+  });
+}
+
+export function broadcastCombatEnd(): void {
+  activeCombat = null;
+  const message = JSON.stringify({ type: 'combat-end' });
+  Array.from(clients).forEach(client => {
+    if (client.authenticated && client.ws.readyState === WebSocket.OPEN) {
+      client.ws.send(message);
+    }
+  });
+}
+
 export function setPlayerNoteCallback(cb: (note: unknown) => void): void {
   onPlayerNoteCallback = cb;
 }
@@ -368,6 +394,7 @@ export function broadcastCampaignClosed(): void {
   latestState = null;
   messageHistory = [];
   activeEncounter = null;
+  activeCombat = null;
   Array.from(clients).forEach(client => {
     if (client.authenticated && client.ws.readyState === WebSocket.OPEN) {
       client.ws.send(message);

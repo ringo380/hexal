@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog, Menu, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import Store from 'electron-store';
-import { startServer, stopServer, getStatus as getWebServerStatus, broadcastState, broadcastCampaignClosed, broadcastMessage, broadcastEncounterReveal, broadcastEncounterDismiss, broadcastPlayerNote, setPlayerNoteCallback } from './webServer';
+import { startServer, stopServer, getStatus as getWebServerStatus, broadcastState, broadcastCampaignClosed, broadcastMessage, broadcastEncounterReveal, broadcastEncounterDismiss, broadcastCombatUpdate, broadcastCombatEnd, broadcastPlayerNote, setPlayerNoteCallback } from './webServer';
 
 // Session-only message type (not persisted in campaign data)
 interface DmMessage {
@@ -637,6 +637,25 @@ ipcMain.on('dismiss-encounter', () => {
     }
   });
   broadcastEncounterDismiss();
+});
+
+// Relay combat tracker updates from DM to all player view windows + web clients
+ipcMain.on('combat-update', (_event, data) => {
+  Array.from(playerViewWindows).forEach(win => {
+    if (!win.isDestroyed()) {
+      win.webContents.send('combat-update', data);
+    }
+  });
+  broadcastCombatUpdate(data);
+});
+
+ipcMain.on('combat-end', () => {
+  Array.from(playerViewWindows).forEach(win => {
+    if (!win.isDestroyed()) {
+      win.webContents.send('combat-end');
+    }
+  });
+  broadcastCombatEnd();
 });
 
 // Relay player note from player window to DM renderer + other player windows + web clients

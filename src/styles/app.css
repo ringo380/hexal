@@ -2905,6 +2905,11 @@ label {
   flex: none !important;
 }
 
+.creature-hp {
+  width: 55px !important;
+  flex: none !important;
+}
+
 .creature-notes {
   flex: 1;
 }
@@ -7763,4 +7768,252 @@ label {
   background: rgba(255, 200, 50, 0.2) !important;
   border-color: rgba(255, 200, 50, 0.4) !important;
   color: #ffc832 !important;
+}
+
+/* ============ COMBAT TRACKER PANEL ============ */
+
+.combat-panel {
+  position: fixed;
+  top: 100px;
+  right: 16px;
+  width: 360px;
+  max-height: calc(100vh - 120px);
+  background: var(--panel-bg, #2a2a2a);
+  border: 1px solid var(--border-color, #444);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.combat-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color, #444);
+}
+
+.combat-panel-header h3 {
+  margin: 0;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.combat-panel-body {
+  padding: 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.combat-panel .combat-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.combat-round-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.combat-round {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffc832;
+}
+
+.combat-turn-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.combat-current-turn {
+  font-size: 13px;
+  color: #ccc;
+}
+
+.combat-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.combatant-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.combatant-row {
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: #252525;
+}
+
+.combatant-drag-handle {
+  cursor: grab;
+  color: #666;
+  font-size: 14px;
+  padding: 0 2px;
+  flex: none;
+  user-select: none;
+}
+
+.combatant-drag-handle:hover {
+  color: #aaa;
+}
+
+.combatant-row.current {
+  border-color: #ffc832;
+  background: rgba(255, 200, 50, 0.08);
+}
+
+.combatant-row.down {
+  opacity: 0.6;
+}
+
+.combatant-row.pc .combatant-name {
+  color: #4a9eff;
+}
+
+.combatant-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.combatant-initiative {
+  width: 46px;
+  flex: none;
+  text-align: center;
+}
+
+.combatant-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combatant-controls {
+  display: flex;
+  gap: 2px;
+  flex: none;
+}
+
+.combatant-hp {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.combatant-hp .hp-value {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #e57373;
+  min-width: 62px;
+}
+
+.combatant-hp .hp-untracked {
+  color: #777;
+}
+
+.combatant-hp .hp-amount {
+  width: 52px;
+  flex: none;
+}
+
+.combatant-conditions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.combatant-conditions .condition-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: rgba(156, 39, 176, 0.25);
+  border: 1px solid rgba(156, 39, 176, 0.5);
+  color: #ce93d8;
+  cursor: pointer;
+}
+
+.combatant-conditions .condition-select {
+  font-size: 11px;
+  padding: 2px 4px;
+  max-width: 110px;
+}
+
+.combatant-conditions .condition-custom {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.combatant-conditions .condition-custom input {
+  width: 110px;
+  font-size: 11px;
+}
+
+.combat-add-section h4 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #999;
+}
+
+.combat-quick-add {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.combat-quick-add select {
+  flex: 1;
+  min-width: 0;
+}
+
+.combat-manual-add {
+  display: flex;
+  gap: 6px;
+}
+
+.combat-manual-add input[type="text"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.combat-manual-add input[type="number"] {
+  width: 52px;
+  flex: none;
 }

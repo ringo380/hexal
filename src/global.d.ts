@@ -71,6 +71,10 @@ interface ElectronAPI {
   dismissEncounter: () => void;
   onEncounterReveal: (callback: (data: unknown) => void) => () => void;
   onEncounterDismiss: (callback: () => void) => () => void;
+  combatUpdate: (data: unknown) => void;
+  combatEnd: () => void;
+  onCombatUpdate: (callback: (data: unknown) => void) => () => void;
+  onCombatEnd: (callback: () => void) => () => void;
   // Templates
   listUserTemplates: () => Promise<{ fileName: string; filePath: string; modifiedAt: string; content: string | null }[]>;
   saveUserTemplate: (envelope: string, fileName: string) => Promise<{ success: boolean; filePath?: string; error?: string }>;

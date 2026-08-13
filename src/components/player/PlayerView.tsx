@@ -14,6 +14,8 @@ import type { HexCoordinate, PlayerNote } from '../../types';
 import type { ActiveEncounter } from '../../types/Campaign';
 import { WEATHER_CONDITION_LABELS, TEMPERATURE_LABELS } from '../../types/Weather';
 import EncounterOverlay from './EncounterOverlay';
+import CombatBanner from './CombatBanner';
+import type { PlayerCombatState } from '../../types/Combat';
 
 interface DmMessage {
   id: string;
@@ -31,9 +33,10 @@ interface PlayerViewProps {
   activeEncounter?: ActiveEncounter | null;
   onEncounterDismiss?: () => void;
   onSaveNote?: (note: PlayerNote) => void;
+  combatState?: PlayerCombatState | null;
 }
 
-function PlayerView({ campaign, messages = [], onMessageSeen, activeEncounter, onEncounterDismiss, onSaveNote }: PlayerViewProps) {
+function PlayerView({ campaign, messages = [], onMessageSeen, activeEncounter, onEncounterDismiss, onSaveNote, combatState }: PlayerViewProps) {
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('presentation');
   const [selectedHexKey, setSelectedHexKey] = useState<string | null>(null);
   const [showQuestLog, setShowQuestLog] = useState(false);
@@ -238,6 +241,11 @@ function PlayerView({ campaign, messages = [], onMessageSeen, activeEncounter, o
           messages={messages}
           onClose={() => setShowHistory(false)}
         />
+      )}
+
+      {/* Combat initiative banner */}
+      {combatState && (
+        <CombatBanner combat={combatState} />
       )}
 
       {/* Encounter overlay */}
