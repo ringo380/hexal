@@ -7,6 +7,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { WebSocketServer, WebSocket } from 'ws';
+import { pickLanAddress, detectDefaultRouteAddress } from './network';
 
 // ---------- Types ----------
 
@@ -127,24 +128,20 @@ function sanitizeDiceRoll(x: unknown): SanitizedDiceRoll | null {
   };
 }
 
+// Local address of the default route. The status getters are synchronous, so
+// callers refresh it (awaited) just before starting the server.
+let defaultRouteAddress: string | null = null;
+export async function refreshDefaultRouteAddress(): Promise<void> {
+  defaultRouteAddress = await detectDefaultRouteAddress();
+}
+
 function generatePin(): string {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
 
 function getLanUrl(port: number): string {
-  const interfaces = os.networkInterfaces();
-  const keys = Object.keys(interfaces);
-  for (let i = 0; i < keys.length; i++) {
-    const addrs = interfaces[keys[i]];
-    if (!addrs) continue;
-    for (let j = 0; j < addrs.length; j++) {
-      const addr = addrs[j];
-      if (addr.family === 'IPv4' && !addr.internal) {
-        return `http://${addr.address}:${port}`;
-      }
-    }
-  }
-  return `http://localhost:${port}`;
+  const address = pickLanAddress(os.networkInterfaces(), defaultRouteAddress);
+  return `http://${address || 'localhost'}:${port}`;
 }
 
 function getStaticDir(): string {
@@ -162,6 +159,10 @@ function getStaticDir(): string {
   }
   return devDir; // fallback
 }
+
+// Entry page emitted by vite.config.web-player.ts (rollupOptions.input).
+// There is no index.html in that build.
+const ENTRY_FILE = 'web-player.html';
 
 const MIME_TYPES: Record<string, string> = {
   '.html': 'text/html',
@@ -212,8 +213,8 @@ export function startServer(options: { port: number; pin?: string }): WebServerS
     const qIdx = urlPath.indexOf('?');
     if (qIdx !== -1) urlPath = urlPath.substring(0, qIdx);
 
-    // Default to index.html
-    if (urlPath === '/') urlPath = '/index.html';
+    // Default to the web player entry page
+    if (urlPath === '/') urlPath = `/${ENTRY_FILE}`;
 
     // Decode URI components
     urlPath = decodeURIComponent(urlPath);
@@ -241,8 +242,8 @@ export function startServer(options: { port: number; pin?: string }): WebServerS
     }
 
     if (!fs.existsSync(filePath)) {
-      // SPA fallback: serve index.html for unknown paths
-      const indexPath = path.join(staticDir, 'index.html');
+      // SPA fallback: serve the entry page for unknown paths
+      const indexPath = path.join(staticDir, ENTRY_FILE);
       if (fs.existsSync(indexPath)) {
         res.writeHead(200, { 'Content-Type': 'text/html' });
         fs.createReadStream(indexPath).pipe(res);
