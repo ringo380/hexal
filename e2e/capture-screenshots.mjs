@@ -15,11 +15,27 @@ import { copyFileSync, mkdirSync, existsSync, unlinkSync, renameSync } from 'fs'
 import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { fileURLToPath } from 'url';
+import { execFileSync } from 'child_process';
+
+/**
+ * The Documents folder the app will use (Electron's app.getPath('documents')).
+ * On Windows it is often redirected (e.g. into OneDrive), so ~/Documents is
+ * wrong there; ask the same known-folder API Electron uses.
+ */
+function documentsDir() {
+  if (process.platform === 'win32') {
+    const out = execFileSync('powershell.exe', [
+      '-NoProfile', '-Command', "[Environment]::GetFolderPath('MyDocuments')",
+    ], { encoding: 'utf8' }).trim();
+    if (out) return out;
+  }
+  return join(homedir(), 'Documents');
+}
 
 // ── Paths (use fileURLToPath for Node < 20.11 compat) ─────────────
 const __dirname    = dirname(fileURLToPath(import.meta.url));
 const FIXTURE_SRC  = join(__dirname, 'fixtures', 'showcase-campaign.hexal');
-const HEXAL_DIR    = join(homedir(), 'Documents', 'Hexal');
+const HEXAL_DIR    = join(documentsDir(), 'Hexal');
 const FIXTURE_DEST = join(HEXAL_DIR, 'The Sundered Reaches.hexal');
 const BACKUP_DEST  = FIXTURE_DEST + '.bak';
 const SCREENSHOTS  = join(__dirname, '..', 'docs', 'screenshots');

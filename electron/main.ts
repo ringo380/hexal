@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import Store from 'electron-store';
 import { startServer, stopServer, getStatus as getWebServerStatus, broadcastState, broadcastCampaignClosed, broadcastMessage, broadcastEncounterReveal, broadcastEncounterDismiss, broadcastCombatUpdate, broadcastCombatEnd, broadcastPlayerNote, setPlayerNoteCallback, broadcastDiceRoll, setDiceRollCallback } from './webServer';
+import { toSafeFileName } from './fileNames';
 
 // Session-only message type (not persisted in campaign data)
 interface DmMessage {
@@ -204,7 +205,12 @@ function createApplicationMenu() {
           click: async () => {
             await shell.openExternal('https://github.com/ringo380/hexal');
           }
-        }
+        },
+        // macOS shows About in the app menu; other platforms have no app menu
+        ...(isMac ? [] : [
+          { type: 'separator' as const },
+          { role: 'about' as const, label: 'About Hexal' }
+        ])
       ]
     }
   ];
@@ -361,7 +367,7 @@ ipcMain.handle('save-campaign', async (_event, { campaign, filePath, compact = f
     let savePath = filePath;
     if (!savePath) {
       const hexalFolder = getHexalFolder();
-      const safeName = campaign.name.replace(/[/\\]/g, '-');
+      const safeName = toSafeFileName(campaign.name);
       savePath = path.join(hexalFolder, `${safeName}.hexal`);
     }
 
@@ -436,7 +442,7 @@ ipcMain.handle('save-file-dialog', async (_event, defaultName: string) => {
   if (!win) return null;
 
   const result = await dialog.showSaveDialog(win, {
-    defaultPath: defaultName,
+    defaultPath: toSafeFileName(defaultName),
     filters: [
       { name: 'Hexal Campaign', extensions: ['hexal'] },
       { name: 'JSON', extensions: ['json'] },
@@ -455,7 +461,7 @@ ipcMain.handle('save-as-dialog', async (_event, defaultName: string) => {
   if (!win) return null;
 
   const result = await dialog.showSaveDialog(win, {
-    defaultPath: defaultName,
+    defaultPath: toSafeFileName(defaultName),
     filters: [{ name: 'Hexal Campaign', extensions: ['hexal'] }]
   });
   if (result.canceled || !result.filePath) {
@@ -504,7 +510,7 @@ ipcMain.handle('export-file-dialog', async (_event, { defaultName, format }: { d
   };
 
   const result = await dialog.showSaveDialog(win, {
-    defaultPath: defaultName,
+    defaultPath: toSafeFileName(defaultName),
     filters: filters[format] || [{ name: 'All Files', extensions: ['*'] }]
   });
 
@@ -603,7 +609,7 @@ ipcMain.handle('export-template-dialog', async (_event, defaultName: string) => 
 
   const safeName = defaultName.endsWith('.hexal-template') ? defaultName : `${defaultName}.hexal-template`;
   const result = await dialog.showSaveDialog(win, {
-    defaultPath: safeName,
+    defaultPath: toSafeFileName(safeName),
     filters: [{ name: 'Hexal Template', extensions: ['hexal-template'] }]
   });
 

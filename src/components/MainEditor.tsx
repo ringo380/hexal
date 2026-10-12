@@ -50,6 +50,7 @@ import { CATEGORY_INFO, type ContentCategory, parseHexKey, type ActiveEncounter 
 import { useWeatherSimulation } from '../stores/WeatherSimulationContext';
 import { useToast } from '../stores/ToastContext';
 import { useTimeSince } from '../hooks/useTimeSince';
+import { shortcutLabel } from '../utils/keyboard';
 
 interface MainEditorProps {
   onRegisterExport?: (handler: () => void) => void;
@@ -324,7 +325,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
               className="btn btn-icon"
               onClick={undo}
               disabled={!canUndo}
-              title="Undo (⌘Z)"
+              title={`Undo (${shortcutLabel('Z')})`}
               aria-label="Undo"
             >
               <Icon name="undo" size={16} />
@@ -333,7 +334,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
               className="btn btn-icon"
               onClick={redo}
               disabled={!canRedo}
-              title="Redo (⌘⇧Z)"
+              title={`Redo (${shortcutLabel('Z', { shift: true })})`}
               aria-label="Redo"
             >
               <Icon name="redo" size={16} />
@@ -364,7 +365,7 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
             id="search-input"
             type="text"
             className="search-input"
-            placeholder="Search... (⌘F)"
+            placeholder={`Search... (${shortcutLabel('F')})`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             aria-label="Search hexes"

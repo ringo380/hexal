@@ -7,6 +7,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { WebSocketServer, WebSocket } from 'ws';
+import { pickLanAddress, detectDefaultRouteAddress } from './network';
 
 // ---------- Types ----------
 
@@ -127,24 +128,21 @@ function sanitizeDiceRoll(x: unknown): SanitizedDiceRoll | null {
   };
 }
 
+// Local address of the default route, looked up asynchronously because the
+// status getters are synchronous. Refreshed on every server start.
+let defaultRouteAddress: string | null = null;
+function refreshDefaultRouteAddress(): void {
+  detectDefaultRouteAddress().then(address => { defaultRouteAddress = address; });
+}
+refreshDefaultRouteAddress();
+
 function generatePin(): string {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
 
 function getLanUrl(port: number): string {
-  const interfaces = os.networkInterfaces();
-  const keys = Object.keys(interfaces);
-  for (let i = 0; i < keys.length; i++) {
-    const addrs = interfaces[keys[i]];
-    if (!addrs) continue;
-    for (let j = 0; j < addrs.length; j++) {
-      const addr = addrs[j];
-      if (addr.family === 'IPv4' && !addr.internal) {
-        return `http://${addr.address}:${port}`;
-      }
-    }
-  }
-  return `http://localhost:${port}`;
+  const address = pickLanAddress(os.networkInterfaces(), defaultRouteAddress);
+  return `http://${address || 'localhost'}:${port}`;
 }
 
 function getStaticDir(): string {
@@ -197,6 +195,7 @@ export function startServer(options: { port: number; pin?: string }): WebServerS
     stopServer();
   }
 
+  refreshDefaultRouteAddress();
   currentPort = options.port;
   currentPin = options.pin || generatePin();
   clients = [];

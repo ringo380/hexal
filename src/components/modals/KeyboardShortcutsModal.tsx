@@ -1,5 +1,6 @@
 // KeyboardShortcutsModal - Shows all keyboard shortcuts
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { MOD_KEY } from '../../utils/keyboard';
 
 interface KeyboardShortcutsModalProps {
   onClose: () => void;
@@ -10,8 +11,7 @@ interface ShortcutSection {
   shortcuts: { keys: string; description: string }[];
 }
 
-const isMac = navigator.platform.toLowerCase().includes('mac');
-const cmdKey = isMac ? '⌘' : 'Ctrl';
+const cmdKey = MOD_KEY;
 
 const sections: ShortcutSection[] = [
   {

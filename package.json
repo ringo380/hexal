@@ -17,6 +17,7 @@
     "dev": "vite",
     "build": "tsc && vite build && npm run build:web-player && electron-builder",
     "build:mac": "tsc && vite build && npm run build:web-player && electron-builder --mac",
+    "build:win": "tsc && vite build && npm run build:web-player && electron-builder --win",
     "build:web-player": "vite build --config vite.config.web-player.ts",
     "preview": "vite preview",
     "electron": "electron .",

@@ -8,6 +8,10 @@
  * Run: node e2e/smoke.mjs
  */
 import { _electron as electron } from 'playwright';
+import { tmpdir } from 'os';
+import { join } from 'path';
+
+const SHOT_DIR = tmpdir();
 
 let PASS = 0;
 let FAIL = 0;
@@ -149,7 +153,7 @@ async function testCreateCampaign(window) {
   const toolbar = window.locator('.toolbar');
   test('Toolbar visible', await toolbar.count() > 0);
 
-  await window.screenshot({ path: '/tmp/hexal_e2e_03_campaign.png' });
+  await window.screenshot({ path: join(SHOT_DIR, 'hexal_e2e_03_campaign.png') });
 }
 
 async function testToolbarElements(window) {
@@ -221,7 +225,7 @@ async function testHexSelection(window) {
   const coordDisplay = await detailPanel.first().textContent();
   test('Detail panel shows hex coordinates', coordDisplay.includes('Hex'));
 
-  await window.screenshot({ path: '/tmp/hexal_e2e_06_detail.png' });
+  await window.screenshot({ path: join(SHOT_DIR, 'hexal_e2e_06_detail.png') });
 }
 
 async function testTerrainChange(window) {
@@ -246,7 +250,7 @@ async function testTerrainChange(window) {
       await terrainSelect.selectOption(terrainValue);
       await window.waitForTimeout(500);
       test('Terrain changed without error', !window.isClosed());
-      await window.screenshot({ path: '/tmp/hexal_e2e_07_terrain.png' });
+      await window.screenshot({ path: join(SHOT_DIR, 'hexal_e2e_07_terrain.png') });
     }
   } else {
     // Try finding by label
@@ -380,7 +384,7 @@ async function testContentItems(window) {
     test('Location section exists (may be collapsed)', await locationSection.count() > 0);
   }
 
-  await window.screenshot({ path: '/tmp/hexal_e2e_11_content.png' });
+  await window.screenshot({ path: join(SHOT_DIR, 'hexal_e2e_11_content.png') });
 }
 
 async function testAddEncounter(window) {
@@ -524,7 +528,7 @@ async function testSidebarFiltering(window) {
     test('Filter menu opened', menuVisible);
 
     if (menuVisible) {
-      await window.screenshot({ path: '/tmp/hexal_e2e_15_filters.png' });
+      await window.screenshot({ path: join(SHOT_DIR, 'hexal_e2e_15_filters.png') });
 
       // Close filter menu by clicking on the canvas area
       await clickCanvasCenter(window);
@@ -553,7 +557,7 @@ async function testRegionsModal(window) {
     test('Regions modal opened', await modal.count() > 0);
 
     if (await modal.count() > 0) {
-      await window.screenshot({ path: '/tmp/hexal_e2e_16_regions.png' });
+      await window.screenshot({ path: join(SHOT_DIR, 'hexal_e2e_16_regions.png') });
 
       // The button is "+ Add" in the regions modal
       const addRegionBtn = modal.locator('button:has-text("Add"), button:has-text("+ Add")');
@@ -599,7 +603,7 @@ async function testGenerateModal(window) {
     test('Generate modal opened', await modal.count() > 0);
 
     if (await modal.count() > 0) {
-      await window.screenshot({ path: '/tmp/hexal_e2e_17_generate.png' });
+      await window.screenshot({ path: join(SHOT_DIR, 'hexal_e2e_17_generate.png') });
 
       // Check for generation options
       const modalText = await modal.first().textContent();
@@ -630,7 +634,7 @@ async function testTemplatesModal(window) {
     test('Templates modal opened', await modal.count() > 0);
 
     if (await modal.count() > 0) {
-      await window.screenshot({ path: '/tmp/hexal_e2e_18_templates.png' });
+      await window.screenshot({ path: join(SHOT_DIR, 'hexal_e2e_18_templates.png') });
 
       const modalText = await modal.first().textContent();
       test('Templates modal has content', modalText.length > 20);
@@ -660,7 +664,7 @@ async function testTablesModal(window) {
     test('Tables modal opened', await modal.count() > 0);
 
     if (await modal.count() > 0) {
-      await window.screenshot({ path: '/tmp/hexal_e2e_19_tables.png' });
+      await window.screenshot({ path: join(SHOT_DIR, 'hexal_e2e_19_tables.png') });
 
       // Close
       const closeBtn = modal.locator('button:has-text("Close"), button:has-text("Done")');
@@ -720,7 +724,7 @@ async function testKeyboardShortcuts(window) {
   test('Cmd+Shift+/ opens shortcuts modal', shortcutsVisible);
 
   if (shortcutsVisible) {
-    await window.screenshot({ path: '/tmp/hexal_e2e_21_shortcuts.png' });
+    await window.screenshot({ path: join(SHOT_DIR, 'hexal_e2e_21_shortcuts.png') });
     await window.keyboard.press('Escape');
     await window.waitForTimeout(300);
   }
@@ -748,7 +752,7 @@ async function testMapZoomPan(window) {
     await window.waitForTimeout(500);
     test('Zoom out with scroll works', !window.isClosed());
 
-    await window.screenshot({ path: '/tmp/hexal_e2e_22_zoom.png' });
+    await window.screenshot({ path: join(SHOT_DIR, 'hexal_e2e_22_zoom.png') });
   }
 }
 
@@ -798,7 +802,7 @@ async function testMarkerPalette(window) {
       await window.waitForTimeout(500);
       test('Marker placed on hex', !window.isClosed());
 
-      await window.screenshot({ path: '/tmp/hexal_e2e_24_markers.png' });
+      await window.screenshot({ path: join(SHOT_DIR, 'hexal_e2e_24_markers.png') });
     }
   }
 }
@@ -816,7 +820,7 @@ async function testExportDataModal(window) {
     test('Export Data modal opened', await modal.count() > 0);
 
     if (await modal.count() > 0) {
-      await window.screenshot({ path: '/tmp/hexal_e2e_25_export.png' });
+      await window.screenshot({ path: join(SHOT_DIR, 'hexal_e2e_25_export.png') });
 
       // Close
       const closeBtn = modal.locator('button:has-text("Close"), button:has-text("Cancel"), button:has-text("Done")');
@@ -843,7 +847,7 @@ async function testExportMapModal(window) {
     test('Export Map modal opened', await modal.count() > 0);
 
     if (await modal.count() > 0) {
-      await window.screenshot({ path: '/tmp/hexal_e2e_26_export_map.png' });
+      await window.screenshot({ path: join(SHOT_DIR, 'hexal_e2e_26_export_map.png') });
 
       // Close
       const closeBtn = modal.locator('button:has-text("Close"), button:has-text("Cancel"), button:has-text("Done")');
@@ -899,7 +903,7 @@ async function testCloseCampaign(window) {
     const browserVisible = await window.locator('.campaign-browser').count() > 0;
     test('Returned to campaign browser', browserVisible);
 
-    await window.screenshot({ path: '/tmp/hexal_e2e_28_closed.png' });
+    await window.screenshot({ path: join(SHOT_DIR, 'hexal_e2e_28_closed.png') });
   } else {
     test('Close button found', false, 'could not locate close/back button');
   }
@@ -945,7 +949,7 @@ async function main() {
     await testCloseCampaign(window);
   } catch (err) {
     console.error(`\nFATAL: Test suite crashed: ${err.message}`);
-    await window.screenshot({ path: '/tmp/hexal_e2e_crash.png' }).catch(() => {});
+    await window.screenshot({ path: join(SHOT_DIR, 'hexal_e2e_crash.png') }).catch(() => {});
   }
 
   await electronApp.close();
@@ -959,7 +963,7 @@ async function main() {
     ERRORS.forEach(e => console.log(`  ${e}`));
   }
   console.log(`${'='.repeat(50)}`);
-  console.log(`\nScreenshots saved to /tmp/hexal_e2e_*.png`);
+  console.log(`\nScreenshots saved to ${join(SHOT_DIR, 'hexal_e2e_*.png')}`);
   process.exit(FAIL > 0 ? 1 : 0);
 }
 
