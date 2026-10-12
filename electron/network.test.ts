@@ -15,6 +15,26 @@ describe('pickLanAddress', () => {
     expect(pickLanAddress(interfaces, '10.0.0.254')).toBe('10.0.0.254');
   });
 
+  it('ignores a default route owned by a full-tunnel VPN', () => {
+    const interfaces = {
+      wg0: [v4('10.8.0.2')],
+      Tailscale: [v4('100.64.0.3')],
+      'Wi-Fi': [v4('192.168.1.42')],
+    };
+    expect(pickLanAddress(interfaces, '10.8.0.2')).toBe('192.168.1.42');
+    expect(pickLanAddress(interfaces, '100.64.0.3')).toBe('192.168.1.42');
+  });
+
+  it('ranks Linux and macOS VM and container bridges below the real NIC', () => {
+    const interfaces = {
+      virbr0: [v4('192.168.122.1')],
+      'br-3f2a9c': [v4('172.18.0.1')],
+      bridge100: [v4('192.168.64.1')],
+      eth0: [v4('10.0.0.5')],
+    };
+    expect(pickLanAddress(interfaces)).toBe('10.0.0.5');
+  });
+
   it('ignores a default-route address no adapter owns', () => {
     const interfaces = { Ethernet: [v4('192.168.1.20')] };
     expect(pickLanAddress(interfaces, '203.0.113.5')).toBe('192.168.1.20');

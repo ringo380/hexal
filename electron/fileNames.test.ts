@@ -11,9 +11,9 @@ describe('toSafeFileName', () => {
       expect(safe('tab\there')).toBe('tab-here');
     });
 
-    it('strips trailing dots and spaces', () => {
-      expect(safe('The End...')).toBe('The End');
-      expect(safe('Campaign  ')).toBe('Campaign');
+    it('keeps trailing dots and spaces so distinct names stay distinct', () => {
+      expect(safe('The End...')).toBe('The End...');
+      expect(safe('Campaign ')).not.toBe(safe('Campaign'));
     });
 
     it('suffixes reserved device names before the first dot', () => {
@@ -24,9 +24,8 @@ describe('toSafeFileName', () => {
       expect(safe('COM10')).toBe('COM10');
     });
 
-    it('falls back to Untitled when nothing is left', () => {
+    it('falls back to Untitled for an empty name', () => {
       expect(safe('')).toBe('Untitled');
-      expect(safe('...')).toBe('Untitled');
     });
 
     it('leaves ordinary names and extensions alone', () => {

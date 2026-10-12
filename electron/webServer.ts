@@ -128,13 +128,12 @@ function sanitizeDiceRoll(x: unknown): SanitizedDiceRoll | null {
   };
 }
 
-// Local address of the default route, looked up asynchronously because the
-// status getters are synchronous. Refreshed on every server start.
+// Local address of the default route. The status getters are synchronous, so
+// callers refresh it (awaited) just before starting the server.
 let defaultRouteAddress: string | null = null;
-function refreshDefaultRouteAddress(): void {
-  detectDefaultRouteAddress().then(address => { defaultRouteAddress = address; });
+export async function refreshDefaultRouteAddress(): Promise<void> {
+  defaultRouteAddress = await detectDefaultRouteAddress();
 }
-refreshDefaultRouteAddress();
 
 function generatePin(): string {
   return String(Math.floor(1000 + Math.random() * 9000));
@@ -199,7 +198,6 @@ export function startServer(options: { port: number; pin?: string }): WebServerS
     stopServer();
   }
 
-  refreshDefaultRouteAddress();
   currentPort = options.port;
   currentPin = options.pin || generatePin();
   clients = [];

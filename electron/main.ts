@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog, Menu, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import Store from 'electron-store';
-import { startServer, stopServer, getStatus as getWebServerStatus, broadcastState, broadcastCampaignClosed, broadcastMessage, broadcastEncounterReveal, broadcastEncounterDismiss, broadcastCombatUpdate, broadcastCombatEnd, broadcastPlayerNote, setPlayerNoteCallback, broadcastDiceRoll, setDiceRollCallback } from './webServer';
+import { startServer, stopServer, getStatus as getWebServerStatus, broadcastState, broadcastCampaignClosed, broadcastMessage, broadcastEncounterReveal, broadcastEncounterDismiss, broadcastCombatUpdate, broadcastCombatEnd, broadcastPlayerNote, setPlayerNoteCallback, broadcastDiceRoll, setDiceRollCallback, refreshDefaultRouteAddress } from './webServer';
 import { toSafeFileName } from './fileNames';
 
 // Session-only message type (not persisted in campaign data)
@@ -319,7 +319,7 @@ app.whenReady().then(() => {
   const autoStart = settingsStore.get('server.autoStart') as boolean;
   if (autoStart) {
     const port = (settingsStore.get('server.port') as number) || 7680;
-    startServer({ port });
+    refreshDefaultRouteAddress().then(() => startServer({ port }));
   }
 });
 
@@ -863,6 +863,7 @@ ipcMain.handle('set-setting', async (_event, { key, value }: { key: string; valu
 ipcMain.handle('start-web-server', async (_event, options?: { port?: number }) => {
   try {
     const port = options?.port ?? (settingsStore.get('server.port') as number) ?? 7680;
+    await refreshDefaultRouteAddress();
     const status = startServer({ port });
     return { success: true, status };
   } catch (error) {

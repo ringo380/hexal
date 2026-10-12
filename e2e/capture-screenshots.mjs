@@ -24,10 +24,14 @@ import { execFileSync } from 'child_process';
  */
 function documentsDir() {
   if (process.platform === 'win32') {
-    const out = execFileSync('powershell.exe', [
-      '-NoProfile', '-Command', "[Environment]::GetFolderPath('MyDocuments')",
-    ], { encoding: 'utf8' }).trim();
-    if (out) return out;
+    try {
+      const out = execFileSync('powershell.exe', [
+        '-NoProfile', '-Command', "[Environment]::GetFolderPath('MyDocuments')",
+      ], { encoding: 'utf8' }).trim();
+      if (out) return out;
+    } catch (err) {
+      console.warn('Could not query the Documents folder, falling back to ~/Documents:', err.message);
+    }
   }
   return join(homedir(), 'Documents');
 }

@@ -15,7 +15,9 @@ export function toSafeFileName(name: string, platform: string = process.platform
   if (platform !== 'win32') {
     return name.replace(/[/\\]/g, '-');
   }
-  let safe = name.replace(WINDOWS_ILLEGAL, '-').replace(/[. ]+$/, '');
+  // Trailing dots and spaces are left alone: callers append an extension, and
+  // trimming them would make "Campaign " and "Campaign" share one file.
+  let safe = name.replace(WINDOWS_ILLEGAL, '-');
   // Windows matches reserved names up to the first dot, so suffix that part
   // ("aux.v2" -> "aux_.v2"), not the end of the string.
   const dot = safe.indexOf('.');
