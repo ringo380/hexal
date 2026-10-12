@@ -1,4 +1,6 @@
 // Web Player entry point — browser-only, no Electron dependencies
+// Must stay the first import: other modules call crypto.randomUUID at load time
+import './polyfills/randomUUID';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { ViewModeProvider } from './stores/ViewModeContext';

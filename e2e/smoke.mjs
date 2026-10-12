@@ -128,6 +128,13 @@ async function testCreateCampaign(window) {
   await newBtn.first().click();
   await window.waitForTimeout(1000);
 
+  // The modal opens on the template gallery; pick Blank to reach the name step
+  const blankTemplate = window.locator('[aria-label="Blank Campaign"]');
+  if (await blankTemplate.count() > 0) {
+    await blankTemplate.first().click();
+    await window.waitForTimeout(500);
+  }
+
   // Modal with name input
   const modal = window.locator('.modal, .modal-overlay, [class*="modal"]');
   const nameInput = modal.locator('input[type="text"], input:not([type])').first();

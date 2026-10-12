@@ -161,6 +161,10 @@ function getStaticDir(): string {
   return devDir; // fallback
 }
 
+// Entry page emitted by vite.config.web-player.ts (rollupOptions.input).
+// There is no index.html in that build.
+const ENTRY_FILE = 'web-player.html';
+
 const MIME_TYPES: Record<string, string> = {
   '.html': 'text/html',
   '.js': 'application/javascript',
@@ -211,8 +215,8 @@ export function startServer(options: { port: number; pin?: string }): WebServerS
     const qIdx = urlPath.indexOf('?');
     if (qIdx !== -1) urlPath = urlPath.substring(0, qIdx);
 
-    // Default to index.html
-    if (urlPath === '/') urlPath = '/index.html';
+    // Default to the web player entry page
+    if (urlPath === '/') urlPath = `/${ENTRY_FILE}`;
 
     // Decode URI components
     urlPath = decodeURIComponent(urlPath);
@@ -240,8 +244,8 @@ export function startServer(options: { port: number; pin?: string }): WebServerS
     }
 
     if (!fs.existsSync(filePath)) {
-      // SPA fallback: serve index.html for unknown paths
-      const indexPath = path.join(staticDir, 'index.html');
+      // SPA fallback: serve the entry page for unknown paths
+      const indexPath = path.join(staticDir, ENTRY_FILE);
       if (fs.existsSync(indexPath)) {
         res.writeHead(200, { 'Content-Type': 'text/html' });
         fs.createReadStream(indexPath).pipe(res);
