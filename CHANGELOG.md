@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **Toolbar**: the editor toolbar no longer runs off the right edge of the window. Less frequent actions are grouped into four labelled menus: World (Encounters, Landmarks, Templates, Regions, Terrain, Generate), Story (NPCs, Quests, Sessions, Characters), Players (Player Notes, Message Players) and Export (Export Map, Export Data). Travel, Combat and Dice stay one click away. On narrow windows the toolbar wraps onto a second row instead of scrolling the whole layout sideways. The menus work from the keyboard (arrow keys, Home, End, Escape).
+
 ## [1.5.2] - 2026-10-12
 
 ### Fixed

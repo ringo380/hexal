@@ -182,21 +182,14 @@ async function testToolbarElements(window) {
   const searchInput = window.locator('#search-input, input[placeholder*="Search"]');
   test('Search input exists', await searchInput.count() > 0);
 
-  // Action buttons in toolbar
-  const tablesBtn = window.locator('button:has-text("Tables")');
-  test('Tables button exists', await tablesBtn.count() > 0);
+  // Grouped action menus in the toolbar
+  for (const group of ['World', 'Story', 'Players', 'Export']) {
+    const trigger = window.locator('.toolbar .toolbar-menu-trigger').filter({ hasText: group });
+    test(`${group} menu exists`, await trigger.count() > 0);
+  }
 
-  const templatesBtn = window.locator('button:has-text("Templates")');
-  test('Templates button exists', await templatesBtn.count() > 0);
-
-  const regionsBtn = window.locator('button:has-text("Regions")');
-  test('Regions button exists', await regionsBtn.count() > 0);
-
-  const generateBtn = window.locator('button:has-text("Generate")');
-  test('Generate button exists', await generateBtn.count() > 0);
-
-  const exportMapBtn = window.locator('button:has-text("Export Map"), button:has-text("Export")');
-  test('Export button(s) exist', await exportMapBtn.count() > 0);
+  const travelBtn = window.locator('.toolbar button:has-text("Travel")');
+  test('Travel button exists', await travelBtn.count() > 0);
 }
 
 async function testTimeWeatherBar(window) {
@@ -550,12 +543,33 @@ async function testSidebarFiltering(window) {
   test('Hex count indicator exists', await hexCount.count() > 0 || true); // non-critical
 }
 
+// Toolbar actions that live inside a grouped menu, keyed by item label
+const TOOLBAR_MENU_OF = {
+  Encounters: 'World', Landmarks: 'World', Templates: 'World',
+  Regions: 'World', Terrain: 'World', Generate: 'World',
+  NPCs: 'Story', Quests: 'Story', Sessions: 'Story', Characters: 'Story',
+  'Player Notes': 'Players', 'Message Players': 'Players',
+  'Export Map': 'Export', 'Export Data': 'Export',
+};
+
+/** Open the toolbar menu that holds `label` and return the menu item locator. */
+async function toolbarItem(window, label) {
+  const group = TOOLBAR_MENU_OF[label];
+  const trigger = window.locator('.toolbar .toolbar-menu-trigger').filter({ hasText: group }).first();
+  if (await trigger.count() > 0) {
+    await trigger.click();
+    await window.waitForTimeout(200);
+  }
+  return window.locator('.toolbar [role="menuitem"]').filter({ hasText: label });
+}
+
 async function testRegionsModal(window) {
   console.log('\n=== 16. Regions Modal ===');
 
   // Open with Cmd+R — but be careful, Cmd+R might reload in some contexts
   // Use the toolbar button instead
-  const regionsBtn = window.locator('button:has-text("Regions")');
+  const regionsBtn = await toolbarItem(window, 'Regions');
+  test('Regions menu item exists', await regionsBtn.count() > 0);
   if (await regionsBtn.count() > 0) {
     await regionsBtn.first().click();
     await window.waitForTimeout(1000);
@@ -601,7 +615,8 @@ async function testGenerateModal(window) {
   console.log('\n=== 17. Generate Modal ===');
   await dismissModals(window);
 
-  const generateBtn = window.locator('button:has-text("Generate")');
+  const generateBtn = await toolbarItem(window, 'Generate');
+  test('Generate menu item exists', await generateBtn.count() > 0);
   if (await generateBtn.count() > 0) {
     await generateBtn.first().click();
     await window.waitForTimeout(1000);
@@ -632,7 +647,8 @@ async function testTemplatesModal(window) {
   console.log('\n=== 18. Templates Modal ===');
   await dismissModals(window);
 
-  const templatesBtn = window.locator('button:has-text("Templates")');
+  const templatesBtn = await toolbarItem(window, 'Templates');
+  test('Templates menu item exists', await templatesBtn.count() > 0);
   if (await templatesBtn.count() > 0) {
     await templatesBtn.first().click();
     await window.waitForTimeout(1000);
@@ -818,7 +834,8 @@ async function testExportDataModal(window) {
   console.log('\n=== 25. Export Data ===');
   await dismissModals(window);
 
-  const exportBtn = window.locator('button:has-text("Export Data")');
+  const exportBtn = await toolbarItem(window, 'Export Data');
+  test('Export Data menu item exists', await exportBtn.count() > 0);
   if (await exportBtn.count() > 0) {
     await exportBtn.first().click();
     await window.waitForTimeout(1000);
@@ -845,7 +862,8 @@ async function testExportMapModal(window) {
   console.log('\n=== 26. Export Map ===');
   await dismissModals(window);
 
-  const exportMapBtn = window.locator('button:has-text("Export Map")');
+  const exportMapBtn = await toolbarItem(window, 'Export Map');
+  test('Export Map menu item exists', await exportMapBtn.count() > 0);
   if (await exportMapBtn.count() > 0) {
     await exportMapBtn.first().click();
     await window.waitForTimeout(1000);
