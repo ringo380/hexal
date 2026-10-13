@@ -5,6 +5,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.2] - 2026-10-12
+
+### Fixed
+- **Web player join link**: the address shown to the DM returned "Not Found" because the server looked for a page the web player build never creates. It has been broken since the web player was introduced in 1.4.0.
+- **Web player on the local network**: the player view crashed before rendering when opened over plain HTTP on a LAN address, because it relied on a browser API that only exists on HTTPS or localhost pages.
+- **Web player join address**: on machines with a VPN, WSL, Docker or virtual machine network adapters, the server could show an address players cannot reach. It now uses the address of the real network connection.
+- **Windows: campaign names with reserved characters**: a name containing `:` saved without error but left no visible file, so the campaign disappeared from the list, and names containing `?`, `*`, `<`, `>`, `|` or `"` failed to save. These characters are now replaced with `-` in the file name; the campaign name itself is unchanged.
+- **Windows**: tooltips and the search box show `Ctrl+` shortcuts instead of the Mac Command symbol, and About Hexal is available from the Help menu.
+
+### Changed
+- Added a `build:win` script for Windows builds.
+
+## [1.5.1] - 2026-08-13
+
+### Fixed
+- Fixed a TypeScript build error that broke the Linux release build in 1.5.0, leaving that release without Linux packages.
+
+## [1.5.0] - 2026-08-13
+
+### Added
+- **Integrated dice roller**: roll standard notation (`2d6+3`, `1d20`, `d%`, multi-term expressions) from the DM toolbar, an Electron player window, or the web player, with quick die buttons, advantage and disadvantage on single d20 rolls, and a session roll history.
+- **Hidden rolls**: the DM can roll privately; hidden rolls never reach player views.
+- **Shared rolls**: rolls made by the DM or any player appear live in every connected view, and the history is replayed to anyone who joins late.
+
+## [1.4.0] - 2026-08-13
+
+### Added
+- **Initiative and combat tracker**: floating panel with initiative order (drag or buttons to reorder), HP damage and healing, conditions, and a round counter. Quick-add expands encounter creatures into numbered combatants with HP prefilled, and the party joins in one click. Players see a live turn-order banner without HP or hidden combatants.
+- **Player characters on the map**: character tokens with party grouping, drag-to-move on the DM map, party moves from the context menu, and automatic fan-out when several characters share a hex.
+- **Travel mode**: A* route planning over passable terrain, step-by-step party movement with automatic discovery, and a travel log.
+- **DM-to-player messaging** with toast notifications and history, and **player journals** that sync both ways.
+- **Encounter reveal**: theater-of-mind overlay pushed to player views.
+- **Web player**: browser-based player view served over the local network and protected by a PIN, with a mobile-responsive layout and touch gestures.
+- **Campaign templates**: ten built-in settings for new campaigns, plus template import and export, a customization wizard, and a community gallery.
+- **Custom terrain editor** with hazards, categories, and import and export.
+- **Region export** and additional map export options.
+- **Accounts and cloud sync**: email and password sign-up with account management, and offline-first cloud sync with conflict detection and merge resolution.
+- Actionable toast notifications with a history panel.
+- Linux builds (AppImage and deb) alongside macOS and Windows.
+
+### Changed
+- Enhanced fog of war with adjacency silhouettes in player views.
+- Hex grid and weather rendering performance improvements, and a shared render pipeline for the DM and player maps.
+- Visual consistency, save and load feedback, sidebar, and inline editing polish.
+- Updated to Electron 41 and Vite 8.
+
+### Fixed
+- Undiscovered hexes can no longer be selected in player views.
+- Weather overlay rendering, campaign time sync, and sample-based weather audio.
+
+### Security
+- Resolved all open Dependabot and npm audit alerts.
+
 ## [1.3.0] - 2026-02-26
 
 ### Added
@@ -34,6 +87,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Testing
 - Vitest framework with 334 tests covering search, filtering, campaign migration, regions, weather simulation, player view, quests, NPCs, procedural generation, and RNG
 - Playwright E2E smoke test suite for Electron app
+
+## [1.2.5] - 2026-01-26
+
+### Changed
+- Completed the conversion of all icons to the duotone SVG icon system.
+
+## [1.2.4] - 2026-01-26
+
+### Changed
+- Icons upgraded to a duotone style with an accent color.
+
+### Security
+- Patched tar and lodash vulnerabilities.
+
+## [1.2.3] - 2026-01-26
+
+### Added
+- Keyboard shortcuts reference (Cmd/Ctrl+?).
+- Loading states in the export dialogs.
+- Windows application icon.
+
+### Changed
+- Browser alert and confirm dialogs replaced with themed in-app dialogs.
+- Emoji and Unicode buttons replaced with SVG icons.
+
+### Improved
+- Accessibility: ARIA labels on all icon-only buttons, dialog roles on all modals, and a live region for save status.
 
 ## [1.2.2] - 2026-01-19
 

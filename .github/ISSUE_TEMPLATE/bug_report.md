@@ -25,9 +25,10 @@ What actually happened instead.
 If applicable, add screenshots to help explain your problem.
 
 ## Environment
-- OS: [e.g., macOS 14.0]
-- Hexal Version: [e.g., 1.1.0]
-- Architecture: [e.g., Apple Silicon / Intel]
+- OS: [e.g., Windows 11, macOS 14.0, Ubuntu 24.04]
+- Hexal Version: [e.g., 1.5.2, shown in About Hexal]
+- Architecture: [e.g., x64, Apple Silicon]
+- Where it happened: [DM app, player window, or web player in a browser]
 
 ## Additional Context
 Add any other context about the problem here.

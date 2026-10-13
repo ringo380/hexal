@@ -1,14 +1,17 @@
 /**
  * Hexal documentation screenshot capture script.
  *
- * Loads a pre-built showcase campaign fixture and captures 13
- * documentation-quality screenshots of all major features.
+ * Loads a pre-built showcase campaign fixture and captures documentation
+ * screenshots of the major features. Every shot first checks that the screen
+ * it is meant to show is actually open; a shot whose check fails is reported
+ * and NOT written, so a stale or wrong image never silently replaces a good one.
  *
  * Prerequisites:
- *   - Vite dev server running: npm run dev
+ *   - Vite dev server running and settled: npm run dev
  *   - Compiled Electron files in dist-electron/
  *
- * Run: npm run screenshots
+ * Run: npm run screenshots            (all shots)
+ *      npm run screenshots -- dice    (only shots whose name contains "dice")
  */
 import { _electron as electron } from 'playwright';
 import { copyFileSync, mkdirSync, existsSync, unlinkSync, renameSync } from 'fs';
@@ -44,9 +47,14 @@ const FIXTURE_DEST = join(HEXAL_DIR, 'The Sundered Reaches.hexal');
 const BACKUP_DEST  = FIXTURE_DEST + '.bak';
 const SCREENSHOTS  = join(__dirname, '..', 'docs', 'screenshots');
 
-// ── Helpers (reused from smoke.mjs) ────────────────────────────────
+const VIEWPORT = { width: 1920, height: 1080 };
+const ONLY = process.argv[2] || '';
 
-/** Launch the Electron app and return the main window. */
+// ── Helpers ───────────────────────────────────────────────────────
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/** Launch the Electron app and return the main app window (never DevTools). */
 async function launchApp() {
   const electronApp = await electron.launch({
     args: ['./dist-electron/main.js'],
@@ -56,78 +64,98 @@ async function launchApp() {
       VITE_DEV_SERVER_URL: 'http://localhost:5173/',
     },
   });
+  await electronApp.firstWindow();
 
-  let window = await electronApp.firstWindow();
-  await window.waitForTimeout(2000);
-
-  // Find the correct window (skip DevTools)
-  for (const w of electronApp.windows()) {
-    const t = await w.title();
-    if (t.includes('Hexal') || t === '') {
-      window = w;
-      break;
-    }
+  let window;
+  for (let i = 0; i < 60 && !window; i++) {
+    window = electronApp.windows().find(w => w.url().startsWith('http://localhost'));
+    if (!window) await sleep(250);
   }
+  if (!window) throw new Error('App window did not open');
 
-  await window.setViewportSize({ width: 1600, height: 1000 });
+  await window.setViewportSize(VIEWPORT);
   await window.waitForLoadState('networkidle');
   await window.waitForTimeout(3000);
-
   return { electronApp, window };
 }
 
-/** Click the center of the canvas element. */
-async function clickCanvasCenter(window) {
-  const canvas = window.locator('canvas').first();
-  const box = await canvas.boundingBox();
-  if (!box) return null;
-  const cx = box.x + box.width / 2;
-  const cy = box.y + box.height / 2;
-  await window.mouse.click(cx, cy);
-  await window.waitForTimeout(500);
-  return { x: cx, y: cy };
+/**
+ * The toolbar is wider than most screens, and clicking a button near its end
+ * scrolls the layout sideways. Undo that before capturing.
+ */
+async function resetScroll(window) {
+  await window.evaluate(() => {
+    document.querySelectorAll('*').forEach(el => {
+      if (el.scrollLeft) el.scrollLeft = 0;
+    });
+    window.scrollTo(0, 0);
+  });
 }
 
-/** Click at an offset from canvas center. */
-async function clickCanvasOffset(window, dx, dy) {
-  const canvas = window.locator('canvas').first();
-  const box = await canvas.boundingBox();
-  if (!box) return null;
-  const x = box.x + box.width / 2 + dx;
-  const y = box.y + box.height / 2 + dy;
-  await window.mouse.click(x, y);
-  await window.waitForTimeout(500);
-  return { x, y };
-}
-
-/** Dismiss any open modal overlay. */
-async function dismissModals(window) {
-  const overlay = window.locator('.modal-overlay');
-  if (await overlay.count() > 0) {
+/** Press Escape until no modal is open (or give up after a few tries). */
+async function closeModals(window) {
+  for (let i = 0; i < 3; i++) {
+    if (await window.locator('.modal-overlay, .modal, .command-palette-overlay').count() === 0) return;
     await window.keyboard.press('Escape');
-    await window.waitForTimeout(400);
-    if (await overlay.count() > 0) {
-      await window.mouse.click(5, 5);
-      await window.waitForTimeout(400);
-    }
+    await window.waitForTimeout(300);
   }
 }
 
-/** Take a screenshot and save to docs/screenshots/. */
-async function capture(window, name) {
-  const path = join(SCREENSHOTS, name);
-  await window.screenshot({ path });
-  console.log(`  captured: ${name}`);
+/** Click a toolbar button by its visible label. */
+async function toolbar(window, label) {
+  const btn = window.locator('.toolbar button').filter({ hasText: new RegExp(`^\\s*${label}\\s*$`) }).first();
+  await btn.click();
+  await window.waitForTimeout(800);
+}
+
+/** Select a hex through the sidebar hex list, e.g. selectHex(window, 1, 8). */
+async function selectHex(window, q, r) {
+  const row = window.locator('.hex-coord').filter({ hasText: `(${q}, ${r})` }).first();
+  await row.scrollIntoViewIfNeeded();
+  await row.click();
+  await window.waitForTimeout(600);
+  await expectVisible(window, window.getByText(`Hex (${q}, ${r})`).first(), `detail panel for hex (${q}, ${r})`);
+}
+
+async function expectVisible(window, locator, what) {
+  try {
+    await locator.waitFor({ state: 'visible', timeout: 5000 });
+  } catch {
+    throw new Error(`expected ${what} to be visible`);
+  }
+}
+
+const results = [];
+
+/**
+ * Run one shot: `setup` opens the screen and throws if it is not as expected.
+ * The image is written only when setup succeeds.
+ */
+async function shot(window, name, setup, { page = window, clip } = {}) {
+  if (ONLY && !name.includes(ONLY)) return;
+  console.log(`- ${name}`);
+  try {
+    const target = (await setup()) || page;
+    await resetScroll(target);
+    await target.waitForTimeout(300);
+    await target.screenshot({ path: join(SCREENSHOTS, name), clip });
+    results.push({ name, ok: true });
+    console.log('    captured');
+  } catch (err) {
+    results.push({ name, ok: false, error: err.message });
+    console.log(`    FAILED: ${err.message}`);
+  } finally {
+    await closeModals(window).catch(() => {});
+  }
 }
 
 // ── Screenshot sequence ────────────────────────────────────────────
 
 async function main() {
-  // Ensure output directory exists
   mkdirSync(SCREENSHOTS, { recursive: true });
 
-  // Copy fixture to ~/Documents/Hexal/ so the app can find it.
-  // Back up any existing file first to avoid data loss.
+  // Copy the fixture into the Documents\Hexal folder the app lists campaigns
+  // from. Back up any existing file first to avoid data loss.
   mkdirSync(HEXAL_DIR, { recursive: true });
   const fixtureExisted = existsSync(FIXTURE_DEST);
   if (fixtureExisted) {
@@ -142,193 +170,162 @@ async function main() {
     console.log('Launching Hexal...');
     ({ electronApp, window } = await launchApp());
 
-    // ── 1. Campaign Browser ────────────────────────────────────────
-    console.log('\n1/13 Campaign Browser');
-    await capture(window, 'campaign-browser.png');
+    await shot(window, 'campaign-browser.png', async () => {
+      await expectVisible(window, window.locator('.campaign-browser'), 'campaign browser');
+    });
 
-    // ── Open the showcase campaign ─────────────────────────────────
-    // Find the campaign card and double-click it
-    const campaignCard = window.locator('.campaign-card, [class*="campaign-card"], .campaign-item, [class*="campaign-item"]').filter({ hasText: 'Sundered Reaches' });
-    if (await campaignCard.count() > 0) {
-      await campaignCard.first().dblclick();
-    } else {
-      // Fallback: click first card then Open button
-      const firstCard = window.locator('.campaign-card, [class*="campaign-card"], .campaign-item').first();
-      if (await firstCard.count() > 0) {
-        await firstCard.click();
-        await window.waitForTimeout(300);
-        const openBtn = window.locator('button:has-text("Open")').first();
-        if (await openBtn.count() > 0) {
-          await openBtn.click();
-        }
-      }
-    }
+    // Open the showcase campaign
+    await window.locator('.campaign-button').filter({ hasText: 'Sundered Reaches' }).first().click();
     await window.waitForTimeout(3000);
+    await expectVisible(window, window.locator('canvas').first(), 'hex grid canvas');
 
-    // Verify campaign loaded (canvas present)
-    const canvas = window.locator('canvas');
-    if (await canvas.count() === 0) {
-      throw new Error('Campaign did not load — no canvas element found');
-    }
+    await shot(window, 'hex-grid-overview.png', async () => {
+      await selectHex(window, 1, 8);
+    });
 
-    // ── 2. Hex Grid Overview ───────────────────────────────────────
-    console.log('2/13 Hex Grid Overview');
-    // Select a populated hex (click near center of grid)
-    await clickCanvasCenter(window);
-    await window.waitForTimeout(500);
-    await capture(window, 'hex-grid-overview.png');
+    await shot(window, 'hex-detail-panel.png', async () => {
+      await selectHex(window, 5, 4);
+    });
 
-    // ── 3. Hex Detail Panel ────────────────────────────────────────
-    console.log('3/13 Hex Detail Panel');
-    // The overview shot already shows the detail panel with a selected hex
-    // Try clicking at a slightly different position to select a content-rich hex
-    await clickCanvasOffset(window, -200, 0);
-    await window.waitForTimeout(500);
-    await capture(window, 'hex-detail-panel.png');
-
-    // ── 4. Encounter Editor ────────────────────────────────────────
-    console.log('4/13 Encounter Editor');
-    // Try to find and expand an encounter in the detail panel
-    const encounterRow = window.locator('.content-item-row:has-text("Encounter"), [class*="encounter-row"], [class*="content-row"]').filter({ hasText: /Wolf|Goblin|Orc|Merchant|Bar Fight|Guardian|Temple|Ambush/i }).first();
-    if (await encounterRow.count() > 0) {
-      await encounterRow.click();
+    await shot(window, 'encounter-editor.png', async () => {
+      await selectHex(window, 1, 8);
+      await window.locator('.detail-panel').getByText('Bar Fight at the Salty Dog').first().click();
       await window.waitForTimeout(800);
-    }
-    await capture(window, 'encounter-editor.png');
-    await dismissModals(window);
+      const editor = window.locator('.modal, .detail-panel input[type="text"], .detail-panel textarea');
+      if (await editor.count() === 0) throw new Error('encounter editor did not open');
+    });
 
-    // ── 5. NPC Directory ───────────────────────────────────────────
-    console.log('5/13 NPC Directory');
-    // Open via toolbar — look for NPC-related button or use keyboard shortcut
-    const npcBtn = window.locator('button:has-text("NPCs"), button:has-text("NPC Directory")');
-    if (await npcBtn.count() > 0) {
-      await npcBtn.first().click();
-      await window.waitForTimeout(1000);
-    } else {
-      // Try keyboard shortcut
-      await window.keyboard.press('Meta+n');
-      await window.waitForTimeout(1000);
-    }
-    await capture(window, 'npc-system.png');
-    await dismissModals(window);
+    await shot(window, 'npc-system.png', async () => {
+      await toolbar(window, 'NPCs');
+      await expectVisible(window, window.getByText('NPC Directory').first(), 'NPC directory');
+      await window.locator('.modal').getByText('Harbormaster Kael').first().click();
+      await window.waitForTimeout(500);
+    });
 
-    // ── 6. Procedural Generation Modal ─────────────────────────────
-    console.log('6/13 Procedural Generation');
-    const generateBtn = window.locator('button:has-text("Generate")');
-    if (await generateBtn.count() > 0) {
-      await generateBtn.first().click();
-      await window.waitForTimeout(1000);
-    }
-    await capture(window, 'procedural-generation.png');
-    await dismissModals(window);
+    await shot(window, 'quests.png', async () => {
+      await toolbar(window, 'Quests');
+      await expectVisible(window, window.getByText('Quests & Story Arcs').first(), 'quest manager');
+      await window.locator('.modal').getByText('The Missing Fishermen').first().click();
+      await window.waitForTimeout(500);
+    });
 
-    // ── 7. Region Manager ──────────────────────────────────────────
-    console.log('7/13 Regions');
-    const regionsBtn = window.locator('button:has-text("Regions")');
-    if (await regionsBtn.count() > 0) {
-      await regionsBtn.first().click();
-      await window.waitForTimeout(1000);
-    }
-    await capture(window, 'regions.png');
-    await dismissModals(window);
+    await shot(window, 'procedural-generation.png', async () => {
+      await toolbar(window, 'Generate');
+      await expectVisible(window, window.getByText('Generate Content').first(), 'generate dialog');
+    });
 
-    // ── 8. Time Controls ───────────────────────────────────────────
-    console.log('8/13 Time & Weather');
-    // Click the time/weather bar to open controls
-    const timeBar = window.locator('.time-weather-bar, [class*="time-weather"]');
-    if (await timeBar.count() > 0) {
-      await timeBar.first().click();
-      await window.waitForTimeout(1000);
-    }
-    await capture(window, 'time-weather.png');
-    await dismissModals(window);
+    await shot(window, 'regions.png', async () => {
+      await toolbar(window, 'Regions');
+      await expectVisible(window, window.locator('.modal').getByText('The Greenwood').first(), 'region manager');
+    });
 
-    // ── 9. Player View ─────────────────────────────────────────────
-    console.log('9/13 Player View');
-    let playerViewCaptured = false;
-    // Open player view via toolbar or keyboard
-    const playerViewBtn = window.locator('button:has-text("Player View"), button:has-text("Player")');
-    if (await playerViewBtn.count() > 0) {
-      await playerViewBtn.first().click();
-      await window.waitForTimeout(2000);
-
-      // Try to find and capture the player view window
-      const allWindows = electronApp.windows();
-      for (const w of allWindows) {
-        const url = w.url();
-        if (url.includes('player-view') || url.includes('#player-view')) {
-          await w.setViewportSize({ width: 1600, height: 1000 });
-          await w.waitForTimeout(1000);
-          await w.screenshot({ path: join(SCREENSHOTS, 'player-view.png') });
-          console.log('  captured: player-view.png (player window)');
-          playerViewCaptured = true;
-          await w.close();
-          break;
-        }
+    await shot(window, 'time-weather.png', async () => {
+      // The simulation only runs once the radar is switched on in this session
+      await window.getByRole('button', { name: 'Enable weather radar overlay' }).click();
+      await expectVisible(window, window.locator('.weather-sim-status.running'), 'running weather simulation');
+      await window.getByRole('button', { name: 'Toggle map layers' }).click();
+      await window.waitForTimeout(300);
+      for (const label of ['Weather Overlay', 'Isobars', 'Fronts', 'Cloud Cover', 'Wind Arrows']) {
+        const box = window.locator('.layer-controls-item').filter({ hasText: label }).locator('input');
+        if (!(await box.isChecked())) await box.check();
       }
-    }
-    // Fallback: capture main window if player view window wasn't found
-    if (!playerViewCaptured) {
-      console.log('  player view window not found, capturing main window as fallback');
-      await capture(window, 'player-view.png');
-    }
-    await window.waitForTimeout(500);
+      await window.getByRole('button', { name: 'Toggle map layers' }).click();
+      await window.waitForTimeout(4000); // let the weather simulation draw
+    });
 
-    // ── 10. Map Export ─────────────────────────────────────────────
-    console.log('10/13 Map Export');
-    await dismissModals(window);
-    const exportMapBtn = window.locator('button:has-text("Export Map")');
-    if (await exportMapBtn.count() > 0) {
-      await exportMapBtn.first().click();
-      await window.waitForTimeout(1000);
+    await shot(window, 'player-view.png', async () => {
+      await electronApp.evaluate(({ Menu }) => {
+        const view = Menu.getApplicationMenu().items.find(m => m.label === 'View');
+        view.submenu.items.find(i => i.label === 'Open Player View').click();
+      });
+      let player;
+      for (let i = 0; i < 40 && !player; i++) {
+        player = electronApp.windows().find(w => w.url().includes('player-view'));
+        if (!player) await sleep(250);
+      }
+      if (!player) throw new Error('player view window did not open');
+      // Resize the real window (not viewport emulation) so the map canvas
+      // gets the same resize events a user's window would
+      await electronApp.evaluate(({ BrowserWindow }, size) => {
+        const w = BrowserWindow.getAllWindows().find(b => b.webContents.getURL().includes('player-view'));
+        w.setContentSize(size.width, size.height);
+      }, VIEWPORT);
+      await player.waitForTimeout(3000);
+      await expectVisible(player, player.locator('canvas').first(), 'player map');
+      return player;
+    // The player map opens at its default zoom in the top-left corner, so crop
+    // to the map instead of capturing a mostly empty window
+    }, { clip: { x: 0, y: 0, width: 800, height: 560 } });
+    for (const w of electronApp.windows()) {
+      if (w.url().includes('player-view')) await w.close().catch(() => {});
     }
-    await capture(window, 'map-export.png');
-    await dismissModals(window);
 
-    // ── 11. Command Palette ────────────────────────────────────────
-    console.log('11/13 Command Palette');
-    await window.keyboard.press('Meta+k');
-    await window.waitForTimeout(600);
-    await capture(window, 'command-palette.png');
+    await shot(window, 'map-export.png', async () => {
+      await toolbar(window, 'Export Map');
+      await expectVisible(window, window.locator('.modal').first(), 'map export dialog');
+    });
+
+    await shot(window, 'command-palette.png', async () => {
+      await window.locator('canvas').first().click({ position: { x: 5, y: 5 } });
+      await window.keyboard.press('ControlOrMeta+k');
+      await window.waitForTimeout(400);
+      await expectVisible(window, window.locator('.command-palette'), 'command palette');
+      await window.keyboard.type('Storm');
+      await window.waitForTimeout(400);
+    });
+
+    await shot(window, 'session-log.png', async () => {
+      await toolbar(window, 'Sessions');
+      await expectVisible(window, window.getByText('Session Log').first(), 'session log');
+      await window.locator('.modal').getByText('Arrival at Stormhaven').first().click();
+      await window.waitForTimeout(500);
+    });
+
+    await shot(window, 'terrain-editor.png', async () => {
+      await toolbar(window, 'Terrain');
+      await expectVisible(window, window.getByText('Terrain Types').first(), 'terrain editor');
+    });
+
+    await shot(window, 'combat-tracker.png', async () => {
+      await selectHex(window, 1, 8);
+      await toolbar(window, 'Combat');
+      const panel = window.getByRole('region', { name: 'Combat tracker' }).or(window.locator('[aria-label="Combat tracker"]')).first();
+      await expectVisible(window, panel, 'combat tracker');
+      // Starting combat adds the party's characters automatically
+      await panel.getByRole('button', { name: /Start Combat/ }).click();
+      await window.waitForTimeout(400);
+      const pick = panel.getByLabel('Select encounter to add');
+      const option = await pick.locator('option').filter({ hasText: 'Bar Fight' }).first().getAttribute('value');
+      await pick.selectOption(option);
+      await pick.locator('xpath=..').getByRole('button').first().click();
+      await window.waitForTimeout(500);
+      await panel.getByRole('button', { name: 'Next turn' }).click();
+      await window.waitForTimeout(500);
+    });
+    await window.locator('[aria-label="Close combat tracker"]').click().catch(() => {});
+
+    await shot(window, 'dice-roller.png', async () => {
+      await toolbar(window, 'Dice');
+      const panel = window.locator('[aria-label="Dice roller"]').last();
+      await expectVisible(window, panel, 'dice roller');
+      await panel.getByRole('group', { name: 'Choose a die' }).getByRole('button', { name: /d20/ }).click();
+      for (let i = 0; i < 3; i++) {
+        await panel.getByRole('button', { name: /^Roll/ }).first().click();
+        await window.waitForTimeout(300);
+      }
+      await expectVisible(window, window.locator('.dice-history-item').first(), 'roll history');
+    });
     await window.keyboard.press('Escape');
-    await window.waitForTimeout(300);
 
-    // ── 12. Session Log ────────────────────────────────────────────
-    console.log('12/13 Session Log');
-    const sessionBtn = window.locator('button:has-text("Sessions"), button:has-text("Session Log"), button:has-text("Log")');
-    if (await sessionBtn.count() > 0) {
-      await sessionBtn.first().click();
-      await window.waitForTimeout(1000);
-    }
-    await capture(window, 'session-log.png');
-    await dismissModals(window);
-
-    // ── 13. Terrain Editor ─────────────────────────────────────────
-    console.log('13/13 Terrain Editor');
-    const terrainEditorBtn = window.locator('button:has-text("Terrain")').filter({ hasText: /Terrain/i });
-    // The terrain editor might be under a "Terrain" button or in settings
-    // Try the "Tables" menu which may contain terrain editor
-    if (await terrainEditorBtn.count() > 0) {
-      await terrainEditorBtn.first().click();
-      await window.waitForTimeout(1000);
-    } else {
-      // Try keyboard shortcut or alternative path
-      const tablesBtn = window.locator('button:has-text("Tables")');
-      if (await tablesBtn.count() > 0) {
-        await tablesBtn.first().click();
-        await window.waitForTimeout(1000);
-      }
-    }
-    await capture(window, 'terrain-editor.png');
-    await dismissModals(window);
-
-    console.log('\nAll screenshots captured successfully!');
+    await shot(window, 'templates-gallery.png', async () => {
+      await window.getByRole('button', { name: 'Close campaign' }).click();
+      await window.waitForTimeout(1500);
+      await window.locator('button').filter({ hasText: 'New Campaign' }).first().click();
+      await expectVisible(window, window.getByText('Choose a Template').first(), 'template gallery');
+    });
 
   } catch (err) {
     console.error(`\nERROR: ${err.message}`);
-    if (window) {
-      await window.screenshot({ path: join(SCREENSHOTS, 'error.png') }).catch(() => {});
-    }
     process.exitCode = 1;
   } finally {
     // Restore original campaign or remove fixture copy
@@ -347,11 +344,10 @@ async function main() {
     }
   }
 
-  // Report
-  const { readdirSync } = await import('fs');
-  const files = readdirSync(SCREENSHOTS).filter(f => f.endsWith('.png'));
-  console.log(`\nGenerated ${files.length} screenshot(s) in docs/screenshots/:`);
-  files.forEach(f => console.log(`  ${f}`));
+  const failed = results.filter(r => !r.ok);
+  console.log(`\n${results.length - failed.length}/${results.length} screenshots captured in docs/screenshots/`);
+  failed.forEach(f => console.log(`  FAILED ${f.name}: ${f.error}`));
+  if (failed.length) process.exitCode = 1;
 }
 
 main().catch(err => {

@@ -814,5 +814,225 @@
       "locations": [], "encounters": [], "npcs": [], "treasures": [], "clues": [],
       "markers": [], "connections": { "rivers": [0, 3], "roads": [] }
     }
+  },
+  "quests": [
+    {
+      "id": "quest-missing-fishermen",
+      "title": "The Missing Fishermen",
+      "description": "Harbormaster Kael is offering a bounty for news of the fishing crews that never came home.",
+      "status": "active",
+      "dmNotes": "",
+      "objectives": [
+        {
+          "id": "quest-missing-fishermen-o1",
+          "description": "Speak with Harbormaster Kael",
+          "isComplete": true,
+          "isVisibleToPlayers": true
+        },
+        {
+          "id": "quest-missing-fishermen-o2",
+          "description": "Search the Stormhaven coast",
+          "isComplete": false,
+          "isVisibleToPlayers": true
+        },
+        {
+          "id": "quest-missing-fishermen-o3",
+          "description": "Find what took the crews",
+          "isComplete": false,
+          "isVisibleToPlayers": true
+        }
+      ],
+      "linkedHexKeys": [
+        "1,8"
+      ],
+      "linkedNpcRefs": [
+        {
+          "npcId": "npc-0108-1",
+          "hexKey": "1,8"
+        }
+      ],
+      "linkedEncounterIds": [
+        "enc-0108-1"
+      ],
+      "linkedClueIds": [
+        "cl-0108-1"
+      ],
+      "linkedFactionIds": [],
+      "storyArcId": "arc-drowned-coast",
+      "prerequisiteQuestIds": [],
+      "isVisibleToPlayers": true,
+      "tags": [
+        "investigation"
+      ],
+      "createdAt": "2026-02-15T23:12:00.000Z",
+      "modifiedAt": "2026-02-15T23:12:00.000Z"
+    },
+    {
+      "id": "quest-druid-council",
+      "title": "Counsel of the Greenwood",
+      "description": "The Circle of the Green may know what stirs beneath the waves, if the party can earn an audience.",
+      "status": "rumored",
+      "dmNotes": "",
+      "objectives": [
+        {
+          "id": "quest-druid-council-o1",
+          "description": "Reach the Archdruid in the Greenwood",
+          "isComplete": false,
+          "isVisibleToPlayers": true
+        },
+        {
+          "id": "quest-druid-council-o2",
+          "description": "Win the Circle's trust",
+          "isComplete": false,
+          "isVisibleToPlayers": true
+        }
+      ],
+      "linkedHexKeys": [
+        "5,4"
+      ],
+      "linkedNpcRefs": [
+        {
+          "npcId": "npc-0504-1",
+          "hexKey": "5,4"
+        }
+      ],
+      "linkedEncounterIds": [
+        "enc-0504-1"
+      ],
+      "linkedClueIds": [],
+      "linkedFactionIds": [
+        "faction-druids"
+      ],
+      "storyArcId": "arc-drowned-coast",
+      "prerequisiteQuestIds": [
+        "quest-missing-fishermen"
+      ],
+      "isVisibleToPlayers": true,
+      "tags": [
+        "diplomacy"
+      ],
+      "createdAt": "2026-02-15T23:12:00.000Z",
+      "modifiedAt": "2026-02-15T23:12:00.000Z"
+    },
+    {
+      "id": "quest-iron-guard",
+      "title": "Trouble at the Iron Peaks",
+      "description": "Orc raiders have closed the mountain pass, and the Iron Guard is in no mood for visitors.",
+      "status": "unknown",
+      "dmNotes": "",
+      "objectives": [
+        {
+          "id": "quest-iron-guard-o1",
+          "description": "Break the orc blockade",
+          "isComplete": false,
+          "isVisibleToPlayers": true
+        }
+      ],
+      "linkedHexKeys": [
+        "15,3"
+      ],
+      "linkedNpcRefs": [
+        {
+          "npcId": "npc-1503-1",
+          "hexKey": "15,3"
+        }
+      ],
+      "linkedEncounterIds": [
+        "enc-1503-1"
+      ],
+      "linkedClueIds": [],
+      "linkedFactionIds": [
+        "faction-ironguard"
+      ],
+      "storyArcId": "arc-drowned-coast",
+      "prerequisiteQuestIds": [],
+      "isVisibleToPlayers": false,
+      "tags": [
+        "combat"
+      ],
+      "createdAt": "2026-02-15T23:12:00.000Z",
+      "modifiedAt": "2026-02-15T23:12:00.000Z"
+    }
+  ],
+  "storyArcs": [
+    {
+      "id": "arc-drowned-coast",
+      "title": "The Drowned Coast",
+      "description": "Something beneath the Stormhaven waters is waking.",
+      "dmNotes": "",
+      "questIds": [
+        "quest-missing-fishermen",
+        "quest-druid-council",
+        "quest-iron-guard"
+      ],
+      "status": "active",
+      "isVisibleToPlayers": true,
+      "color": "#4a9eff"
+    }
+  ],
+  "parties": [
+    {
+      "id": "party-wardens",
+      "name": "The Wardens",
+      "color": "#4a9eff"
+    }
+  ],
+  "playerCharacters": [
+    {
+      "id": "pc-aria",
+      "name": "Aria",
+      "color": "#e91e63",
+      "icon": "🧝",
+      "hexKey": "1,8",
+      "isVisible": true,
+      "partyId": "party-wardens"
+    },
+    {
+      "id": "pc-brom",
+      "name": "Brom",
+      "color": "#ff9800",
+      "icon": "🧔",
+      "hexKey": "1,8",
+      "isVisible": true,
+      "partyId": "party-wardens"
+    },
+    {
+      "id": "pc-corvin",
+      "name": "Corvin",
+      "color": "#9c27b0",
+      "icon": "🧙",
+      "hexKey": "1,8",
+      "isVisible": true,
+      "partyId": "party-wardens"
+    },
+    {
+      "id": "pc-dessa",
+      "name": "Dessa",
+      "color": "#4caf50",
+      "icon": "🏹",
+      "hexKey": "1,8",
+      "isVisible": true,
+      "partyId": "party-wardens"
+    }
+  ],
+  "weatherSimulation": {
+    "config": {
+      "engineType": "perlin",
+      "simulationSpeed": 3,
+      "overlayOpacity": 0.35,
+      "overlayMode": "precipitation",
+      "showIsobars": true,
+      "showFronts": true,
+      "showParticles": true,
+      "particleDensity": 0.5,
+      "enabled": false,
+      "timeMode": "realtime"
+    },
+    "field": {},
+    "pressureSystems": [],
+    "fronts": [],
+    "activeEvents": [],
+    "tickCount": 0,
+    "seed": "sundered-reaches"
   }
 }
