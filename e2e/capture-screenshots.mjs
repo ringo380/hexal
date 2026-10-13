@@ -102,9 +102,26 @@ async function closeModals(window) {
 }
 
 /** Click a toolbar button by its visible label. */
+// Toolbar actions that live inside a grouped menu, keyed by item label
+const TOOLBAR_MENU_OF = {
+  Encounters: 'World', Landmarks: 'World', Templates: 'World',
+  Regions: 'World', Terrain: 'World', Generate: 'World',
+  NPCs: 'Story', Quests: 'Story', Sessions: 'Story', Characters: 'Story',
+  'Player Notes': 'Players', 'Message Players': 'Players',
+  'Export Map': 'Export', 'Export Data': 'Export',
+};
+
+/** Click a toolbar action, opening its group menu first when it has one. */
 async function toolbar(window, label) {
-  const btn = window.locator('.toolbar button').filter({ hasText: new RegExp(`^\\s*${label}\\s*$`) }).first();
-  await btn.click();
+  // The label may be followed by a count badge (e.g. "Player Notes 2")
+  const exact = (text) => new RegExp(`^\\s*${text}\\s*\\d*\\s*$`);
+  const group = TOOLBAR_MENU_OF[label];
+  if (group) {
+    await window.locator('.toolbar .toolbar-menu-trigger').filter({ hasText: exact(group) }).first().click();
+    await window.locator('.toolbar [role="menuitem"]').filter({ hasText: exact(label) }).first().click();
+  } else {
+    await window.locator('.toolbar button').filter({ hasText: exact(label) }).first().click();
+  }
   await window.waitForTimeout(800);
 }
 

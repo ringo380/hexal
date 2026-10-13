@@ -32,6 +32,7 @@ import LoginModal from './auth/LoginModal';
 import AccountModal from './auth/AccountModal';
 import ProfileMenu from './auth/ProfileMenu';
 import ConnectionStatus from './ui/ConnectionStatus';
+import ToolbarMenu from './ui/ToolbarMenu';
 import WebServerStatus from './player/WebServerStatus';
 import CreateRegionFromSelectionModal from './modals/CreateRegionFromSelectionModal';
 import ExportTemplateModal from './modals/ExportTemplateModal';
@@ -473,39 +474,49 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
         </div>
 
         <div className="toolbar-right">
-          <button className="btn btn-secondary" onClick={() => setShowEncounterTableEditor(true)}>
-            <Icon name="sword" size={16} /> Encounters
-          </button>
-          <button className="btn btn-secondary" onClick={() => setShowLandmarkTableEditor(true)}>
-            <Icon name="pin" size={16} /> Landmarks
-          </button>
-          <button className="btn btn-secondary" onClick={() => setShowTemplateLibrary(true)}>
-            <Icon name="sparkle" size={16} /> Templates
-          </button>
-          <button className="btn btn-secondary" onClick={() => setShowNpcDirectory(true)}>
-            <Icon name="users" size={16} /> NPCs
-          </button>
-          <button className="btn btn-secondary" onClick={() => setShowRegionManager(true)}>
-            <Icon name="map" size={16} /> Regions
-          </button>
-          <button className="btn btn-secondary" onClick={() => setShowTerrainEditor(true)}>
-            <Icon name="hexagon" size={16} /> Terrain
-          </button>
-          <button className="btn btn-secondary" onClick={() => setShowSessionLog(true)}>
-            <Icon name="calendar" size={16} /> Sessions
-          </button>
-          <button className="btn btn-secondary" onClick={() => setShowQuestManager(true)}>
-            <Icon name="star" size={16} /> Quests
-          </button>
-          <button className="btn btn-secondary" onClick={() => setShowCharacterPanel(true)}>
-            <Icon name="walk" size={16} /> Characters
-          </button>
-          <button className="btn btn-secondary" onClick={() => setShowPlayerNotes(true)}>
-            <Icon name="lightbulb" size={16} /> Player Notes
-            {(campaign.playerNotes ?? []).length > 0 && (
-              <span className="filter-badge">{(campaign.playerNotes ?? []).length}</span>
-            )}
-          </button>
+          <ToolbarMenu
+            label="World"
+            icon="map"
+            items={[
+              { label: 'Encounters', icon: 'sword', onSelect: () => setShowEncounterTableEditor(true) },
+              { label: 'Landmarks', icon: 'pin', onSelect: () => setShowLandmarkTableEditor(true) },
+              { label: 'Templates', icon: 'sparkle', onSelect: () => setShowTemplateLibrary(true) },
+              { label: 'Regions', icon: 'map', onSelect: () => setShowRegionManager(true) },
+              { label: 'Terrain', icon: 'hexagon', onSelect: () => setShowTerrainEditor(true) },
+              { label: 'Generate', icon: 'dice', onSelect: () => setShowGenerator(true) },
+            ]}
+          />
+          <ToolbarMenu
+            label="Story"
+            icon="star"
+            items={[
+              { label: 'NPCs', icon: 'users', onSelect: () => setShowNpcDirectory(true) },
+              { label: 'Quests', icon: 'star', onSelect: () => setShowQuestManager(true) },
+              { label: 'Sessions', icon: 'calendar', onSelect: () => setShowSessionLog(true) },
+              { label: 'Characters', icon: 'walk', onSelect: () => setShowCharacterPanel(true) },
+            ]}
+          />
+          <ToolbarMenu
+            label="Players"
+            icon="users"
+            items={[
+              {
+                label: 'Player Notes',
+                icon: 'lightbulb',
+                onSelect: () => setShowPlayerNotes(true),
+                badge: (campaign.playerNotes ?? []).length,
+              },
+              { label: 'Message Players', icon: 'info', onSelect: () => setShowDmMessages(!showDmMessages) },
+            ]}
+          />
+          <ToolbarMenu
+            label="Export"
+            icon="export"
+            items={[
+              { label: 'Export Map', icon: 'map', onSelect: () => setShowMapExport(true) },
+              { label: 'Export Data', icon: 'export', onSelect: () => setShowExport(true) },
+            ]}
+          />
           <button
             className={`btn btn-secondary${showTravelPanel ? ' btn-active' : ''}`}
             onClick={() => setShowTravelPanel(!showTravelPanel)}
@@ -517,18 +528,6 @@ function MainEditor({ onRegisterExport, onRegisterMapExport, onRegisterExportTem
             onToggle={() => setShowCombatTracker(!showCombatTracker)}
           />
           <DiceToolbarButton />
-          <button className="btn btn-secondary" onClick={() => setShowGenerator(true)}>
-            <Icon name="dice" size={16} /> Generate
-          </button>
-          <button className="btn btn-secondary" onClick={() => setShowMapExport(true)}>
-            <Icon name="map" size={16} /> Export Map
-          </button>
-          <button className="btn btn-secondary" onClick={() => setShowExport(true)}>
-            <Icon name="export" size={16} /> Export Data
-          </button>
-          <button className="btn btn-secondary" onClick={() => setShowDmMessages(!showDmMessages)}>
-            <Icon name="info" size={16} /> Message Players
-          </button>
           <ConnectionStatus />
           <WebServerStatus />
           <ProfileMenu
