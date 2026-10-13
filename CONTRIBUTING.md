@@ -36,17 +36,31 @@ Before submitting a bug report:
 
 ## Development Setup
 
+Requires Node.js 22 or later. Development works on Windows, macOS, and Linux.
+
 ```bash
 # Clone your fork
 git clone https://github.com/YOUR_USERNAME/hexal.git
-cd hexal/hexal-electron
+cd hexal
 
 # Install dependencies
-npm install
+npm ci
 
-# Start development server
+# Start the Vite dev server and Electron
 npm run dev
 ```
+
+### Before opening a pull request
+
+```bash
+npx tsc --noEmit    # Type check
+npm test            # Unit tests (Vitest)
+npm run build       # Production build for your platform
+```
+
+If you change UI that appears on the website, regenerate the screenshots with
+`npm run screenshots` while `npm run dev` is running. The script reports any
+screen it could not open instead of capturing the wrong one.
 
 ## Code Style Guidelines
 
@@ -58,11 +72,12 @@ npm run dev
 
 ### File Organization
 
-- Components go in `src/components/`
+- Components go in `src/components/`, grouped by feature in subfolders
 - State management in `src/stores/`
-- Utility functions in `src/services/`
-- Type definitions in `src/types/`
+- Logic and utility functions in `src/services/`
+- Type definitions in `src/types/`, one file per domain
 - Styles in `src/styles/`
+- Electron main process code in `electron/`; tests for its helpers sit beside them as `*.test.ts`
 
 ## Commit Messages
 

@@ -4,21 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hexal - D&D Hex Crawl Campaign Manager</title>
-  <meta name="description" content="A cross-platform desktop application for managing D&D hex crawl campaigns. Visual hex grid editor, procedural generation, player view, and more.">
+  <meta name="description" content="A desktop application for running D&D hex crawl campaigns on Windows, macOS, and Linux. Hex map editor, combat tracker, dice roller, quests, weather, and a player view your table can join from any browser.">
   <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
 
   <!-- Open Graph -->
   <meta property="og:title" content="Hexal - D&D Hex Crawl Campaign Manager">
   <meta property="og:description" content="A cross-platform desktop application for managing D&D hex crawl campaigns with visual hex grid editing, procedural generation, and player view.">
-  <meta property="og:image" content="screenshots/hex-grid-overview.png">
+  <meta property="og:image" content="https://hexal.online/screenshots/hex-grid-overview.png">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://ringo380.github.io/hexal/">
+  <meta property="og:url" content="https://hexal.online/">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Hexal - D&D Hex Crawl Campaign Manager">
   <meta name="twitter:description" content="A cross-platform desktop application for managing D&D hex crawl campaigns.">
-  <meta name="twitter:image" content="screenshots/hex-grid-overview.png">
+  <meta name="twitter:image" content="https://hexal.online/screenshots/hex-grid-overview.png">
 
   <style>
     /* ── Reset & Variables ──────────────────────────────────────── */
@@ -320,16 +320,16 @@
       <img src="assets/icon.png" alt="Hexal" class="hero-icon">
       <h1>Hexal</h1>
       <p class="tagline">D&D Hex Crawl Campaign Manager</p>
-      <span class="version">v1.3.0</span>
+      <span class="version" id="latest-version">v1.5.2</span>
       <div class="hero-buttons">
         <a href="https://github.com/ringo380/hexal/releases/latest" class="btn btn-primary">
-          Download for macOS (Apple Silicon)
+          Download for Windows
         </a>
         <a href="https://github.com/ringo380/hexal/releases/latest" class="btn btn-secondary">
-          macOS (Intel)
+          macOS (Apple Silicon &amp; Intel)
         </a>
         <a href="https://github.com/ringo380/hexal/releases/latest" class="btn btn-secondary">
-          Windows
+          Linux
         </a>
       </div>
       <div class="hero-screenshot">
@@ -410,6 +410,38 @@
           <h3>Map Export</h3>
           <p>Export your map to PNG, JPEG, or PDF with print-ready and player handout presets.</p>
         </div>
+
+        <!-- At the Table -->
+        <div class="feature-card">
+          <div class="icon">&#x2694;</div>
+          <h3>Combat Tracker</h3>
+          <p>Initiative order, HP, conditions, and rounds. Add the party and an encounter's creatures in one click, and players see the turn order live.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">&#x1f3b2;</div>
+          <h3>Dice Roller</h3>
+          <p>Roll standard notation with advantage and disadvantage. Rolls are shared with every player view, and the DM can roll in secret.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">&#x2b50;</div>
+          <h3>Quests &amp; Story Arcs</h3>
+          <p>Track quests with objectives, status, and prerequisites, link them to hexes and NPCs, and group them into story arcs.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">&#x1f9ed;</div>
+          <h3>Characters &amp; Travel</h3>
+          <p>Party tokens on the map, route planning across passable terrain, step-by-step movement with discovery, and a travel log.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">&#x1f4f1;</div>
+          <h3>Web Player</h3>
+          <p>Players join from any browser on your network with a PIN, on laptops, tablets, or phones, and receive messages and encounter reveals live.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">&#x1f4da;</div>
+          <h3>Campaign Templates</h3>
+          <p>Start from ten ready-made settings with their own terrain, encounter tables, factions, and regions, or build and share your own.</p>
+        </div>
       </div>
     </div>
   </section>
@@ -462,8 +494,58 @@
 
       <div class="showcase-item">
         <div class="showcase-text">
+          <h3>Campaign Templates</h3>
+          <p>Start a new campaign from a blank map or one of ten ready-made settings, from the Sword Coast to the Underdark. Each comes with its own terrain, encounter tables, factions, and regions, and you can save and share your own.</p>
+        </div>
+        <div class="showcase-image">
+          <img src="screenshots/templates-gallery.png" alt="Template gallery with built-in campaign settings">
+        </div>
+      </div>
+
+      <div class="showcase-item">
+        <div class="showcase-text">
+          <h3>Quests &amp; Story Arcs</h3>
+          <p>Keep every thread in one place: objectives you can tick off, status from rumored to completed, prerequisites between quests, and links to the hexes, NPCs, and encounters involved. Story arcs group quests into the bigger picture.</p>
+        </div>
+        <div class="showcase-image">
+          <img src="screenshots/quests.png" alt="Quest manager showing quests with status and objectives">
+        </div>
+      </div>
+
+      <div class="showcase-item">
+        <div class="showcase-text">
+          <h3>Combat Tracker</h3>
+          <p>Start combat and the party joins automatically. Quick-add an encounter's creatures, set initiative, track HP and conditions, and step through turns while players follow along on their own screens.</p>
+        </div>
+        <div class="showcase-image">
+          <img src="screenshots/combat-tracker.png" alt="Combat tracker panel with party members and creatures in initiative order">
+        </div>
+      </div>
+
+      <div class="showcase-item">
+        <div class="showcase-text">
+          <h3>Weather Radar</h3>
+          <p>A live weather simulation moves pressure systems, fronts, clouds, and precipitation across your map. Turn on the layers you want, and let the weather shape travel and encounters.</p>
+        </div>
+        <div class="showcase-image">
+          <img src="screenshots/time-weather.png" alt="Hex map with the weather radar overlay showing pressure centers, fronts, and rain">
+        </div>
+      </div>
+
+      <div class="showcase-item">
+        <div class="showcase-text">
+          <h3>Dice Roller</h3>
+          <p>Pick a die or type notation like 2d6+3, roll with advantage or disadvantage, and keep a shared history. Hidden rolls stay with the DM.</p>
+        </div>
+        <div class="showcase-image">
+          <img src="screenshots/dice-roller.png" alt="Dice roller panel with a d20 result and roll history">
+        </div>
+      </div>
+
+      <div class="showcase-item">
+        <div class="showcase-text">
           <h3>Player View</h3>
-          <p>Open a second window that shows only discovered hexes, with fog of war hiding DM-only content. Perfect for streaming or projecting onto a second screen at the table.</p>
+          <p>Open a second window that shows only discovered hexes, with fog of war hiding DM-only content. Perfect for streaming or projecting onto a second screen at the table. Players can also join from their own devices through the web player.</p>
         </div>
         <div class="showcase-image">
           <img src="screenshots/player-view.png" alt="Player view with fog of war">
@@ -488,11 +570,11 @@
       <h2 class="section-title">Built with</h2>
       <p class="section-subtitle">A modern desktop stack for performance and reliability.</p>
       <div class="tech-badges">
-        <span class="tech-badge">Electron 35</span>
+        <span class="tech-badge">Electron 41</span>
         <span class="tech-badge">React 18</span>
         <span class="tech-badge">TypeScript</span>
         <span class="tech-badge">HTML5 Canvas</span>
-        <span class="tech-badge">Vite</span>
+        <span class="tech-badge">Vite 8</span>
       </div>
     </div>
   </section>
@@ -506,12 +588,12 @@
         <div class="step">
           <div class="step-number">1</div>
           <h3>Download</h3>
-          <p>Grab the latest release from <a href="https://github.com/ringo380/hexal/releases/latest">GitHub Releases</a> for your platform.</p>
+          <p>Grab the latest release for Windows, macOS, or Linux from <a href="https://github.com/ringo380/hexal/releases/latest">GitHub Releases</a>.</p>
         </div>
         <div class="step">
           <div class="step-number">2</div>
           <h3>Create a Campaign</h3>
-          <p>Click "New Campaign", name your world, and set your grid size. You're ready to go.</p>
+          <p>Click "New Campaign", pick a blank map or one of ten ready-made settings, name your world, and you're ready to go.</p>
         </div>
         <div class="step">
           <div class="step-number">3</div>
@@ -539,6 +621,18 @@
       <p style="margin-top: 8px;">MIT License &middot; Built by <a href="https://github.com/ringo380">Ryan Robson</a></p>
     </div>
   </footer>
+
+  <script>
+    // Keep the hero version current without editing this page each release.
+    fetch('https://api.github.com/repos/ringo380/hexal/releases/latest')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (release) {
+        if (release && release.tag_name) {
+          document.getElementById('latest-version').textContent = release.tag_name;
+        }
+      })
+      .catch(function () { /* keep the built-in version */ });
+  </script>
 
 </body>
 </html>
