@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Toolbar**: the editor toolbar no longer runs off the right edge of the window. Less frequent actions are grouped into four labelled menus: World (Encounters, Landmarks, Templates, Regions, Terrain, Generate), Story (NPCs, Quests, Sessions, Characters), Players (Player Notes, Message Players) and Export (Export Map, Export Data). Travel, Combat and Dice stay one click away. On narrow windows the toolbar wraps onto a second row instead of scrolling the whole layout sideways. The menus work from the keyboard (arrow keys, Home, End, Escape).
 
+### Security
+- Updated Electron to 41.10.7 and electron-builder to 26.17.0, and refreshed dependencies to patched versions of dompurify, fast-uri, @xmldom/xmldom, undici, js-yaml, brace-expansion, source-map-js, http-cache-semantics and vitest.
+
 ## [1.5.2] - 2026-10-12
 
 ### Fixed
